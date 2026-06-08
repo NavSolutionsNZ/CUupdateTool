@@ -21,14 +21,39 @@ Python 3 only, no third-party packages.
   Table 14  -> EX-T14.txt / CU-T14.txt
 Pairing is by stem; A and B must use the same <Type> subfolder name.
 
-## Run
-Preview first (classifies, moves/writes nothing):
-    python3 run_batch.py --root /path/to/job --cu CU26Q1 --initials RL \
+## Run — step by step
+
+### 0. Check Python
+Open a terminal (Windows: PowerShell or Command Prompt). Run:
+    python --version
+If that errors, try:  python3 --version
+You need Python 3. Use whichever word works (`python` or `python3`) in the
+commands below — on Windows it's usually `python`, on Mac/Linux `python3`.
+
+### 1. Put the tool files together
+The five files below MUST sit in ONE folder, and you run the command FROM that
+folder (run_batch.py imports execute/diffengine/scorer from alongside it):
+    run_batch.py  execute.py  diffengine.py  scorer.py  run_one.py
+e.g.  C:\CUtool\
+
+### 2. Lay out the job (inputs already language-stripped by the cmdlet)
+    <root>\A\<Type>\EX-<stem>.txt      e.g.  C:\jobs\CustX\A\Table\EX-T14.txt
+    <root>\B\<Type>\CU-<stem>.txt      e.g.  C:\jobs\CustX\B\Table\CU-T14.txt
+
+### 3. Open the terminal in the tool folder
+    cd C:\CUtool
+
+### 4. Preview first (--dry-run: classifies, writes/moves NOTHING)
+    python run_batch.py --root C:\jobs\CustX --cu CU26Q1 --initials RL \
         --text "CU upgrade." --date 08/06/26 --dry-run
 
-Real run:
-    python3 run_batch.py --root /path/to/job --cu CU26Q1 --initials RL \
+### 5. Real run (drop --dry-run)
+    python run_batch.py --root C:\jobs\CustX --cu CU26Q1 --initials RL \
         --text "CU upgrade." --date 08/06/26
+
+Set the four values to your job: --cu = CU token, --initials = yours,
+--text = doc-trigger boilerplate, --date = merge date DD/MM/YY.
+Mac/Linux: use python3 and forward-slash paths (--root /path/to/job).
 
 ## What happens
 - AUTO-MERGED: writes  <root>/Merged/<Type>/Merged-<stem>.txt
