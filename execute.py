@@ -259,21 +259,25 @@ def _append_doc_trigger(lines, engine, params):
 
 
 def _customer_doc_entries(engine, entry_re):
-    """Return A's changelog entry lines (plus continuation lines) whose tag is a
-    customer tag and which are not already present in B's changelog."""
+    """Return A's changelog entry lines (plus continuation lines) that are NOT
+    already present in B's changelog.
+
+    Self-identifying by SET DIFFERENCE, not by prefix: an entry present in A but
+    absent from B is a customer addition by definition (the vendor base cannot
+    have entries the older customer object lacks; newer vendor entries live in B
+    and are kept because we build on B). This deliberately does NOT depend on the
+    customer-prefix census - the doc trigger reliably carries customer tags even
+    when those tags were never declared as customer prefixes (e.g. DC in T77).
+    Matching is on the exact (stripped) entry line, so shared history is never
+    re-carried and a verbatim duplicate is never produced."""
     a_lines = engine.A
     b_text = '\n'.join(engine.B)
-    # locate A's changelog: the region containing entry lines near the tail.
     idxs = [i for i, l in enumerate(a_lines) if entry_re.match(l)]
     if not idxs:
         return []
     out = []
     for i in idxs:
-        m = entry_re.match(a_lines[i])
-        tag = m.group(1)
-        if engine._layer(tag) != 'customer':
-            continue
-        if a_lines[i].strip() in b_text:           # already in B
+        if a_lines[i].strip() in b_text:           # already in B (shared history)
             continue
         entry = [a_lines[i]]
         k = i + 1
