@@ -26,6 +26,18 @@ CUST = {'AP', 'WBL'}
 VEND = {'PA', 'PPA', 'EU', 'INC', 'IMM', 'PS'}
 LANGS = {'ENZ'}
 
+# Per-object customer-prefix overrides (census differs per customer/object).
+# T77's customisations are DC-tagged (Direct Credit), so DC must be a customer
+# prefix for it. Defaults to CUST when an object isn't listed here.
+CUST_OVERRIDE = {
+    'T77': {'AP', 'WBL', 'DC'},
+}
+
+
+def _cust_for(name):
+    return CUST_OVERRIDE.get(name, CUST)
+
+
 PARAMS = dict(cu_token='CU26Q1', initials='RL', text='CU upgrade.',
               merge_date='08/06/26', merge_date_dots='08.06.26')
 
@@ -45,6 +57,7 @@ EXPECTED_VERDICTS = {
                     (100,   'caption',     'CARRY'): 1,
                     (None,  'code',        'DEV'):   3,     # AP001691 x2, AP001651
                     (None,  'code',        'CARRY'): 1}),   # AP2263
+    'T77': Counter({(1, 'caption', 'CARRY'): 1}),           # OptionCaption/String carry
 }
 
 # Objects that should auto-execute, and the fixture they must reproduce.
@@ -52,6 +65,9 @@ EXEC_CASES = {
     'T14': (os.path.join(FIX, 'Cust_T14.stripped.txt'),
             os.path.join(FIX, '20206Q1_T14.stripped.txt'),
             os.path.join(FIX, 'Merged_T14.stripped.txt')),
+    'T77': (os.path.join(FIX, 'EX-T77.stripped.txt'),
+            os.path.join(FIX, 'CU-T77.stripped.txt'),
+            os.path.join(FIX, 'MyMerged-T77.stripped.txt')),
 }
 # Objects that should route to DEV in the narrow build (not execute).
 EXEC_GATED_TO_DEV = ['T36']
@@ -62,6 +78,8 @@ OBJ = {
             os.path.join(FIX, '20206Q1_T14.stripped.txt')),
     'T36': (os.path.join(FIX, 'Cust_T36.stripped.txt'),
             os.path.join(FIX, '20206Q1_T36.stripped.txt')),
+    'T77': (os.path.join(FIX, 'EX-T77.stripped.txt'),
+            os.path.join(FIX, 'CU-T77.stripped.txt')),
 }
 
 
@@ -69,16 +87,17 @@ def _norm(text):
     out = []
     for l in text.replace('\r\n', '\n').replace('\r', '\n').split('\n'):
         l = l.rstrip()
-        # canonicalise doc-trigger entry leading indent to 6 spaces
-        m = re.match(r'^\s+([A-Za-z0-9.\-]+\s+\d{2}\.\d{2}\.\d{2}\s.*)$', l)
+        # canonicalise doc-trigger entries: 6-space indent, tag padded to 11,
+        # internal whitespace (incl. TortoiseMerge tabs) collapsed to one space.
+        m = re.match(r'^\s+([A-Za-z0-9.\-]+)\s+(\d{2}\.\d{2}\.\d{2}\s.*)$', l)
         if m:
-            l = '      ' + m.group(1)
+            l = '      ' + m.group(1).ljust(11) + m.group(2)
         out.append(l)
     return '\n'.join(out)
 
 
-def _verdict_set(a, b):
-    e = DiffEngine(a, b, CUST, VEND, LANGS)
+def _verdict_set(name, a, b):
+    e = DiffEngine(a, b, _cust_for(name), VEND, LANGS)
     rows = e.classify()
     out = Counter()
     for r in rows:
@@ -97,17 +116,17 @@ def run():
 
     # ---- verdict layer ----
     for name, (a, b) in OBJ.items():
-        got = _verdict_set(a, b)
+        got = _verdict_set(name, a, b)
         want = EXPECTED_VERDICTS[name]
         if got != want:
-            fails.append(f"[verdict] {name}: got {sorted(got)} want {sorted(want)}")
+            fails.append(f"[verdict] {name}: got {sorted(got.items())} want {sorted(want.items())}")
         else:
-            print(f"[verdict] {name}: OK ({len(got)} rows)")
+            print(f"[verdict] {name}: OK ({sum(got.values())} rows)")
 
     # ---- execution layer: must reproduce fixture ----
     for name, (a, b, merged) in EXEC_CASES.items():
         try:
-            out = ex.execute(a, b, CUST, VEND, LANGS, PARAMS)
+            out = ex.execute(a, b, _cust_for(name), VEND, LANGS, PARAMS)
         except ex.GateToDev as g:
             fails.append(f"[exec] {name}: unexpectedly gated to DEV ({g})")
             continue
@@ -123,7 +142,7 @@ def run():
     for name in EXEC_GATED_TO_DEV:
         a, b = OBJ[name]
         try:
-            ex.execute(a, b, CUST, VEND, LANGS, PARAMS)
+            ex.execute(a, b, _cust_for(name), VEND, LANGS, PARAMS)
             fails.append(f"[gate] {name}: executed but should route to DEV")
         except ex.GateToDev:
             print(f"[gate] {name}: OK (routes to DEV)")

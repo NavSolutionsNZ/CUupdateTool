@@ -32,7 +32,9 @@ from diffengine import DiffEngine
 # field-graft: whole customer-added field, inserted after its anchor sibling.
 # code:        customer code block (// Start TAG .. // Stop TAG), inserted at
 #              its anchor-equivalent position. Both are verbatim transplants.
-_EXECUTABLE_KINDS = {'field-graft', 'code'}
+# caption:     caption/optioncaption/optionstring carry on a shared field -
+#              replace B's caption/option property lines with A's values.
+_EXECUTABLE_KINDS = {'field-graft', 'code', 'caption'}
 # Rows with this verdict are "no action needed, take B as-is" and don't block
 # the gate (they describe vendor content we keep).
 _BENIGN_VERDICT = 'TAKE_B'
@@ -103,7 +105,14 @@ def execute(custfn, vendfn, cust, vend, langs, params):
     if blockers:
         raise GateToDev([f"{r['kind']}/{r['verdict']} node={r['node']}" for r in blockers])
 
-    grafts = actionable  # all CARRY field-graft or code by now
+    grafts = [r for r in actionable if r['kind'] in ('field-graft', 'code')]
+    captions = [r for r in actionable if r['kind'] == 'caption']
+
+    # --- caption/option carry: replace B's caption/option lines with A's ----
+    # Done first, on B's node text, before line insertions shift indices.
+    b_lines = list(e.B)
+    for r in captions:
+        b_lines = _carry_caption(b_lines, e, r['node'])
 
     # --- build merged body: start from B, insert each customer block ------
     # Each insertion: (after_b_line_idx, [verbatim A lines]). We collect all,
@@ -137,7 +146,7 @@ def execute(custfn, vendfn, cust, vend, langs, params):
             raise GateToDev([f"unexpected executable kind {r['kind']}"])
         insertions.append((after, block))
 
-    out = list(e.B)                                     # LF-normalised already (load())
+    out = list(b_lines)                                 # caption-carried B (LF)
     for after, block in sorted(insertions, key=lambda x: x[0], reverse=True):
         out[after:after] = block
 
@@ -148,6 +157,42 @@ def execute(custfn, vendfn, cust, vend, langs, params):
     out = _append_doc_trigger(out, e, params)
 
     return '\n'.join(out)
+
+
+def _carry_caption(b_lines, engine, node_id):
+    """Replace B's CaptionML / OptionCaptionML / OptionString property lines for
+    the given field with A's versions (carry customer caption/options). Matched
+    by property name within the field's line span; B's line count is preserved
+    (these are single-line property replacements) so later graft anchors that
+    key off B node positions remain valid.
+
+    A's value lines are language-normalised already (inputs are stripped), so we
+    transplant A's exact property line."""
+    import re as _re
+    a_node = engine.Aby.get(node_id)
+    b_node = engine.Bby.get(node_id)
+    if a_node is None or b_node is None:
+        return b_lines
+
+    PROPS = ('CaptionML', 'OptionCaptionML', 'OptionString')
+    prop_re = _re.compile(r'^\s*(' + '|'.join(PROPS) + r')=')
+
+    # Map prop -> A's full line(s). A field node props are newline-joined.
+    a_prop_lines = {}
+    for l in a_node['props'].split('\n'):
+        m = prop_re.match(l)
+        if m:
+            a_prop_lines[m.group(1)] = l
+
+    # B node occupies b_lines[start : start+count]
+    start = b_node['line'] - 1
+    count = b_node['props'].count('\n') + 1
+    out = list(b_lines)
+    for i in range(start, start + count):
+        m = prop_re.match(out[i])
+        if m and m.group(1) in a_prop_lines:
+            out[i] = a_prop_lines[m.group(1)]
+    return out
 
 
 def _apply_header(lines, engine, params):

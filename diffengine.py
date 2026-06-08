@@ -197,6 +197,7 @@ class DiffEngine:
             has_codeblock = any(self._layer(m.group(1)) == 'customer'
                                 for m in self.INLINE.finditer(a['props']))
             cap_changed = self._caption_base_differs(a, b)
+            opt_changed = self._option_differs(a, b)
             other_changed = self._nonlang_noncaption_differs(a, b)
 
             if has_codeblock:
@@ -206,19 +207,31 @@ class DiffEngine:
                 detail = ', '.join(f'{t}:{v}' for t, v in sv) if sv else 'scorer'
                 rows.append(self._row(a, ctags[0] if ctags else None, verdict, 'code',
                                       f'field {nid} customer code block -> scorer [{detail}]'))
-            elif ctags and cap_changed and not other_changed:
-                rows.append(self._row(a, ctags[0], 'CARRY', 'caption',
-                                      f'field {nid} caption override (customer {ctags[0]}): carry customer caption forward'))
+            elif (cap_changed or opt_changed) and not other_changed:
+                # Caption / OptionCaption / OptionString difference, nothing else.
+                # RULE (user decision): always carry the customer's caption/option
+                # values on any such difference (tag NOT required) - caption drift
+                # is low-risk and easy to catch in testing. Option lists carry the
+                # customer set; we WARN (not gate) if the vendor changed options
+                # mid-list (their set isn't a prefix of the customer's) since that
+                # can shift option ordinals - flagged for the tester to eyeball.
+                warn = opt_changed and not self._vendor_options_are_prefix(a, b)
+                rows.append(dict(node=a['id'], tag=(ctags[0] if ctags else None),
+                                 verdict='CARRY', kind='caption', line=a['line'],
+                                 reason=f'field {nid} caption/option override: carry customer '
+                                        f'caption/optioncaption/optionstring'
+                                        + (' [WARN: vendor also changed options mid-list]' if warn else ''),
+                                 warn=warn))
             elif ctags and other_changed:
                 rows.append(self._row(a, ctags[0], 'DEV', 'property-modify',
                                       f'field {nid} customer-tagged property change beyond caption -> human review'))
-            elif not ctags:
-                # change explained by vendor tags / vendor drift -> take B
+            elif other_changed:
+                # changed beyond caption/option, no customer tag -> vendor upgrade
                 rows.append(self._row(a, None, 'TAKE_B', 'vendor-change',
-                                      f'field {nid} differs but no customer tag -> vendor upgrade, take B'))
+                                      f'field {nid} differs (non-caption) but no customer tag -> take B'))
             else:
-                rows.append(self._row(a, ctags[0] if ctags else None, 'DEV', 'unexplained',
-                                      f'field {nid} change not coherently justified -> human review'))
+                rows.append(self._row(a, ctags[0] if ctags else None, 'TAKE_B', 'vendor-change',
+                                      f'field {nid} no material customer difference -> take B'))
 
         # 4) object-level / CODE-section customer code blocks. The scorer scans
         # the WHOLE object and scores every customer Start/Stop block by anchor
@@ -241,16 +254,42 @@ class DiffEngine:
 
     def _caption_base_differs(self, a, b):
         def cap(n):
-            m = re.search(r'CaptionML=\[?([A-Z]{3})=([^;\]\n]+)', n['props'])
+            m = re.search(r'(?<!Option)CaptionML=\[?([A-Z]{3})=([^;\]\n]+)', n['props'])
             return (m.group(1), norm(m.group(2))) if m else None
         return cap(a) is not None and cap(a) != cap(b)
+
+    def _option_differs(self, a, b):
+        """True if OptionCaptionML or OptionString differs between A and B."""
+        return (self._opt_caption(a) != self._opt_caption(b)
+                or self._opt_string(a) != self._opt_string(b))
+
+    def _opt_caption(self, n):
+        m = re.search(r'OptionCaptionML=\[?([A-Z]{3})=([^;\]\n]*)', n['props'])
+        return norm(m.group(2)) if m else None
+
+    def _opt_string(self, n):
+        m = re.search(r'OptionString=([^;\n]*)', n['props'])
+        return norm(m.group(1)) if m else None
+
+    def _vendor_options_are_prefix(self, a, b):
+        """True if B's (vendor) OptionString is a prefix of A's (customer) one,
+        i.e. the customer only APPENDED options and the vendor changed nothing
+        mid-list. When False, vendor touched options mid-list -> ordinal shift
+        risk -> WARN (carry still proceeds per user rule)."""
+        av, bv = self._opt_string(a), self._opt_string(b)
+        if av is None or bv is None:
+            return True                       # no option string to worry about
+        ao = av.split(','); bo = bv.split(',')
+        return ao[:len(bo)] == bo             # B is a prefix of A
 
     def _nonlang_noncaption_differs(self, a, b):
         def keyset(n):
             s = self._strip_lang(n['props'])
             txt = '\n'.join(s)
-            txt = re.sub(r'CaptionML=\[?[A-Z]{3}=[^;\]\n]+;?', '', txt)   # drop caption
-            txt = re.sub(r'Description=[^;}\n]+', '', txt)                # drop tag-bearing Description
+            txt = re.sub(r'OptionCaptionML=\[?[A-Z]{3}=[^;\]\n]*;?', '', txt)  # drop option caption
+            txt = re.sub(r'OptionString=[^;\n]*;?', '', txt)                  # drop option string
+            txt = re.sub(r'CaptionML=\[?[A-Z]{3}=[^;\]\n]+;?', '', txt)       # drop caption
+            txt = re.sub(r'Description=[^;}\n]+', '', txt)                    # drop tag-bearing Description
             return norm(txt)
         return keyset(a) != keyset(b)
 
