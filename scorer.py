@@ -15,9 +15,12 @@ import re
 from difflib import SequenceMatcher
 
 def build_grammar(prefixes):
+    # incadea tags come in two comment styles, both standard:
+    #   line-comment:  // Start <tag> ... // Stop <tag>
+    #   block-comment: { Start <tag>  ...   Stop <tag>}   (braces = C/AL block comment delimiters)
     alt='|'.join(sorted(prefixes,key=len,reverse=True))
-    return (re.compile(rf'^\s*//\s*Start\s+({alt})([0-9.\-]*)\b',re.I),
-            re.compile(rf'^\s*//\s*Stop\s+({alt})([0-9.\-]*)\b',re.I))
+    return (re.compile(rf'^\s*(?://|\{{)\s*Start\s+({alt})([0-9.\-]*)\b',re.I),
+            re.compile(rf'^\s*(?://\s*)?Stop\s+({alt})([0-9.\-]*)\s*\}}?',re.I))
 
 def norm(l): return re.sub(r'\s+',' ',l.strip())
 def sim(a,b): return 1.0 if a==b else SequenceMatcher(None,a,b).ratio()
@@ -48,7 +51,9 @@ class Scorer:
         st=[];out=[]
         for i,l in enumerate(self.A):
             mo=self.OPEN.match(l);mc=self.CLOSE.match(l)
-            if mo and mo.group(1).upper() in self.CUST: st.append({'p':mo.group(1).upper(),'id':mo.group(2),'start':i})
+            if mo and mo.group(1).upper() in self.CUST:
+                brace = l.lstrip().startswith('{')   # block-comment style => inner is suppressed vendor code
+                st.append({'p':mo.group(1).upper(),'id':mo.group(2),'start':i,'brace':brace})
             elif mc and mc.group(1).upper() in self.CUST:
                 for k in range(len(st)-1,-1,-1):
                     if st[k]['p']==mc.group(1).upper() and st[k]['id']==mc.group(2):
@@ -83,7 +88,11 @@ class Scorer:
             return [i for i,x in enumerate(self.bn) if sim(val,x)>=0.90]
         return []
 
-    def _classify(self,inner):
+    def _classify(self,inner,brace=False):
+        # brace-style { Start..Stop } blocks are C/AL block comments: the ENTIRE inner content
+        # is commented-out (suppressed) vendor code, regardless of per-line // markers.
+        if brace:
+            return 'VANILLA_SUPPRESS'   # block-commented vendor logic, no replacement -> always DEV
         real=[x for x in inner if norm(x) and not self.is_tag(x) and not CC.match(x)]
         commented=[x for x in inner if CC.match(x) and not self.is_tag(x)]
         if commented and not real: return 'VANILLA_SUPPRESS'   # commented vendor out, no replacement
@@ -91,7 +100,7 @@ class Scorer:
         return 'PURE_ADD'
 
     def score_block(self,b):
-        content=self._classify(b['inner'])
+        content=self._classify(b['inner'],b.get('brace',False))
         vmod=(content=='VANILLA_MOD')
         bk,bv=self._anchor(b['start'],-1); ak,av=self._anchor(b['stop'],+1)
         bpos=self._locate(bk,bv); apos=self._locate(ak,av)

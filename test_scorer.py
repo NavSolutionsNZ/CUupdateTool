@@ -14,6 +14,7 @@ EXP = {
  ('T39','WBL-009@31'):'TRANSPLANT',
  ('T39','WBL-006@761'):'DEV',   # VANILLA_MOD
  ('T5025400','WBL-006@83'):'TRANSPLANT',
+ ('T5025400','WBL-006@1360'):'DEV',   # brace-style { } block comment: customer SUPPRESSED vendor VIN check -> DEV (must not reinstate)
  # T38 VANILLA_MOD -> DEV
  ('T38','WBL-009@688'):'DEV', ('T38','WBL-009@719'):'DEV', ('T38','WBL-009@1455'):'DEV', ('T38','WBL-009@2735'):'DEV',
 }
