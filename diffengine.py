@@ -219,6 +219,24 @@ class DiffEngine:
             else:
                 rows.append(self._row(a, ctags[0] if ctags else None, 'DEV', 'unexplained',
                                       f'field {nid} change not coherently justified -> human review'))
+
+        # 4) object-level / CODE-section customer code blocks. The scorer scans
+        # the WHOLE object and scores every customer Start/Stop block by anchor
+        # survival. Blocks that live OUTSIDE any field node (global triggers, the
+        # CODE{} procedures) are scored but never surfaced by the per-node loop
+        # above. Emit a 'code' row for each such block so the executor can act on
+        # it and the whole-object gate can SEE it (never silently drop code).
+        emitted_lines = {r['line'] for r in rows if r['kind'] == 'code'}
+        for sb in self._scorer_blocks():
+            if sb['line'] in emitted_lines:
+                continue
+            verdict = 'CARRY' if sb['verdict'] == 'TRANSPLANT' else 'DEV'
+            node = {'id': None, 'line': sb['line']}
+            rows.append(dict(node=None, tag=sb['tag'], verdict=verdict, kind='code',
+                             line=sb['line'],
+                             reason=f"CODE-section block {sb['tag']} -> scorer "
+                                    f"[{sb['content']}:{sb['verdict']} score={sb['score']}]",
+                             span=(sb['start'], sb['stop']), chosen=sb['chosen']))
         return rows
 
     def _caption_base_differs(self, a, b):
@@ -235,6 +253,27 @@ class DiffEngine:
             txt = re.sub(r'Description=[^;}\n]+', '', txt)                # drop tag-bearing Description
             return norm(txt)
         return keyset(a) != keyset(b)
+
+    def _scorer_blocks(self):
+        """Return the scorer's full per-block results for the whole object,
+        each with tag, line (1-based start), span (0-based start,stop), content
+        class, score and verdict. Used to surface CODE-section blocks as rows."""
+        if not hasattr(self, '_sblocks'):
+            self._sblocks = []
+            try:
+                sc = Scorer(self._custfn, self._vendfn, self.CUST, self.CUST | self.VEND)
+                for b in sc.blocks():
+                    r = sc.score_block(b)
+                    self._sblocks.append(dict(tag=r['tag'], line=r['line'],
+                                              span=(b['start'], b['stop']),
+                                              content=r['content'], score=r['score'],
+                                              verdict=r['verdict'], chosen=r.get('chosen')))
+            except Exception:
+                self._sblocks = []
+        # normalise key name expected by caller
+        return [dict(tag=s['tag'], line=s['line'], start=s['span'][0],
+                     stop=s['span'][1], content=s['content'], score=s['score'],
+                     verdict=s['verdict'], chosen=s['chosen']) for s in self._sblocks]
 
     def _scorer_verdicts(self, tags):
         """Run the anchor scorer once (cached) and return [(tag, verdict)] for the given
