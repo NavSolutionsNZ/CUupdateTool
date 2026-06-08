@@ -274,7 +274,18 @@ Remaining caveats:
   primary page/report/table-field signal + worklist enrichment; **language-layer extract/reattach
   via native cmdlets (compile-only; translation correctness is the local dev's job, no drift
   reporting)**.
-- Prototype, not production: anchor/confidence scorer (§9 bugs open).
-- Not started: page/report structural differ; PowerShell port; merge-assist tool.
+- **Stage 2 (classify) + Stage 3 (execute) BUILT & tested (Python prototype):** difference engine now
+  surfaces BOTH field-section AND object-level/CODE-section customer code (the latter was a prior
+  silent-loss gap — fixed). `execute.py` narrow path auto-merges field-graft + code-block transplants
+  with full bookkeeping (header + doc-trigger), under a whole-object gate (all-CARRY or whole object →
+  DEV). `test_diffengine.py` freezes verdict + execution (byte-exact vs hand-merged T14). `run_batch.py`
+  drives a whole job: auto-merged objects written to Merged/ and moved out of A/B into AautoMerged/
+  BautoMerged/; manual objects left in A/B as the worklist. See CONTEXT §8.7.
+  - Narrow path covers field-graft + clean code transplant. NOT yet executing: caption-carry (next),
+    VANILLA_MOD/SUPPRESS (DEV by rule), RDLC layout (DEV).
+- Prototype, not production: anchor/confidence scorer (§9 — note §8.5.1 field-trigger attribution still
+  open; CODE-section blocks now keyed by span).
+- Not started: page/report structural differ beyond field-grafts; PowerShell port (scorer + engine +
+  executor); merge-assist tool; Stage 0 census wiring (prefixes still hardcoded/overridable via flags).
 - Environment: instance-based (read A & B tiers; tool creates merged tier, non-prod gated).
   PowerShell module wrapping the NAV v14 dev-shell (Export/Import/Compile/Merge-NAVApplicationObject).

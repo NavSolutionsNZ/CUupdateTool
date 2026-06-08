@@ -114,19 +114,24 @@ confirm before adding to the repo.
 Census inference validated across all: vendor = PA/EU/INC/PPA/IMM/PS (in both A&B); customer =
 AP/WBL (A-only). Language: ENU base (in both), ENZ customer layer (A-only); C80 has no captions.
 
-## 6. Open work (UPDATED — see §8 for the latest session's detail)
+## 6. Open work (UPDATED — see §8.7 for the latest session's detail)
 
-1. **Structural differ** — DONE as the *difference-driven engine* (`diffengine.py`). See §8.
-   Remaining polish: scorer↔field line-range join, RDLC report handling, known-answer harness.
-2. **Scorer threshold tuning** — current PURE 0.75 / VMOD 0.90 conservative defaults, validated on
-   22+ blocks; tune from real-run logs. VANILLA_MOD auto-transplant path implemented but
-   **unexercised in the TRANSPLANT direction** (all real VANILLA_MOD scored to DEV).
-3. **Language extract/reattach** — wire the native cmdlets into the pipeline (compile-only).
-   Mechanics fully resolved this session — see §8.4.
-4. **PowerShell port** — port scorer + engine; build the instance-based wrapper around the v14
-   dev-shell. Earlier PS scaffold predates this design.
-5. **Merge-assist tool** (separate) — ingests dev-resolved objects into the merged set.
-6. **Two-phase orchestration & reporting** — auto → pause at side-by-side review → resume; ledger.
+1. **Structural differ** — DONE as `diffengine.py`; §8.7 added CODE-section visibility (critical
+   safety fix) so it sees object-level customer code, not just field-section. Remaining polish:
+   field-TRIGGER scorer↔field line-range join (§8.5.1), RDLC report handling (§8.5.2).
+2. **Known-answer harness** — DONE (`test_diffengine.py`, §8.7). Verdict + execution layers, passing.
+3. **Stage 3 execution** — DONE (narrow path: field-graft + code transplant + bookkeeping, §8.7).
+   `execute.py` + `run_batch.py`/`run_one.py`. T14 auto-merges byte-exact; whole-object gate routes
+   uncertain objects to DEV. NEXT execution path: caption-carry (unlocks objects like T36).
+4. **Scorer threshold tuning** — PURE 0.75 / VMOD 0.90 conservative defaults; tune from real-run logs.
+   VANILLA_MOD auto-transplant path implemented but unexercised in TRANSPLANT direction (all real
+   VANILLA_MOD scored to DEV).
+5. **Language extract/reattach** — mechanics resolved (§8.4); fixture-prep stripper built (§8.7, NOT
+   production). Still to WIRE the native cmdlets into the actual pipeline (compile-only).
+6. **PowerShell port** — port scorer + engine + executor; build instance wrapper around v14 dev-shell.
+7. **Merge-assist tool** (separate) — ingests dev-resolved objects into the merged set.
+8. **Two-phase orchestration & reporting** — auto → pause at side-by-side review → resume; ledger.
+   (Batch runner is a first cut: auto-merges + moves done files out, leaves manual worklist in A/B.)
 
 ## 7. Working principles (consistent throughout)
 
@@ -225,28 +230,117 @@ The engine reports a verdict for EVERY diff; most are TAKE_B vendor upgrades (e.
   - `-DevelopmentLanguageId` defaults ENU but is inferred (a DEU-base customer needs DEU). Goal is
     COMPILE-CLEAN reattach only; translation correctness is the local dev's job; no drift reports.
 
-### 8.5 KNOWN ROUGH EDGES (next session's first tasks)
+### 8.5 KNOWN ROUGH EDGES
 1. **scorer↔field attribution** in `diffengine._scorer_verdicts` is keyed by TAG, so every block of
    a tag attaches to every field bearing that tag (verdict still correct — any DEV → field DEV — but
    the detail is noisy/misattributed). FIX: key scorer blocks by LINE RANGE; match each field's code
-   blocks to scorer blocks within that field's line span.
+   blocks to scorer blocks within that field's line span. STILL OPEN. (§8.7 added a separate
+   CODE-section code-row path that IS keyed by line/span; the field-TRIGGER attribution issue remains.)
 2. **RDLC report layout** (R5025607 "Add header and footer") not surfaced — the change lives in the
    base64 RDLC blob which isn't parsed into nodes. Needs: detect a customer doc entry whose desc
-   matches RDLC/layout keywords → DEV with detail (the differ can't parse binary layout).
-3. **No known-answer harness** for `diffengine.py` yet (scorer has `test_scorer.py`, 20/20; the old
-   `test_structdiff.py` tests the SUPERSEDED tag-driven differ). Build `test_diffengine.py` freezing
-   the §8.3 validated verdicts. Get user sign-off on the verdict list first (was mid-review:
-   T38 bare `WBL` "declared-in-VL-but-located-nowhere"→DEV still needs user confirmation of whether
-   it's real customisation or a stale VL token).
-4. Census prefixes/languages are hardcoded in `diffengine.py __main__` (CUST/VEND/LANGS) — these
-   come from Stage 0 census in production; fine for prototype.
+   matches RDLC/layout keywords → DEV with detail (the differ can't parse binary layout). STILL OPEN.
+3. ~~No known-answer harness for diffengine~~ **RESOLVED (§8.7)** — `test_diffengine.py` built (verdict
+   + execution layers, both passing). T38 bare `WBL` SIGNED OFF: stale VL token (declared in Version
+   List, zero body occurrences; real customisation is `WBL009`, manifests separately) → IGNORE: emit
+   no row, no DEV. Earlier "→DEV" was over-conservative noise.
+4. Census prefixes/languages still hardcoded (now in `run_batch.py`/`run_one.py` defaults, overridable
+   via `--cust/--vend/--langs`). Stage 0 census feeds these in production. STILL OPEN.
 
-### 8.6 Repo state / files
-- `scorer.py` + `test_scorer.py` — anchor scorer, 20/20. COMMITTED+PUSHED (commit 7ade8fb).
-- `diffengine.py` — difference-driven engine, verdicts correct. COMMITTED (f70773a).
-- `structdiff.py` + `test_structdiff.py` — SUPERSEDED tag-driven differ; kept in history (4443612).
-  Can be deleted once `diffengine.py` has its harness; left for now as reference.
-- Test objects `Cust_*.txt` / `20206Q1_*.txt` committed (NOTE §5 confidentiality flag — confirm
-  these are OK to remain in the repo).
-- PAT used this session should be revoked/regenerated (was pasted in chat).
+### 8.6 Repo state / files (current as of §8.7 session)
+- `scorer.py` + `test_scorer.py` — anchor scorer, 20/20. COMMITTED+PUSHED. §8.7 added a `chosen`
+  field to `score_block`'s return (the validated before/after anchor positions) — additive, no
+  verdict change, harness still 20/20.
+- `diffengine.py` — difference-driven engine. §8.7 added CODE-section visibility (see §8.7) +
+  `_scorer_blocks` helper. PUSHED (commit b133b01).
+- `execute.py` — NEW (§8.7). Stage 3 narrow-path executor. PUSHED (b133b01).
+- `test_diffengine.py` — NEW (§8.7). Known-answer harness, PASSES. PUSHED (b133b01).
+- `strip_lang_fixture.py` — NEW (§8.7). FIXTURE-PREP ONLY (not production language handling — that
+  stays the native cmdlet). PUSHED (b133b01).
+- `fixtures/` — NEW (§8.7). Frozen language-normalised known-answer set (T14, T36 stripped A/B/Merged,
+  plus raw Merged uploads). PUSHED (b133b01).
+- `run_batch.py` + `run_one.py` — NEW (§8.7). Job/single-object drivers. PUSHED (commit 8c145d1).
+- `README_run.md` — NEW (§8.7). Quick-start for the runners. (Presented to user; commit if not yet in.)
+- `structdiff.py` + `test_structdiff.py` — SUPERSEDED tag-driven differ; still in repo, still passes
+  (2/2). Safe to delete now that diffengine has its harness; left as reference.
+- Test objects `Cust_*.txt` / `20206Q1_*.txt` — CONFIRMED OK to remain in repo (no customer-sensitive
+  info; §5 confidentiality flag CLEARED by user).
+- PAT note: user is aware; do not re-raise.
 - Prototype is Python; production target is PowerShell (must call dev-shell cmdlets).
+
+### 8.7 Session log — Stage 3 EXECUTION engine + CODE-section visibility fix + runners
+**Outcome: the tool now actually MERGES, not just triages. T14 (the common basic case) auto-merges
+to a byte-exact reproduction of the hand-merge; T36 routes to DEV. Pushed (b133b01, 8c145d1).**
+
+**MCP question (the session's opening topic): assessed and REJECTED for now.** Workflow is fully
+deterministic with no LLM/agent in it; MCP only adds value when an agent consumes it. Introducing MCP
+would mean first introducing nondeterminism into the one place the design's safety argument depends
+on. Future seam IF ever wanted: a READ-ONLY MCP server over emitted artifacts for Stage-4 dev review
+(query the ledger / pull side-by-side evidence), never a path into differ/scorer/transplant. Not built.
+
+**Workflow captured (user's real manual process being automated):** select by `Modified` field →
+export language layer → build xls + pipe-separated number filter → export+split from CU DB via cmdlet
+→ prefix `CU-`/`EX-`, fold by type → TortoiseMerge each file by hand → join by type → import + compile
+-troubleshoot (defer missing-dependency failures, repeat) → reattach language → hand to consultants.
+Weeks per customer. **The bulk of TortoiseMerge time is MECHANICAL** ("merge the block, bump version
+list + date, add doc-trigger comment"), not hard judgement — confirming the triage+EXECUTE design.
+
+**Merge conventions FROZEN (from hand-merged T14 + T36, language-stripped):**
+- **A-after-B placement** (user's TortoiseMerge habit: A differences placed AFTER B's): customer
+  content inserted after the corresponding B content / anchor. This is the locked placement rule.
+- Code block: insert verbatim A span at the scorer's validated `chosen` before-anchor +1. Carry the
+  block's adjacent blank line on each side (A-after-B spacing).
+- Field-graft: insert whole A field node verbatim after its surviving anchor sibling node in B.
+- Header: Date = merge date DD/MM/YY; reassert Modified=Yes; PRESERVE B's Time field as-is; append CU
+  token to **A's** Version List token list (A carries customer tokens; B is vanilla).
+- Doc-trigger: B's changelog stays; then append A's customer-tagged entries not in B (verbatim, with
+  continuation lines), in A order; then append ONE CU stamp line LAST:
+  `      <CUtoken padded to 11> <DD.MM.YY> <initials> <text>` at 6-space indent.
+- Three per-run params (confirmed): CU token (e.g. CU26Q1), initials (e.g. RL), boilerplate ("CU
+  upgrade."). merge_date_dots = merge_date with '/'→'.'.
+- Normalisation (TortoiseMerge artifacts, NOT convention): CRLF→LF, trailing whitespace, doc-trigger
+  leading indent. Harness compares modulo these.
+
+**CRITICAL ENGINE FIX — CODE-section visibility (was a silent code-loss risk):** `classify()` only
+modelled FIELD-section nodes; customer code in object-level / `CODE{}` triggers/procedures was scored
+by the scorer but NEVER surfaced as a ledger row. So the whole-object gate was BLIND to it — an
+executor would ship a half-merged object missing that code. For T14 (the common basic case!) two of
+its three customisations (AP001651, WBL code blocks in CODE section) were invisible. FIX: after the
+per-node loop, `classify()` now emits a `code` row for every scorer block not already attributed to a
+field node (`_scorer_blocks` helper; carries span + `chosen` anchor). Surfaced that T36 ALSO has
+CODE-section blocks, some scoring DEV → T36 correctly routes to DEV (was under-reported before).
+
+**Stage 3 executor (`execute.py`) — NARROW PATH:** executes `field-graft` + `code` CARRY rows only
+(verbatim transplant + bookkeeping). **Whole-object gate:** auto-execute ONLY if every non-TAKE_B row
+is a CARRY executable kind; ANY other row (caption, DEV, doc-graft, property-modify…) routes the WHOLE
+object to DEV untouched, no partial merges. Trusts scorer/`_insertion_anchor` for placement (never
+recomputes — user: "trust the anchor"). Raises `GateToDev(reasons)` when gating.
+
+**NOT YET in the executor (route to DEV for now):** caption-carry execution (so T36's caption rows
+gate it to DEV even though field-grafts are clean); VANILLA_MOD/SUPPRESS (always DEV by scorer rule);
+RDLC. **Next obvious execution path = caption-carry** (would let objects like T36 partially qualify).
+
+**Runners (`run_batch.py`, `run_one.py`):** batch walks `<root>/A/<Type>/EX-<stem>.txt` +
+`<root>/B/<Type>/CU-<stem>.txt` (stem = TypeChar+Number: C/T/P/R; e.g. Table 14 = T14). Inputs already
+language-stripped. Auto-merged → write `<root>/Merged/<Type>/Merged-<stem>.txt` and MOVE both sources
+to `AautoMerged/`+`BautoMerged/` (mirror subfolders) so only manual objects remain in A/ and B/ as the
+worklist. DEV/error → left in place, reported. `--dry-run` previews. Census prefixes overridable.
+Batch output verified byte-identical to validated T14 fixture.
+
+**`strip_lang_fixture.py` (fixture-prep only):** strips ENZ; collapses single-survivor brackets
+KEEPING the `ENU=` prefix (cmdlet form: `[ENU=x;ENZ=y]`→`ENU=x`, NOT bare `x` — user caught this bug);
+promotes a lone-ENZ caption (no ENU sibling) to ENU ("change ENZ to ENU", user's rule). Handles 4
+forms: bracketed single-line, bracketed multi-line, single-quoted TextConst, bare single-language.
+cp1252 encoding. NOT production — production language handling stays `Remove-NAVApplicationObjectLanguage`.
+
+**Process note:** user flagged that discuss-first was being over-applied to the point of never pushing.
+Calibration: settle DESIGN before building (done thoroughly); once spec agreed + tests green, SHIP by
+default — don't gate every commit on another approval. Carry this forward.
+
+**Next session candidates (in rough priority):**
+1. Caption-carry execution path (unlocks partial T36; needs a frozen caption-only fixture case).
+2. A third executable object as a 2nd/3rd known-answer case (ideally multiple code blocks at
+   different anchors, all staying CARRY, to harden multi-insert ordering).
+3. §8.5.1 field-trigger scorer↔field attribution by line range.
+4. §8.5.2 RDLC keyword→DEV path.
+5. Wire Stage 0 census so prefixes aren't hardcoded.
+6. Commit README_run.md if not already in; optionally delete superseded structdiff.
