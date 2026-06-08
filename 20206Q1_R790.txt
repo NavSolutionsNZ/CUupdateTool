@@ -1,0 +1,906 @@
+OBJECT Report 790 Calculate Inventory
+{
+  OBJECT-PROPERTIES
+  {
+    Date=04/08/22;
+    Time=[ 4:17:29 PM];
+    Version List=NAVW1.x,N.7.2.1;
+  }
+  PROPERTIES
+  {
+    CaptionML=ENU=Calculate Inventory;
+    ProcessingOnly=Yes;
+    OnPreReport=BEGIN
+                  // Start PA035597
+                  IF SkipDim THEN
+                    ColumnDim := ''
+                  ELSE
+                    DimSelectionBuf.CompareDimText(3,REPORT::"Calculate Inventory",'',ColumnDim,Text003);
+                  // Stop PA035597
+                END;
+
+  }
+  DATASET
+  {
+    { 8129;    ;DataItem;                    ;
+               DataItemTable=Table27;
+               DataItemTableView=SORTING(No.)
+                                 WHERE(No Inventory Tracking=CONST(No),
+                                       Item Type=CONST(Item),
+                                       Blocked=CONST(No));
+               OnPreDataItem=VAR
+                               ItemJnlTemplate@1109400000 : Record 82;
+                               ItemJnlBatch@1109400001 : Record 233;
+                             BEGIN
+                               // Start EU.0012613
+                               IF ("Item Location".GETFILTERS <> '') AND (Item.GETFILTERS = '') THEN
+                                 CurrReport.BREAK;
+                               // Stop EU.0012613
+                               IF PostingDate = 0D THEN
+                                 ERROR(Text000);
+
+                               ItemJnlTemplate.GET(ItemJnlLine."Journal Template Name");
+                               ItemJnlBatch.GET(ItemJnlLine."Journal Template Name",ItemJnlLine."Journal Batch Name");
+                               IF NextDocNo = '' THEN BEGIN
+                                 IF ItemJnlBatch."No. Series" <> '' THEN BEGIN
+                                   ItemJnlLine.SETRANGE("Journal Template Name",ItemJnlLine."Journal Template Name");
+                                   ItemJnlLine.SETRANGE("Journal Batch Name",ItemJnlLine."Journal Batch Name");
+                               // Start PA036824.29199
+                                   IF NOT ItemJnlLine.FINDFIRST THEN
+                               // Stop PA036824.29199
+                                     NextDocNo := NoSeriesMgt.GetNextNo(ItemJnlBatch."No. Series",PostingDate,FALSE);
+                                   ItemJnlLine.INIT;
+                                 END;
+                                 IF NextDocNo = '' THEN
+                                   ERROR(Text001);
+                               END;
+
+                               NextLineNo := 0;
+
+                               // Start INC
+                               Window.OPEN(Text002,Item."No.");
+                               // Stop INC
+
+                               // Start PA035597
+                               IF NOT SkipDim THEN
+                                 SelectedDim.GetSelectedDim(USERID,3,REPORT::"Calculate Inventory",'',TempSelectedDim);
+                               // Stop PA035597
+
+                               QuantityOnHandBuffer.RESET;
+                               QuantityOnHandBuffer.DELETEALL;
+                             END;
+
+               OnAfterGetRecord=BEGIN
+                                  Window.UPDATE;
+                                END;
+
+               OnPostDataItem=BEGIN
+                                WITH QuantityOnHandBuffer DO BEGIN
+                                  RESET;
+                                // Start PA036824.29199
+                                  IF FINDSET THEN BEGIN
+                                // Stop PA036824.29199
+                                    REPEAT
+                                // Start PA035597
+                                      InsertItemJnlLine("Item No.","Variant Code","Dimension Entry No.","Location Code","Bin Code",Quantity,"Department Code","Make Code");
+                                // Stop PA035597
+                                    UNTIL NEXT = 0;
+                                    DELETEALL;
+                                  END;
+                                END;
+                              END;
+
+               ReqFilterFields=No.,Global Dimension 1 Filter,Global Dimension 2 Filter,Location Filter,Bin Filter,Shelf No.,Last Phys. Inventory Date;
+               CalcFields=Last Phys. Inventory Date }
+
+    { 5444;1   ;DataItem;                    ;
+               DataItemTable=Table2000000026;
+               DataItemTableView=SORTING(Number);
+               OnPreDataItem=BEGIN
+                               ItemLedgEntry.RESET;
+                               IF ByDept OR ByProj THEN
+                                 ItemLedgEntry.SETCURRENTKEY(
+                                   "Item No.","Variant Code","Drop Shipment","Global Dimension 1 Code","Global Dimension 2 Code","Location Code","Bin Code")
+                               ELSE
+                                 ItemLedgEntry.SETCURRENTKEY("Item No.","Variant Code","Drop Shipment","Location Code","Bin Code");
+                               ItemLedgEntry.SETRANGE("Item No.",Item."No.");
+                               Item.COPYFILTER("Variant Filter",ItemLedgEntry."Variant Code");
+                               Item.COPYFILTER("Global Dimension 1 Filter",ItemLedgEntry."Global Dimension 1 Code");
+                               Item.COPYFILTER("Global Dimension 2 Filter",ItemLedgEntry."Global Dimension 2 Code");
+                               Item.COPYFILTER("Location Filter",ItemLedgEntry."Location Code");
+                               Item.COPYFILTER("Bin Filter",ItemLedgEntry."Bin Code");
+
+                               // Start PA036824.29199
+                               IF NOT ItemLedgEntry.FINDFIRST THEN BEGIN
+                               // Stop PA036824.29199
+                               // Start PA035597
+                                IF ColumnDim <> '' THEN
+                                   TransferDim(ItemLedgEntry."Dimension Set ID");
+                               // Stop PA035597
+                                 QuantityOnHandBuffer.INIT;
+                                 QuantityOnHandBuffer."Item No." := Item."No.";
+                                 QuantityOnHandBuffer."Variant Code" := '';
+                                 QuantityOnHandBuffer."Department Code" := '';
+                                 QuantityOnHandBuffer."Make Code" := '';
+                                 QuantityOnHandBuffer."Location Code" := '';
+                                 QuantityOnHandBuffer."Bin Code" := '';
+                                 QuantityOnHandBuffer.Quantity := 0;
+                                 IF ByDept THEN
+                                   QuantityOnHandBuffer."Make Code" := Item."Make Code";
+                                 QuantityOnHandBuffer.INSERT;
+
+                                 CurrReport.BREAK;
+                               END;
+
+                               // Start PA035597
+                               IF ColumnDim = '' THEN
+                                 TempDimBufIn.SETRANGE("Table ID",DATABASE::Item)
+                               ELSE
+                                 TempDimBufIn.SETRANGE("Table ID",DATABASE::"Item Ledger Entry");
+                               TempDimBufIn.SETRANGE("Entry No.");
+                               TempDimBufIn.DELETEALL;
+
+                               // Start PA036824.29199
+                               // Stop PA036824.29199
+                               // Stop PA035597
+                             END;
+
+               OnAfterGetRecord=VAR
+                                  DimEntryNoL@1109400000 : Integer;
+                                BEGIN
+                                  ItemLedgEntry.SETRANGE("Item No.",Item."No.");
+                                  ItemLedgEntry.SETRANGE("Variant Code",ItemLedgEntry."Variant Code");
+                                  ItemLedgEntry.SETRANGE("Drop Shipment",ItemLedgEntry."Drop Shipment");
+                                  IF ByDept THEN
+                                    ItemLedgEntry.SETRANGE("Global Dimension 1 Code",ItemLedgEntry."Global Dimension 1 Code");
+                                  IF ByProj THEN
+                                    ItemLedgEntry.SETRANGE("Global Dimension 2 Code",ItemLedgEntry."Global Dimension 2 Code");
+                                  IF ByLocation THEN
+                                    ItemLedgEntry.SETRANGE("Location Code",ItemLedgEntry."Location Code");
+                                  IF ByBin THEN
+                                    ItemLedgEntry.SETRANGE("Bin Code",ItemLedgEntry."Bin Code");
+
+                                  // Start PA036824.29199
+                                  IF ColumnDim <> '' THEN BEGIN
+                                    ItemLedgEntry.SETRANGE("Entry No.",ItemLedgEntry."Entry No.");
+                                    TransferDim(ItemLedgEntry."Dimension Set ID");
+                                  END;
+                                  // Stop PA036824.29199
+
+                                  ItemLedgEntry.CALCSUMS(Quantity);
+
+                                  WITH QuantityOnHandBuffer DO BEGIN
+                                    IF (ItemLedgEntry.Quantity <> 0) OR ZeroQty THEN BEGIN
+
+                                  // Start PA036824.29199
+                                      TempDimBufIn.SETRANGE("Entry No.",ItemLedgEntry."Dimension Set ID");
+                                      DimEntryNoL := DimBufMgt.FindDimensions(TempDimBufIn);
+                                      IF DimEntryNoL = 0 THEN
+                                        DimEntryNoL := DimBufMgt.InsertDimensions(TempDimBufIn);
+                                  // Stop PA036824.29199
+
+                                      RESET;
+
+                                  // Start PA036824.29199
+                                      SETRANGE("Dimension Entry No.",DimEntryNoL);
+                                  // Stop PA036824.29199
+                                      SETRANGE("Item No.",ItemLedgEntry."Item No.");
+                                      SETRANGE("Variant Code",ItemLedgEntry."Variant Code");
+                                      IF ByDept THEN
+                                        SETRANGE("Department Code",ItemLedgEntry."Global Dimension 1 Code");
+                                      IF ByProj THEN
+                                        SETRANGE("Make Code",ItemLedgEntry."Global Dimension 2 Code");
+                                      IF ByLocation THEN
+                                        SETRANGE("Location Code",ItemLedgEntry."Location Code");
+                                      IF ByBin THEN
+                                        SETRANGE("Bin Code",ItemLedgEntry."Bin Code");
+                                  // Start PA036824.29199
+                                      IF FINDFIRST THEN BEGIN
+                                  // Stop PA036824.29199
+                                        Quantity := Quantity + ItemLedgEntry.Quantity;
+                                        MODIFY;
+                                      END ELSE BEGIN
+                                        "Item No." := ItemLedgEntry."Item No.";
+                                        "Variant Code" := ItemLedgEntry."Variant Code";
+                                  // Start PA036824.29199
+                                        "Dimension Entry No." := DimEntryNoL;
+                                  // Stop PA036824.29199
+                                        IF ByDept THEN
+                                          "Department Code" := ItemLedgEntry."Global Dimension 1 Code";
+                                        IF ByProj THEN
+                                          "Make Code" := ItemLedgEntry."Global Dimension 2 Code";
+                                        IF ByLocation THEN
+                                          "Location Code" := ItemLedgEntry."Location Code";
+                                        IF ByBin THEN BEGIN
+                                          "Location Code" := ItemLedgEntry."Location Code";
+                                          "Bin Code" := ItemLedgEntry."Bin Code";
+                                        END;
+                                        Quantity := ItemLedgEntry.Quantity;
+                                        VALIDATE("Location Code");
+                                        INSERT;
+                                      END;
+                                    END;
+                                  // Start PA036824.29199
+                                    ItemLedgEntry.FINDLAST;
+                                  // Stop PA036824.29199
+                                  END;
+
+                                  // Start PA036824.29199
+                                  IF ColumnDim <> '' THEN
+                                    ItemLedgEntry.SETRANGE("Entry No.");
+                                  // Stop PA036824.29199
+
+                                  Step := 0;
+                                  IF ByBin THEN BEGIN
+                                    Item.COPYFILTER("Bin Filter",ItemLedgEntry."Bin Code");
+                                    Step := ItemLedgEntry.NEXT;
+                                  END;
+                                  IF (Step = 0) AND ByLocation THEN BEGIN
+                                    Item.COPYFILTER("Location Filter",ItemLedgEntry."Location Code");
+                                    Step := ItemLedgEntry.NEXT;
+                                  END;
+                                  IF (Step = 0) AND ByProj THEN BEGIN
+                                    Item.COPYFILTER("Global Dimension 2 Filter",ItemLedgEntry."Global Dimension 2 Code");
+                                    Step := ItemLedgEntry.NEXT;
+                                  END;
+                                  IF (Step = 0) AND ByDept THEN BEGIN
+                                    Item.COPYFILTER("Global Dimension 1 Filter",ItemLedgEntry."Global Dimension 1 Code");
+                                    Step := ItemLedgEntry.NEXT;
+                                  END;
+                                  IF Step = 0 THEN BEGIN
+                                    ItemLedgEntry.SETRANGE("Drop Shipment");
+                                    Step := ItemLedgEntry.NEXT;
+                                  END;
+                                  IF Step = 0 THEN BEGIN
+                                    Item.COPYFILTER("Variant Filter",ItemLedgEntry."Variant Code");
+                                    Step := ItemLedgEntry.NEXT;
+                                  END;
+
+                                  IF Step = 0 THEN
+                                    CurrReport.BREAK;
+                                END;
+                                 }
+
+    { 1471200;0;DataItem;                    ;
+               DataItemTable=Table5028700;
+               OnPreDataItem=VAR
+                               ItemJnlTemplate@1261301 : Record 82;
+                               ItemJnlBatch@1261300 : Record 233;
+                             BEGIN
+                               // Start EU.0012613
+                               IF ("Item Location".GETFILTERS = '') OR (Item.GETFILTERS <> '') THEN
+                                 CurrReport.BREAK;
+                               IF PostingDate = 0D THEN
+                                 ERROR(Text000);
+
+                               ItemJnlTemplate.GET(ItemJnlLine."Journal Template Name");
+                               ItemJnlBatch.GET(ItemJnlLine."Journal Template Name", ItemJnlLine."Journal Batch Name");
+                               IF NextDocNo = '' THEN BEGIN
+                                 IF ItemJnlBatch."No. Series" <> '' THEN BEGIN
+                                   ItemJnlLine.SETRANGE("Journal Template Name", ItemJnlLine."Journal Template Name");
+                                   ItemJnlLine.SETRANGE("Journal Batch Name", ItemJnlLine."Journal Batch Name");
+                                   IF NOT ItemJnlLine.FINDFIRST THEN
+                                     NextDocNo := NoSeriesMgt.GetNextNo(ItemJnlBatch."No. Series", PostingDate, FALSE);
+                                   ItemJnlLine.INIT;
+                                 END;
+                                 IF NextDocNo = '' THEN
+                                   ERROR(Text001);
+                               END;
+
+                               NextLineNo := 0;
+                               Window.OPEN(Text002, "Item Location"."Item No.");
+
+                               IF NOT SkipDim THEN
+                                 SelectedDim.GetSelectedDim(USERID, 3, REPORT::"Calculate Inventory", '', TempSelectedDim);
+
+                               QuantityOnHandBuffer.RESET;
+                               QuantityOnHandBuffer.DELETEALL;
+                               // Stop EU.0012613
+                             END;
+
+               OnAfterGetRecord=VAR
+                                  ItemL@1261300 : Record 27;
+                                BEGIN
+                                  // Start EU.0012613
+                                  ItemL.GET("Item Location"."Item No.");
+                                  // Start EU.0135165.134721
+                                  IF (ItemL."Item Type" <> ItemL."Item Type"::Item) OR ItemL.Blocked THEN
+                                  // Stop EU.0135165.134721
+                                    CurrReport.SKIP;
+                                  Window.UPDATE;
+                                  // Stop EU.0012613
+                                END;
+
+               OnPostDataItem=BEGIN
+                                // Start EU.0012613
+                                QuantityOnHandBuffer.RESET;
+                                IF QuantityOnHandBuffer.FINDSET THEN BEGIN
+                                  REPEAT
+                                    InsertItemJnlLine(
+                                      QuantityOnHandBuffer."Item No.",
+                                      QuantityOnHandBuffer."Variant Code",
+                                      QuantityOnHandBuffer."Dimension Entry No.",
+                                      QuantityOnHandBuffer."Location Code",
+                                      QuantityOnHandBuffer."Bin Code",
+                                      QuantityOnHandBuffer.Quantity,
+                                      QuantityOnHandBuffer."Department Code",
+                                      QuantityOnHandBuffer."Make Code");
+                                  UNTIL QuantityOnHandBuffer.NEXT = 0;
+                                  QuantityOnHandBuffer.DELETEALL;
+                                END;
+                                // Stop EU.0012613
+                              END;
+
+               ReqFilterFields=Location Code,Date Filter,Bin Filter;
+               CalcFields=Inventory }
+
+    { 1261300;1;DataItem;Integer_Location    ;
+               DataItemTable=Table2000000026;
+               DataItemTableView=SORTING(Number);
+               OnPreDataItem=BEGIN
+                               // Start EU.0012613
+                               ItemLedgEntry.RESET;
+                               IF ByDept OR ByProj THEN
+                                 ItemLedgEntry.SETCURRENTKEY("Item No.", "Variant Code", "Drop Shipment", "Global Dimension 1 Code", "Global Dimension 2 Code", "Location Code", "Bin Code")
+                               ELSE
+                                 ItemLedgEntry.SETCURRENTKEY("Item No.", "Variant Code", "Drop Shipment", "Location Code", "Bin Code");
+                               ItemLedgEntry.SETRANGE("Item No.", "Item Location"."Item No.");
+                               ItemLedgEntry.SETRANGE("Location Code", "Item Location"."Location Code");
+                               "Item Location".COPYFILTER("Date Filter", ItemLedgEntry."Posting Date");
+                               "Item Location".COPYFILTER("Bin Filter", ItemLedgEntry."Bin Code");
+
+                               IF NOT ItemLedgEntry.FINDFIRST THEN BEGIN
+                                IF ColumnDim <> '' THEN
+                                   TransferDim(ItemLedgEntry."Dimension Set ID");
+                                 QuantityOnHandBuffer.INIT;
+                                 QuantityOnHandBuffer."Item No." := "Item Location"."Item No.";
+                                 QuantityOnHandBuffer."Variant Code" := '';
+                                 QuantityOnHandBuffer."Department Code" := '';
+                                 QuantityOnHandBuffer."Make Code" := '';
+                                 QuantityOnHandBuffer."Location Code" := '';
+                                 QuantityOnHandBuffer."Bin Code" := '';
+                                 QuantityOnHandBuffer.Quantity := 0;
+                                 IF ByDept THEN
+                                   QuantityOnHandBuffer."Make Code" := "Item Location"."Make Code";
+                                 QuantityOnHandBuffer.INSERT;
+
+                                 CurrReport.BREAK;
+                               END;
+
+                               IF ColumnDim = '' THEN
+                                 TempDimBufIn.SETRANGE("Table ID", DATABASE::"Item Location")
+                               ELSE
+                                 TempDimBufIn.SETRANGE("Table ID", DATABASE::"Item Ledger Entry");
+                               TempDimBufIn.SETRANGE("Entry No.");
+                               TempDimBufIn.DELETEALL;
+                               // Stop EU.0012613
+                             END;
+
+               OnAfterGetRecord=VAR
+                                  DimEntryNoL@1109400000 : Integer;
+                                BEGIN
+                                  // Start EU.0012613
+                                  ItemLedgEntry.SETRANGE("Item No.", "Item Location"."Item No.");
+                                  ItemLedgEntry.SETRANGE("Variant Code", ItemLedgEntry."Variant Code");
+                                  ItemLedgEntry.SETRANGE("Drop Shipment", ItemLedgEntry."Drop Shipment");
+                                  IF ByDept THEN
+                                    ItemLedgEntry.SETRANGE("Global Dimension 1 Code", ItemLedgEntry."Global Dimension 1 Code");
+                                  IF ByProj THEN
+                                    ItemLedgEntry.SETRANGE("Global Dimension 2 Code", ItemLedgEntry."Global Dimension 2 Code");
+                                  IF ByLocation THEN
+                                    ItemLedgEntry.SETRANGE("Location Code", ItemLedgEntry."Location Code");
+                                  IF ByBin THEN
+                                    ItemLedgEntry.SETRANGE("Bin Code", ItemLedgEntry."Bin Code");
+
+                                  IF ColumnDim <> '' THEN BEGIN
+                                    ItemLedgEntry.SETRANGE("Entry No.", ItemLedgEntry."Entry No.");
+                                    TransferDim(ItemLedgEntry."Dimension Set ID");
+                                  END;
+
+                                  ItemLedgEntry.CALCSUMS(Quantity);
+
+                                  IF (ItemLedgEntry.Quantity <> 0) OR ZeroQty THEN BEGIN
+                                    TempDimBufIn.SETRANGE("Entry No.", ItemLedgEntry."Dimension Set ID");
+                                    DimEntryNoL := DimBufMgt.FindDimensions(TempDimBufIn);
+                                    IF DimEntryNoL = 0 THEN
+                                      DimEntryNoL := DimBufMgt.InsertDimensions(TempDimBufIn);
+                                    QuantityOnHandBuffer.RESET;
+
+                                    QuantityOnHandBuffer.SETRANGE("Dimension Entry No.", DimEntryNoL);
+                                    QuantityOnHandBuffer.SETRANGE("Item No.", ItemLedgEntry."Item No.");
+                                    QuantityOnHandBuffer.SETRANGE("Variant Code", ItemLedgEntry."Variant Code");
+                                    IF ByDept THEN
+                                      QuantityOnHandBuffer.SETRANGE("Department Code", ItemLedgEntry."Global Dimension 1 Code");
+                                    IF ByProj THEN
+                                      QuantityOnHandBuffer.SETRANGE("Make Code", ItemLedgEntry."Global Dimension 2 Code");
+                                    IF ByLocation THEN
+                                      QuantityOnHandBuffer.SETRANGE("Location Code", ItemLedgEntry."Location Code");
+                                    IF ByBin THEN
+                                      QuantityOnHandBuffer.SETRANGE("Bin Code", ItemLedgEntry."Bin Code");
+                                    IF QuantityOnHandBuffer.FINDFIRST THEN BEGIN
+                                      QuantityOnHandBuffer.Quantity := QuantityOnHandBuffer.Quantity + ItemLedgEntry.Quantity;
+                                      QuantityOnHandBuffer.MODIFY;
+                                    END ELSE BEGIN
+                                      QuantityOnHandBuffer."Item No." := ItemLedgEntry."Item No.";
+                                      QuantityOnHandBuffer."Variant Code" := ItemLedgEntry."Variant Code";
+                                      QuantityOnHandBuffer."Dimension Entry No." := DimEntryNoL;
+                                      IF ByDept THEN
+                                        QuantityOnHandBuffer."Department Code" := ItemLedgEntry."Global Dimension 1 Code";
+                                      IF ByProj THEN
+                                        QuantityOnHandBuffer."Make Code" := ItemLedgEntry."Global Dimension 2 Code";
+                                      IF ByLocation THEN
+                                        QuantityOnHandBuffer."Location Code" := ItemLedgEntry."Location Code";
+                                      IF ByBin THEN BEGIN
+                                        QuantityOnHandBuffer."Location Code" := ItemLedgEntry."Location Code";
+                                        QuantityOnHandBuffer."Bin Code" := ItemLedgEntry."Bin Code";
+                                      END;
+                                      QuantityOnHandBuffer.Quantity := ItemLedgEntry.Quantity;
+                                      QuantityOnHandBuffer.VALIDATE("Location Code");
+                                      QuantityOnHandBuffer.INSERT;
+                                    END;
+                                  END;
+                                  ItemLedgEntry.FINDLAST;
+
+                                  IF ColumnDim <> '' THEN
+                                    ItemLedgEntry.SETRANGE("Entry No.");
+
+                                  Step := 0;
+                                  IF ByBin THEN BEGIN
+                                    "Item Location".COPYFILTER("Bin Filter", ItemLedgEntry."Bin Code");
+                                    Step := ItemLedgEntry.NEXT;
+                                  END;
+                                  IF (Step = 0) AND ByLocation THEN BEGIN
+                                    ItemLedgEntry.SETRANGE("Location Code","Item Location"."Location Code");
+                                    Step := ItemLedgEntry.NEXT;
+                                  END;
+                                  IF Step = 0 THEN BEGIN
+                                    ItemLedgEntry.SETRANGE("Drop Shipment");
+                                    Step := ItemLedgEntry.NEXT;
+                                  END;
+
+                                  IF Step = 0 THEN
+                                    CurrReport.BREAK;
+                                  // Stop EU.0012613
+                                END;
+                                 }
+
+  }
+  REQUESTPAGE
+  {
+    PROPERTIES
+    {
+      CaptionML=ENU=Calculate Inventory;
+      SaveValues=Yes;
+      OnOpenPage=BEGIN
+                   IF PostingDate = 0D THEN
+                     PostingDate := WORKDATE;
+                   ValidatePostingDate;
+                   // Start PA036824.29199
+                   ColumnDim := DimSelectionBuf.GetDimSelectionText(3,REPORT::"Calculate Inventory",'');
+                   GeneralLedgSetupG.GET;
+                   ByDept := SelectedDim.GET(USERID,3,REPORT::"Calculate Inventory",'',GeneralLedgSetupG."Global Dimension 1 Code");
+                   ByProj := SelectedDim.GET(USERID,3,REPORT::"Calculate Inventory",'',GeneralLedgSetupG."Global Dimension 2 Code");
+                   // Stop PA036824.29199
+                 END;
+
+    }
+    CONTROLS
+    {
+      { 1900000001;0;Container;
+                  ContainerType=ContentArea }
+
+      { 1900000002;1;Group  ;
+                  CaptionML=ENU=Options }
+
+      { 1   ;2   ;Field     ;
+                  CaptionML=ENU=Posting Date;
+                  SourceExpr=PostingDate;
+                  OnValidate=BEGIN
+                               ValidatePostingDate;
+                             END;
+                              }
+
+      { 9   ;2   ;Field     ;
+                  CaptionML=ENU=Document No.;
+                  SourceExpr=NextDocNo }
+
+      { 11  ;2   ;Field     ;
+                  CaptionML=ENU=Items Not on Inventory;
+                  SourceExpr=ZeroQty }
+
+      { 3   ;2   ;Field     ;
+                  CaptionML=ENU=By Department;
+                  SourceExpr=ByDept;
+                  OnValidate=BEGIN
+                               // Start PA036824.29199
+                               SetSelectGlobalDim(GeneralLedgSetupG."Global Dimension 1 Code",ByDept);
+                               // Stop PA036824.29199
+                             END;
+                              }
+
+      { 5   ;2   ;Field     ;
+                  CaptionML=ENU=By Make Code;
+                  SourceExpr=ByProj;
+                  OnValidate=BEGIN
+                               // Start PA036824.29199
+                               SetSelectGlobalDim(GeneralLedgSetupG."Global Dimension 2 Code",ByProj);
+                               // Stop PA036824.29199
+                             END;
+                              }
+
+      { 7   ;2   ;Field     ;
+                  CaptionML=ENU=By Location;
+                  SourceExpr=ByLocation }
+
+      { 13  ;2   ;Field     ;
+                  CaptionML=ENU=By Bin;
+                  SourceExpr=ByBin }
+
+      { 15  ;2   ;Field     ;
+                  Name=ByDimensions;
+                  CaptionML=ENU=By Dimensions;
+                  SourceExpr=ColumnDim;
+                  Editable=FALSE;
+                  OnAssistEdit=BEGIN
+                                 // Start PA036824.29199
+                                 DimSelectionBuf.SetDimSelectionMultiple(3,REPORT::"Calculate Inventory",ColumnDim);
+
+                                 ByDept := SelectedDim.GET(USERID,3,REPORT::"Calculate Inventory",'',GeneralLedgSetupG."Global Dimension 1 Code");
+                                 ByProj := SelectedDim.GET(USERID,3,REPORT::"Calculate Inventory",'',GeneralLedgSetupG."Global Dimension 2 Code");
+                                 // Stop PA036824.29199
+                               END;
+                                }
+
+    }
+  }
+  LABELS
+  {
+  }
+  CODE
+  {
+    VAR
+      Text000@1000 : TextConst 'ENU=Please enter the posting date.';
+      Text001@1001 : TextConst 'ENU=Please enter the document no.';
+      ItemJnlBatch@1004 : Record 233;
+      ItemJnlLine@1005 : Record 83;
+      ItemLedgEntry@1109400002 : Record 32;
+      QuantityOnHandBuffer@1007 : TEMPORARY Record 307;
+      SourceCodeSetup@1008 : Record 242;
+      ItemLocationsG@1109400021 : Record 5028700;
+      DimSetEntry@1010 : Record 480;
+      TempDimSetEntry@1015 : TEMPORARY Record 480;
+      SelectedDim@1011 : Record 369;
+      TempSelectedDim@1012 : TEMPORARY Record 369;
+      TempDimBufIn@1013 : TEMPORARY Record 360;
+      TempDimBufOut@1014 : TEMPORARY Record 360;
+      DimSelectionBuf@1016 : Record 368;
+      GeneralLedgSetupG@1109400001 : Record 98;
+      NoSeriesMgt@1017 : Codeunit 396;
+      DimBufMgt@1018 : Codeunit 411;
+      Window@1019 : Dialog;
+      PostingDate@1020 : Date;
+      NextDocNo@1021 : Code[20];
+      Step@1109400009 : Integer;
+      NextLineNo@1023 : Integer;
+      SkipDim@1037 : Boolean;
+      ColumnDim@1027 : Text[250];
+      ByDept@1109400011 : Boolean;
+      ByProj@1109400012 : Boolean;
+      ByLocation@1109400013 : Boolean;
+      ByBin@1109400014 : Boolean;
+      ZeroQty@1109400015 : Boolean;
+      _INCADEA_@1109400016 : Boolean;
+      Item2G@1109400017 : Record 27;
+      Text002@1109400020 : TextConst 'ENU=Processing items    #1##########';
+      Text003@1003 : TextConst 'ENU=Retain Dimensions';
+      Text004@1025 : TextConst 'ENU=You must not filter on dimensions if you calculate locations with %1 is %2.';
+
+    PROCEDURE SetItemJnlLine@1(VAR NewItemJnlLine@1109400000 : Record 83);
+    BEGIN
+      ItemJnlLine := NewItemJnlLine;
+    END;
+
+    LOCAL PROCEDURE ValidatePostingDate@4();
+    BEGIN
+      ItemJnlBatch.GET(ItemJnlLine."Journal Template Name",ItemJnlLine."Journal Batch Name");
+      IF ItemJnlBatch."No. Series" = '' THEN
+        NextDocNo := ''
+      ELSE BEGIN
+        NextDocNo := NoSeriesMgt.GetNextNo(ItemJnlBatch."No. Series",PostingDate,FALSE);
+        CLEAR(NoSeriesMgt);
+      END;
+    END;
+
+    PROCEDURE InsertItemJnlLine@6(VAR ItemNo@1000 : Code[20];VAR VariantCode2@1001 : Code[10];DimEntryNo2@1002 : Integer;VAR LocationCode2@1109400004 : Code[10];VAR BinCode2@1109400005 : Code[20];VAR Quantity2@1109400006 : Decimal;VAR DeptCode2@1109400000 : Code[10];VAR MakeCode2@1109400001 : Code[20]);
+    VAR
+      ItemLedgEntry@1007 : Record 32;
+      DimValue@1013 : Record 349;
+      LocationL@1109400009 : Record 14;
+      DimMgt@1016 : Codeunit 408;
+      ShelfDefaultL@1109400008 : 'Shelf No.(Item),Shelf No.(Item Location),Bin';
+    BEGIN
+      WITH ItemJnlLine DO BEGIN
+        IF NextLineNo = 0 THEN BEGIN
+          LOCKTABLE;
+          SETRANGE("Journal Template Name","Journal Template Name");
+          SETRANGE("Journal Batch Name","Journal Batch Name");
+          IF FINDLAST THEN
+            NextLineNo := "Line No.";
+
+          SourceCodeSetup.GET;
+        END;
+        NextLineNo := NextLineNo + 10000;
+
+        IF (Quantity2 <> 0) OR ZeroQty THEN BEGIN
+          INIT;
+          "Line No." := NextLineNo;
+          VALIDATE("Posting Date",PostingDate);
+          VALIDATE("Entry Type","Entry Type"::"Positive Adjmt.");
+          VALIDATE("Document No.",NextDocNo);
+          VALIDATE("Item No.",ItemNo);
+          VALIDATE("Variant Code",VariantCode2);
+
+          VALIDATE("Shortcut Dimension 1 Code",DeptCode2);
+          VALIDATE("Shortcut Dimension 2 Code",MakeCode2);
+
+          VALIDATE("Location Code",LocationCode2);
+          VALIDATE("Bin Code",BinCode2);
+          VALIDATE("Source Code",SourceCodeSetup."Phys. Inventory Journal");
+          "Qty. (Phys. Inventory)" := Quantity2;
+          ItemJnlLine."Phys. Inventory" := TRUE;
+          VALIDATE("Qty. (Calculated)",Quantity2);
+          VALIDATE("Unit Amount",0);
+
+          ItemLedgEntry.RESET;
+          ItemLedgEntry.SETCURRENTKEY("Item No.");
+      // Start EU.0012613
+          IF ("Item Location".GETFILTERS = '') OR (Item.GETFILTERS <> '') THEN
+            ItemLedgEntry.SETRANGE("Item No.",Item."No.")
+          ELSE
+            ItemLedgEntry.SETRANGE("Item No.", "Item Location"."Item No.");
+      // Stop EU.0012613
+      // Start PA036824.29199
+          IF ItemLedgEntry.FINDLAST THEN
+      // Stop PA036824.29199
+            "Last Item Ledger Entry No." := ItemLedgEntry."Entry No."
+          ELSE
+            "Last Item Ledger Entry No." := 0;
+
+          Item2G.GET(ItemNo);
+      // Start INC
+          LocationL.SETRANGE(Code,LocationCode2);
+      // Start PA036824.29199
+          IF LocationL.FINDFIRST THEN BEGIN
+      // Stop PA036824.29199
+            ShelfDefaultL := LocationL."Shelf/Bin Default";
+            CASE ShelfDefaultL  OF
+              LocationL."Shelf/Bin Default"::"Shelf No.(Item)":
+                "Shelf/Bin No." := Item2G."Shelf No.";
+              LocationL."Shelf/Bin Default"::"Shelf No.(Item Location)":
+                BEGIN
+      // Start INC
+                  IF ItemLocationsG.GET(ItemNo,LocationCode2) THEN
+      // Stop INC
+                    "Shelf/Bin No." := ItemLocationsG."Shelf No.";
+                END;
+              LocationL."Shelf/Bin Default"::Bin:
+                "Shelf/Bin No." := '';
+            END;
+          END;
+      // Stop INC
+          VALIDATE("Location Code");
+          VALIDATE("Bin Code",BinCode2);
+          "Reason Code" := ItemJnlBatch."Reason Code";
+          INSERT(TRUE);
+        END;
+        IF ColumnDim = '' THEN
+            DimEntryNo2 := CreateDimFromItemDefault;
+
+      // Start PA035597
+        IF DimBufMgt.GetDimensions(DimEntryNo2,TempDimBufOut) THEN BEGIN
+          TempDimSetEntry.RESET;
+          TempDimSetEntry.DELETEALL;
+      // Start PA036824.29199
+          IF TempDimBufOut.FINDSET THEN BEGIN
+      // Stop PA036824.29199
+            REPEAT
+              DimValue.GET(TempDimBufOut."Dimension Code",TempDimBufOut."Dimension Value Code");
+              TempDimSetEntry."Dimension Code" := TempDimBufOut."Dimension Code";
+              TempDimSetEntry."Dimension Value Code" := TempDimBufOut."Dimension Value Code";
+              TempDimSetEntry."Dimension Value ID" := DimValue."Dimension Value ID";
+              IF TempDimSetEntry.INSERT THEN;
+              "Dimension Set ID" := DimMgt.GetDimensionSetID(TempDimSetEntry);
+              DimMgt.UpdateGlobalDimFromDimSetID("Dimension Set ID",
+                "Shortcut Dimension 1 Code","Shortcut Dimension 2 Code");
+              MODIFY;
+            UNTIL TempDimBufOut.NEXT = 0;
+            TempDimBufOut.DELETEALL;
+          END;
+        END;
+      // Stop PA035597
+      END;
+    END;
+
+    PROCEDURE InitializeRequest@2(NewPostingDate@1000 : Date;DocNo@1001 : Code[20];ItemsNotOnInvt@1002 : Boolean;ByDept2@1109400003 : Boolean;ByProj2@1109400004 : Boolean;ByLocation2@1109400005 : Boolean;ByBin2@1109400006 : Boolean);
+    BEGIN
+      PostingDate := NewPostingDate;
+      NextDocNo := DocNo;
+      ZeroQty := ItemsNotOnInvt;
+      ByDept := ByDept2;
+      ByProj := ByProj2;
+      ByLocation := ByLocation2;
+      ByBin := ByBin2;
+      IF NOT SkipDim THEN
+        ColumnDim := DimSelectionBuf.GetDimSelectionText(3,REPORT::"Calculate Inventory",'');
+    END;
+
+    PROCEDURE TransferDim@3(DimSetID@1000 : Integer);
+    BEGIN
+      DimSetEntry.SETRANGE("Dimension Set ID",DimSetID);
+      // Start PA036824.29199
+      IF DimSetEntry.FINDSET THEN BEGIN
+      // Stop PA036824.29199
+        REPEAT
+          IF TempSelectedDim.GET(
+               USERID,3,REPORT::"Calculate Inventory",'',DimSetEntry."Dimension Code")
+          THEN
+            InsertDim(DATABASE::"Item Ledger Entry",DimSetID,DimSetEntry."Dimension Code",DimSetEntry."Dimension Value Code");
+        UNTIL DimSetEntry.NEXT = 0;
+      END;
+    END;
+
+    LOCAL PROCEDURE UpdateBuffer@12(BinCode@1002 : Code[20];NewQuantity@1001 : Decimal);
+    VAR
+      DimEntryNo@1000 : Integer;
+    BEGIN
+      // Start PA036824.29199
+      WITH QuantityOnHandBuffer DO BEGIN
+        IF NOT HasNewQuantity(NewQuantity) THEN
+          EXIT;
+        IF BinCode = '' THEN BEGIN
+          IF ColumnDim <> '' THEN
+            TempDimBufIn.SETRANGE("Entry No.",ItemLedgEntry."Dimension Set ID");
+          DimEntryNo := DimBufMgt.FindDimensions(TempDimBufIn);
+          IF DimEntryNo = 0 THEN
+            DimEntryNo := DimBufMgt.InsertDimensions(TempDimBufIn);
+        END;
+        IF RetrieveBuffer(BinCode,DimEntryNo) THEN BEGIN
+          Quantity := Quantity + NewQuantity;
+          MODIFY;
+        END ELSE BEGIN
+          Quantity := NewQuantity;
+          INSERT;
+        END;
+      END;
+      // Stop PA036824.29199
+    END;
+
+    PROCEDURE RetrieveBuffer@7(BinCode@1000 : Code[20];DimEntryNo@1001 : Integer) : Boolean;
+    BEGIN
+      // Start PA036824.29199
+      WITH QuantityOnHandBuffer DO BEGIN
+        RESET;
+        "Item No." := ItemLedgEntry."Item No.";
+        "Variant Code" := ItemLedgEntry."Variant Code";
+        "Location Code" := ItemLedgEntry."Location Code";
+        "Dimension Entry No." := DimEntryNo;
+        "Bin Code" := BinCode;
+        EXIT(FIND);
+      END;
+      // Stop PA036824.29199
+    END;
+
+    PROCEDURE HasNewQuantity@22(NewQuantity@1000 : Decimal) : Boolean;
+    BEGIN
+      // Start PA036824.29199
+      EXIT((NewQuantity <> 0) OR ZeroQty);
+      // Stop PA036824.29199
+    END;
+
+    PROCEDURE SetSkipDim@8(NewSkipDim@1000 : Boolean);
+    BEGIN
+      SkipDim := NewSkipDim;
+    END;
+
+    LOCAL PROCEDURE SetSelectGlobalDim@1109400033(ByGlobalDimP@1109400000 : Code[20];SelectedP@1109400001 : Boolean);
+    BEGIN
+      //@ This function inserts or deletes in Selected Dimensions table
+      //@ Global Dimensions 1 or 2 according to By Departments(Global Dim 1)
+      //@ and By Make Code(Global Dim 2) values
+      //@ param ByBlobalDim Contains Global Dimension Code
+      //@ param SelectedP Contains the boolean value of Req Page filter
+
+      // Start PA036824.29199
+      IF SelectedP THEN BEGIN
+        IF NOT SelectedDim.GET(USERID,3,REPORT::"Calculate Inventory",
+          '',ByGlobalDimP)
+        THEN BEGIN
+          SelectedDim.INIT;
+          SelectedDim."User ID" := USERID;
+          SelectedDim."Object Type" := 3;
+          SelectedDim."Object ID" := REPORT::"Calculate Inventory";
+          SelectedDim."Dimension Code" := ByGlobalDimP;
+          SelectedDim.INSERT;
+        END;
+      END ELSE BEGIN
+        IF SelectedDim.GET(USERID,3,REPORT::"Calculate Inventory",'',ByGlobalDimP) THEN BEGIN
+          SelectedDim.DELETE;
+                END;
+      END;
+      ColumnDim := DimSelectionBuf.GetDimSelectionText(3,REPORT::"Calculate Inventory",'');
+      // Stop PA036824.29199
+    END;
+
+    LOCAL PROCEDURE CreateDimFromItemDefault@13() DimEntryNo : Integer;
+    VAR
+      DefaultDimension@1000 : Record 352;
+    BEGIN
+      WITH DefaultDimension DO BEGIN
+        SETRANGE("No.",QuantityOnHandBuffer."Item No.");
+      // Start EU.0012613
+        IF ("Item Location".GETFILTERS = '') OR (Item.GETFILTERS <> '') THEN BEGIN
+          SETRANGE("Table ID", DATABASE::Item);
+          IF FINDSET THEN
+            REPEAT
+              InsertDim(DATABASE::Item,0,"Dimension Code","Dimension Value Code");
+            UNTIL NEXT = 0;
+        END ELSE BEGIN
+          SETRANGE("Table ID", DATABASE::"Item Location");
+          IF FINDSET THEN
+            REPEAT
+              InsertDim(DATABASE::"Item Location",0,"Dimension Code","Dimension Value Code");
+            UNTIL NEXT = 0;
+        END;
+      END;
+
+      DimEntryNo := DimBufMgt.InsertDimensions(TempDimBufIn);
+      IF ("Item Location".GETFILTERS = '') OR (Item.GETFILTERS <> '') THEN
+        TempDimBufIn.SETRANGE("Table ID", DATABASE::Item)
+      ELSE
+        TempDimBufIn.SETRANGE("Table ID", DATABASE::"Item Location");
+      TempDimBufIn.DELETEALL;
+      // Stop EU.0012613
+    END;
+
+    LOCAL PROCEDURE InsertDim@56(TableID@1000 : Integer;EntryNo@1001 : Integer;DimCode@1002 : Code[20];DimValueCode@1003 : Code[20]);
+    BEGIN
+      WITH TempDimBufIn DO BEGIN
+        INIT;
+        "Table ID" := TableID;
+        "Entry No." := EntryNo;
+        "Dimension Code" := DimCode;
+        "Dimension Value Code" := DimValueCode;
+        IF INSERT THEN;
+      END;
+    END;
+
+    BEGIN
+    {
+      PA-Number  Date
+      ------------------------------------------------
+      PA031550   26.07.10 Created Request Page
+      PA032178   27.10.10 DD 1798176 docu trigger and version list corrected.
+      PA033067   12.04.12 DR DE Captions implemented
+      PA033259   22.08.12 AI Deletion of Start/Stop History in Code, update copyright and Version List
+      PA033259   18.09.12 DR Variable names changed according to incadea styleguide
+      PA035597   10.02.14 GC NAV 2013 R2 Technical Upgrade
+      PA036824   06.11.14 GK 29199 By Dimensions Filter Inventory Calculation merged from Standard NAV,SetSelectGlobalDim Local function
+                             added to update Selected Dimensions table according to ByDept and ByProj values
+      PA037401   04.02.15 TS Merge NAV 2013 R2 Cumulative Update 15
+      PA039931   28.01.16 GE Extend all make code variables to code20
+      PA039932   02.02.16 GE Merge of PA039931
+      --- 7.1.5 ---
+      EU.0012613 08.02.18 KR Added new dataitem "Item Location" to filter the data based on filters applied on this Data item.
+      --- 7.3.0 ---
+      EU.0015843 13.04.18 KR Merge of EU.0012613
+      --- 7.2.1 ---
+      EU.0105563 09.09.20 AD Downmerge of EU.0015843
+      EU.0135165 08.04.22 GV 134721 Skip Blocked Items in Item Location dataitem in order to avoid error.
+    }
+    END.
+  }
+  RDLDATA
+  {
+  }
+}
+
