@@ -114,30 +114,139 @@ confirm before adding to the repo.
 Census inference validated across all: vendor = PA/EU/INC/PPA/IMM/PS (in both A&B); customer =
 AP/WBL (A-only). Language: ENU base (in both), ENZ customer layer (A-only); C80 has no captions.
 
-## 6. Open work
+## 6. Open work (UPDATED — see §8 for the latest session's detail)
 
-1. **Structural differ (§7b)** — page/report/table-field path. Parse A & B control/dataitem/field
-   trees, cross-reference doc-trigger entries, classify clean-add (auto-graft) vs restructure/modify
-   (DEV). **Greenfield — not started.** Test cases ready: P21 WBL10 field-add (graft-eligible),
-   P21 AP-2362 FactBox restructure (DEV), T36 fields 50090-50097.
+1. **Structural differ** — DONE as the *difference-driven engine* (`diffengine.py`). See §8.
+   Remaining polish: scorer↔field line-range join, RDLC report handling, known-answer harness.
 2. **Scorer threshold tuning** — current PURE 0.75 / VMOD 0.90 conservative defaults, validated on
-   22 blocks; tune from real-run logs. VANILLA_MOD auto-transplant path is implemented but
+   22+ blocks; tune from real-run logs. VANILLA_MOD auto-transplant path implemented but
    **unexercised in the TRANSPLANT direction** (all real VANILLA_MOD scored to DEV).
-3. **Language extract/reattach** — wire the three native cmdlets into the pipeline (compile-only).
-4. **PowerShell port** — port scorer + differ; build the instance-based wrapper around the v14
-   dev-shell (`Export/Import/Compile/Merge-NAVApplicationObject` + the language cmdlets). Provision
-   the merged tier (non-prod gated). Earlier PS module scaffold exists (CalUpgrade.psd1/.psm1 +
-   Config) but predates the type-aware/doc-trigger design and needs revising to match this spec.
+3. **Language extract/reattach** — wire the native cmdlets into the pipeline (compile-only).
+   Mechanics fully resolved this session — see §8.4.
+4. **PowerShell port** — port scorer + engine; build the instance-based wrapper around the v14
+   dev-shell. Earlier PS scaffold predates this design.
 5. **Merge-assist tool** (separate) — ingests dev-resolved objects into the merged set.
-6. **Two-phase orchestration & reporting** — auto → pause at side-by-side review (download
-   decisions.json) → resume; running ledger of every object's verdict + reason.
+6. **Two-phase orchestration & reporting** — auto → pause at side-by-side review → resume; ledger.
 
 ## 7. Working principles (consistent throughout)
 
 - Discover what varies (tags, languages); infer from evidence; auto-proceed when confident; prompt
   only on genuine ambiguity.
 - Do the confident mechanical work; route every uncertain/semantic call to a human.
-- Never silently lose customer code (the one scoped exception — untagged CODE diffs → take B — is
-  explicit and on record).
+- Never silently lose **whole** customer elements; small untagged deltas inside shared nodes are an
+  accepted, on-record risk (caught at compile/UAT).
 - Prefer native NAV cmdlets over re-implementing (language layers, merge, compile).
 - Validate against real objects with known answers before trusting any heuristic.
+- **Diff finds everything; tags justify.** Identify differences FIRST, then justify each by tag
+  layer. Never search by tag first (silently misses untagged/odd-form changes).
+
+---
+
+## 8. Session log — difference-driven engine, brace tags, pipeline stages, language mechanics
+
+This section is the authoritative current state. Read it before continuing.
+
+### 8.0 The A/B/C model (locked terminology — A and B are EQUAL inputs to C)
+- **A** = old vendor base + customer code (customer's current object). Read-only input.
+- **B** = new vendor standard / CU2026Q1. Read-only input.
+- **C** = the MERGE of A and B: B's vendor content + A's customer content, the latter RE-ANCHORED
+  into B's upgraded context. C is the output (built in stage b). A and B are both first-class
+  contributors — C is NOT "B with tweaks". Anchors are LOCATED IN B; customer content TAKEN FROM A;
+  both written into C. B is never mutated.
+
+### 8.1 Pipeline stages (agreed structure; compartmentalised, each emits an inspectable artifact)
+- **Stage 0 — Census & intake.** Discover tag prefixes (vendor/customer) + language layers from
+  A vs B; confirm via a modal (small: paths + confirm inference). Emits the registry.
+- **Stage 1 — Determine changed objects.** Killme→retire, Modified=No→take B, normalised A==B→take B.
+  Object export to .txt + language extract happens at this boundary (see 8.4). Emits changed-set.
+- **Stage 2 — Classify changes.** scorer (code) + diffengine (structural) → per-change verdict
+  (AUTO vs FLAG). NO merging. **This is what we are building now.** Emits the classified ledger.
+- **Stage 3 — Execute auto-merges.** Build C: copy B, transplant/graft customer content at
+  re-anchored positions, canonicalise drifted tags. Emits merged objects + audit.
+- **Stage 4 — Flagged objects.** Side-by-side review, dev resolves, ingest. (Two-phase pause is the
+  3→4 seam.)
+- **Stage 5 — Completion.** Reattach language layer onto C, final integrity check.
+- **Stage 6 — DB/instance, compile, deploy to merged tier (non-prod gated).**
+Python prototype scope = Stage 2 brains (scorer + engine). Stages 0,1,3,5,6 are PowerShell; Stage 4
+is UI+ingest.
+
+### 8.2 Tag grammar — TWO standard incadea styles (both now handled in scorer AND engine)
+- line-comment:  `// Start <tag>` … `// Stop <tag>`
+- block-comment: `{ Start <tag>` …   `Stop <tag>}`  (braces are C/AL block-comment delimiters — the
+  ENTIRE inner content is commented-out/suppressed vendor code). A brace block with no replacement
+  is VANILLA_SUPPRESS → always DEV. CRITICAL bug fixed: brace inner was read as live code →
+  false PURE_ADD→TRANSPLANT, which would have silently REINSTATED vendor logic the customer
+  deliberately suppressed (T5025400 VIN-length check, WBL-006@1360). Scorer now 20/20.
+- Tag matching is hyphen/dot-insensitive: VL `WBL009` == body `WBL-009` (`cf()` canonical-fold).
+  Canonical form = the Version List spelling. Drift (e.g. body WBL-009 vs VL WBL009) is FLAGGED in
+  stage a, and CANONICALISED into C in stage b so the NEXT upgrade reads clean tags. Bare `WBL`
+  stays bare (never invent an id). Customer tags are carried as-is into C (their provenance);
+  vendor/CU/date stamping is NOT done — B already IS the CU standard.
+
+### 8.3 The difference-driven engine (`diffengine.py`) — verdict logic (CURRENT, CORRECT)
+Diff A vs B (language-layer-normalised) into added / removed / changed control/field nodes (node
+identity = control-ID, matched only within the parsed tree — a control-ID can also appear as a
+PROCEDURE name, do not confuse). Then justify each difference by tag layer:
+- A-only node, **customer Description tag** → CARRY (graft WHOLE field; identity = Description tag,
+  NOT an inline code tag — a new field's inner code block travels with it, no separate scorer call).
+- A-only node, **customer doc-trigger entry justifies it** (quoted name in node props) → CARRY
+  (doc-graft). **Doc justification takes PRIORITY over a misleading vendor Description tag** on an
+  A-only field (P5025649: field 1101353001 carries vendor `Description=PA038441` but doc "Add
+  External Document No." is the true justification → CARRY, not vendor-deletion).
+- A-only node, **vendor-tagged only** → TAKE_B (vendor deletion — B dropped it).
+- A-only node, **untagged AND undocumented (whole field)** → DEV (a whole missing field can fail
+  silently; keep safe). e.g. T38 field 70000 "RUID".
+- **changed** shared node: customer code block inside → route to SCORER (TRANSPLANT→CARRY / DEV);
+  customer-tagged caption override (base lang) only → CARRY (carry customer caption forward, e.g.
+  T36 fields 11/100: customer "Customer Order No." vs CU "Your Reference" — MUST keep);
+  customer-tagged other-property change → DEV; no customer tag → TAKE_B (vendor change, incl.
+  untagged delta inside shared node = accepted risk); incoherent → DEV.
+- **removed** (B-only) node / any B-only tag → TAKE_B (new tags ONLY ever appear in B = vendor
+  upgrade; a customer can never introduce a new tag in this 2-object compare).
+
+Validated verdicts on the corpus (ALL CORRECT): T14 WBL 50000 graft; T36 AP001651 50090/91/96/97
+graft; T36 AP2308 11/100 caption-carry; P21 WBL10 doc-graft (anchor after B 5452600); P5025649 WBL
+doc-graft; T38 70000 DEV; code fields (T38 4/43/5050, T39 6/5025358, T5025400 1) → scorer.
+The engine reports a verdict for EVERY diff; most are TAKE_B vendor upgrades (e.g. T36 214 diffs,
+6 customer) — proves it misses nothing.
+
+### 8.4 Language layer — mechanics RESOLVED (do not re-litigate)
+- Determine languages by **census** (in-both→base/development language; A-only→customer layer),
+  **confirm in the modal** (discover-then-confirm; never hardcode, never blind-ask). Validated:
+  base ENU (both A&B), customer ENZ (A-only), clean high-volume signal across all objects.
+- **Sequencing (PowerShell):** object-export-to-.txt FIRST, THEN language-extract. The PS language
+  cmdlets operate on exported .txt, NOT the live DB. (The Object Designer GUI does both at once,
+  which is why "extract before export" felt right — in PS the text export must precede.)
+  - Stage 1: `Export-NAVApplicationObject` A,B → .txt; `Export-NAVApplicationObjectLanguage
+    -Source A.txt -LanguageId ENZ -Destination A-ENZ.txt` (stash); `Remove-NAVApplicationObjectLanguage
+    -Source A.txt -LanguageId ENZ -DevelopmentLanguageId ENU` (strip for clean compare; normalise B too).
+  - Stage 5: `Import-NAVApplicationObjectLanguage -Source C.txt -LanguagePath A-ENZ.txt -Destination
+    C-final/` (reattach; Import does NOT modify source — writes to Destination, consistent with C-is-output).
+  - `-DevelopmentLanguageId` defaults ENU but is inferred (a DEU-base customer needs DEU). Goal is
+    COMPILE-CLEAN reattach only; translation correctness is the local dev's job; no drift reports.
+
+### 8.5 KNOWN ROUGH EDGES (next session's first tasks)
+1. **scorer↔field attribution** in `diffengine._scorer_verdicts` is keyed by TAG, so every block of
+   a tag attaches to every field bearing that tag (verdict still correct — any DEV → field DEV — but
+   the detail is noisy/misattributed). FIX: key scorer blocks by LINE RANGE; match each field's code
+   blocks to scorer blocks within that field's line span.
+2. **RDLC report layout** (R5025607 "Add header and footer") not surfaced — the change lives in the
+   base64 RDLC blob which isn't parsed into nodes. Needs: detect a customer doc entry whose desc
+   matches RDLC/layout keywords → DEV with detail (the differ can't parse binary layout).
+3. **No known-answer harness** for `diffengine.py` yet (scorer has `test_scorer.py`, 20/20; the old
+   `test_structdiff.py` tests the SUPERSEDED tag-driven differ). Build `test_diffengine.py` freezing
+   the §8.3 validated verdicts. Get user sign-off on the verdict list first (was mid-review:
+   T38 bare `WBL` "declared-in-VL-but-located-nowhere"→DEV still needs user confirmation of whether
+   it's real customisation or a stale VL token).
+4. Census prefixes/languages are hardcoded in `diffengine.py __main__` (CUST/VEND/LANGS) — these
+   come from Stage 0 census in production; fine for prototype.
+
+### 8.6 Repo state / files
+- `scorer.py` + `test_scorer.py` — anchor scorer, 20/20. COMMITTED+PUSHED (commit 7ade8fb).
+- `diffengine.py` — difference-driven engine, verdicts correct. COMMITTED (f70773a).
+- `structdiff.py` + `test_structdiff.py` — SUPERSEDED tag-driven differ; kept in history (4443612).
+  Can be deleted once `diffengine.py` has its harness; left for now as reference.
+- Test objects `Cust_*.txt` / `20206Q1_*.txt` committed (NOTE §5 confidentiality flag — confirm
+  these are OK to remain in the repo).
+- PAT used this session should be revoked/regenerated (was pasted in chat).
+- Prototype is Python; production target is PowerShell (must call dev-shell cmdlets).

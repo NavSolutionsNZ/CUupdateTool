@@ -8,6 +8,17 @@ This document is the authoritative spec. It records not just *what* the tool doe
 because each rule was derived from real object evidence (T14, C80, T36, R790, P21, T38, T39,
 T5025400, P5025649, R5025607) and the reasoning matters for anyone extending it.
 
+> **UPDATE (latest session) — read `CONTEXT.md` §8 first.** The structural path described in §7
+> below (tag-driven: start from Version List tags, find where each manifests) has been SUPERSEDED
+> by the **difference-driven engine** (`diffengine.py`): DIFF A vs B FIRST to find every change,
+> THEN justify each difference by tag layer (customer tag → carry; vendor tag/B-only → take B;
+> A-only untagged whole field → DEV; doc trigger justifies untagged structural adds and takes
+> priority over a misleading vendor Description tag). This is strictly safer (the diff cannot
+> silently miss a change). The §7 tag/doc concepts (caption-carry, field-graft, restructure→DEV,
+> RDLC→DEV, doc trigger) all still hold — only the *ordering* changed (difference-first, tag-as-
+> justification). Tag grammar now includes the brace form `{ Start..Stop }` (block comment =
+> suppressed vendor code → DEV). Pipeline is staged 0–6; language mechanics resolved. See CONTEXT §8.
+
 ---
 
 ## 1. Core terminology
