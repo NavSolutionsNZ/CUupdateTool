@@ -114,24 +114,28 @@ confirm before adding to the repo.
 Census inference validated across all: vendor = PA/EU/INC/PPA/IMM/PS (in both A&B); customer =
 AP/WBL (A-only). Language: ENU base (in both), ENZ customer layer (A-only); C80 has no captions.
 
-## 6. Open work (UPDATED — see §8.7 for the latest session's detail)
+## 6. Open work (UPDATED — see §8.8 for the latest session's detail)
 
-1. **Structural differ** — DONE as `diffengine.py`; §8.7 added CODE-section visibility (critical
-   safety fix) so it sees object-level customer code, not just field-section. Remaining polish:
-   field-TRIGGER scorer↔field line-range join (§8.5.1), RDLC report handling (§8.5.2).
-2. **Known-answer harness** — DONE (`test_diffengine.py`, §8.7). Verdict + execution layers, passing.
-3. **Stage 3 execution** — DONE (narrow path: field-graft + code transplant + bookkeeping, §8.7).
-   `execute.py` + `run_batch.py`/`run_one.py`. T14 auto-merges byte-exact; whole-object gate routes
-   uncertain objects to DEV. NEXT execution path: caption-carry (unlocks objects like T36).
-4. **Scorer threshold tuning** — PURE 0.75 / VMOD 0.90 conservative defaults; tune from real-run logs.
-   VANILLA_MOD auto-transplant path implemented but unexercised in TRANSPLANT direction (all real
-   VANILLA_MOD scored to DEV).
-5. **Language extract/reattach** — mechanics resolved (§8.4); fixture-prep stripper built (§8.7, NOT
-   production). Still to WIRE the native cmdlets into the actual pipeline (compile-only).
-6. **PowerShell port** — port scorer + engine + executor; build instance wrapper around v14 dev-shell.
-7. **Merge-assist tool** (separate) — ingests dev-resolved objects into the merged set.
-8. **Two-phase orchestration & reporting** — auto → pause at side-by-side review → resume; ledger.
-   (Batch runner is a first cut: auto-merges + moves done files out, leaves manual worklist in A/B.)
+1. **Prefix census (Stage 0) — NOW TOP PRIORITY.** Last silent-loss gap: customer CODE BLOCKS under
+   an undeclared prefix are missed while the doc trigger carries their changelog entry (object claims
+   a change it lacks). Build a census helper using the DOC TRIGGER as discovery source (it lists every
+   customer tag). See §8.8.
+2. **Structural differ** — DONE (`diffengine.py`); sees field-section + CODE-section code. Caption/
+   OptionCaption/OptionString carry DONE (tag-independent, §8.8). Doc-trigger carry by set-difference
+   DONE (prefix-independent, §8.8). Remaining polish: §8.5.1 field-TRIGGER scorer↔field line-range
+   join; §8.5.2 RDLC report handling.
+3. **Known-answer harness** — DONE (`test_diffengine.py`): T14 (field-graft+code), T36 (DEV-route),
+   T77 (caption/option carry). All reproduce fixtures / gate correctly. scorer 20/20.
+4. **Stage 3 execution** — DONE (field-graft + code transplant + caption/option carry + bookkeeping +
+   doc-trigger set-difference carry). Whole-object gate. `execute.py` + `run_batch.py`/`run_one.py`.
+5. **Scorer threshold tuning** — PURE 0.75 / VMOD 0.90; tune from real-run logs. VANILLA_MOD
+   auto-transplant path unexercised in TRANSPLANT direction (all real VANILLA_MOD → DEV so far).
+6. **Language extract/reattach** — mechanics resolved (§8.4); fixture-prep stripper built (NOT
+   production). Still to WIRE native cmdlets into the pipeline (compile-only).
+7. **PowerShell port** — port scorer + engine + executor; instance wrapper around v14 dev-shell.
+8. **Merge-assist tool** (separate) — ingests dev-resolved objects into the merged set.
+9. **Two-phase orchestration & reporting** — batch runner is a first cut (auto-merge + move done files
+   out, leave manual worklist in A/B). Fuller: pause at side-by-side review → resume; ledger.
 
 ## 7. Working principles (consistent throughout)
 
@@ -336,11 +340,80 @@ cp1252 encoding. NOT production — production language handling stays `Remove-N
 Calibration: settle DESIGN before building (done thoroughly); once spec agreed + tests green, SHIP by
 default — don't gate every commit on another approval. Carry this forward.
 
-**Next session candidates (in rough priority):**
-1. Caption-carry execution path (unlocks partial T36; needs a frozen caption-only fixture case).
-2. A third executable object as a 2nd/3rd known-answer case (ideally multiple code blocks at
-   different anchors, all staying CARRY, to harden multi-insert ordering).
-3. §8.5.1 field-trigger scorer↔field attribution by line range.
-4. §8.5.2 RDLC keyword→DEV path.
-5. Wire Stage 0 census so prefixes aren't hardcoded.
-6. Commit README_run.md if not already in; optionally delete superseded structdiff.
+**Next session candidates (SUPERSEDED — see §8.8 for current state and next steps)**
+
+### 8.8 Session log — caption/option carry, doc-trigger set-difference, prefix-dependency narrowed
+**Outcome: caption/OptionCaption/OptionString now carry customer values on ANY difference (tag-
+independent); doc-trigger entries now carry by SET DIFFERENCE (prefix-independent). Two real bugs from
+a user test (T77) fixed. Prefix-census dependency now narrowed to code-blocks ONLY. Pushed 25acb10,
+8688148. README full run instructions pushed 16947cf.**
+
+**Test case T77 (Table 77 Report Selections) — user ran the batch, reported a wrong auto-merge.**
+Now a frozen fixture/known-answer case (first CAPTION/OPTION-carry execution case). Files in `fixtures/`:
+`EX-T77.stripped.txt`, `CU-T77.stripped.txt`, `MyMerged-T77.stripped.txt` (user's hand-merge = target).
+Two root causes found:
+1. Field 1 "Usage" had customer-modified `OptionCaptionML` + `OptionString` (customer APPENDED Direct
+   Credit options). Tool took B (dropped them). Caption-carry previously (a) required a customer tag,
+   (b) only handled `CaptionML`, not options.
+2. Two customer doc entries (`DC9.00`, `DC14.0`) dropped because `DC` wasn't in the customer prefix
+   list (`AP,WBL`). DC is this customer's Direct-Credit prefix — a CENSUS gap.
+
+**FIX A — caption/option carry, tag-independent (user decision: "always take customer on any caption
+difference — low-risk, easy to identify in testing"):**
+- `diffengine.classify()` changed-node branch: `(cap_changed or opt_changed) and not other_changed`
+  → CARRY `caption` (NO tag required). Covers CaptionML, OptionCaptionML, OptionString.
+- New helpers: `_option_differs`, `_opt_caption`, `_opt_string`, `_vendor_options_are_prefix`.
+  `_nonlang_noncaption_differs` extended to also strip option props (so an option-only change is a
+  caption carry, not "other change" → DEV).
+- **WARN (not gate):** if vendor's OptionString is NOT a prefix of customer's (vendor changed options
+  mid-list → ordinal-shift risk), the row gets `warn=True` and the reason notes it. Carry still
+  proceeds per user rule; flagged for tester to eyeball. (T77: vendor changed nothing mid-list, clean.)
+- `execute.py`: new `caption` executable kind. `_carry_caption(b_lines, engine, node_id)` replaces B's
+  CaptionML/OptionCaptionML/OptionString property lines with A's, IN PLACE (line count preserved so
+  later graft anchors stay valid). Applied as a first pass before line insertions.
+
+**FIX B — doc-trigger carry by SET DIFFERENCE, prefix-independent (user insight: "the doc trigger
+WILL include tags not on the version list; can we just merge the section?"):**
+- `_customer_doc_entries` no longer filters on `_layer(tag)=='customer'`. Now carries ANY A changelog
+  entry whose exact stripped line is absent from B. Rationale: an entry in A-not-B is a customer
+  addition by definition (vendor base can't have entries the older customer object lacks; newer vendor
+  entries live in B and are kept since we build on B). Verified on T77: A-not-B = exactly {DC9.00,
+  DC14.0}; B-not-A = newer vendor EU entries (correctly kept from B). Exact-line match cleanly
+  separates 37 shared / 2 carried, no false dupes.
+- This is a UNION merge (keep all B entries incl. newest vendor; append A's customer entries; then CU
+  stamp last) — NOT "take A's section wholesale" (would lose vendor's new entries) nor "take B's"
+  (would lose customer's).
+
+**PREFIX-DEPENDENCY STATUS (important):** caption/option carry AND doc-trigger carry are now BOTH
+prefix-independent. The customer-prefix census now matters in ONLY ONE place: `// Start TAG` customer
+CODE BLOCKS (the scorer needs to know TAG is a customer prefix to score the block as customer code).
+Objects whose only customisations are fields / captions / options / doc entries are now fully
+prefix-independent. **Proven:** T77 output is byte-identical with vs without `DC` in the prefix list
+(it has no DC code blocks).
+
+**THE REMAINING DANGER (next session priority):** if a customer has tagged CODE BLOCKS under an
+undeclared prefix, those blocks are silently missed AND the doc trigger now faithfully carries the
+changelog entry describing them → merged object CLAIMS a change it doesn't contain. So prefix census
+still matters for any object with customer code blocks. **The doc trigger is the natural DISCOVERY
+source for the prefix list** (it reliably lists every customer tag, incl. undeclared ones).
+
+**Harness now: T14 (field-graft+code, reproduces fixture), T36 (routes to DEV — has DEV-scored code),
+T77 (caption/option carry, reproduces fixture). Per-object customer-prefix overrides added
+(`CUST_OVERRIDE`, T77→{AP,WBL,DC}). `_norm` now collapses internal doc-trigger tabs (TortoiseMerge
+artifact — user's hand-merge had a tab in the CU line; tool emits clean canonical spaces).
+scorer 20/20 still green.**
+
+**Commits this session:** 16947cf (README full run steps), 25acb10 (caption/option carry),
+8688148 (doc-trigger set-difference).
+
+**NEXT SESSION — agreed direction:** build the **prefix-census helper** using the DOC TRIGGER as the
+discovery source. Read the doc trigger across a customer's A-side objects, extract every tag prefix
+with counts, present customer-vs-vendor guess for user confirmation → produces the `--cust` list
+before a batch. This closes the last silent-loss gap (code blocks under undeclared prefixes) and is
+the natural first slice of Stage 0 census.
+Other open items still pending: §8.5.1 field-trigger scorer↔field attribution by line range;
+§8.5.2 RDLC keyword→DEV; a code-block-heavy 4th fixture to harden multi-insert ordering;
+optionally delete superseded structdiff.
+Operating procedure UNTIL census exists: before running a customer, pass their FULL customer-prefix
+set via `--cust` (e.g. this customer = AP,WBL,DC — confirm there are no others). Wrong/missing prefix
+silently drops customer CODE BLOCKS.
