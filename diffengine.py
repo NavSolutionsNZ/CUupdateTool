@@ -1,0 +1,278 @@
+#!/usr/bin/env python3
+"""Difference-driven merge engine (Stage 1/2) — diff finds everything, tag layer justifies each.
+
+Ordering (per design): identify what DIFFERS between A and B FIRST, then justify each
+difference by which tag layer explains it. The diff is exhaustive (cannot silently miss a
+change); the tag is the justification, not the search key.
+
+  A = old vendor base + customer code (current customer object, read-only)
+  B = new vendor standard / CU (read-only)
+  C = merge: B's vendor content + A's customer content (built in stage b; this stage REPORTS)
+
+Justification table for each detected difference:
+  customer tag explains it          -> CARRY  (customer customisation: caption-carry / field-graft /
+                                              code->scorer / restructure->DEV)
+  vendor tag explains it            -> TAKE_B (vendor upgrade change)
+  A-only region, vendor-tagged      -> TAKE_B (vendor deletion: B dropped it)
+  A-only region, customer-tagged    -> CARRY  (customer addition)
+  A-only region, UNTAGGED           -> DEV    (cannot justify; never silently lose/guess)
+  B-only tag/region                 -> TAKE_B (new tags only ever appear in B = vendor upgrade)
+  structural diff, no tag, doc says -> doc-trigger path (pages/reports)
+  unexplained / incoherent          -> DEV    (visible safety net)
+
+Code regions are detected here and routed to the SCORER for the TRANSPLANT/DEV decision;
+the engine is the front-end that finds every difference and dispatches each.
+"""
+import re
+from difflib import SequenceMatcher
+from scorer import Scorer
+
+NODE  = re.compile(r'^\s*\{\s*(\d+)\s*;\s*(\d)?\s*;\s*([A-Za-z]+)')
+DOC   = re.compile(r'^\s*([A-Za-z]{2,4}[-\.]?[\w.\-]*?)\s+(\d{2}\.\d{2}\.\d{2})\s+([A-Z]{1,3})\s+(.*)$')
+ADD_V = re.compile(r'\b(add|added|adds|new|create[d]?)\b', re.I)
+RES_V = re.compile(r'\b(divid|restructur|split|moved?|modif|chang|remov|delet|replac|re-?organi)', re.I)
+RDLC  = re.compile(r'\b(header|footer|layout|rdlc|section|font|logo)\b', re.I)
+
+def norm(l): return re.sub(r'\s+', ' ', l.strip())
+def sim(a, b): return 1.0 if a == b else SequenceMatcher(None, a, b).ratio()
+def load(fn): return open(fn, encoding='latin-1').read().replace('\r\n', '\n').split('\n')
+def cf(tag): return re.sub(r'[-.]', '', tag).upper()
+def prefix(tag):
+    m = re.match(r'^([A-Za-z]+)', tag); return m.group(1).upper() if m else ''
+
+
+class DiffEngine:
+    def __init__(self, custfn, vendfn, customer_prefixes, vendor_prefixes, languages=None):
+        self._custfn = custfn; self._vendfn = vendfn
+        self.A = load(custfn); self.B = load(vendfn)
+        self.CUST = {p.upper() for p in customer_prefixes}
+        self.VEND = {p.upper() for p in vendor_prefixes}
+        self.LANGS = set(languages or [])               # customer language layer codes (e.g. ENZ)
+        alt = '|'.join(sorted(self.CUST | self.VEND, key=len, reverse=True))
+        # both tag styles: line '// Start X' and block '{ Start X .. Stop X}'
+        self.OPEN = re.compile(rf'^\s*(?://|\{{)\s*Start\s+({alt})([\w.\-]*)', re.I)
+        self.STOP = re.compile(rf'^\s*(?://\s*)?Stop\s+({alt})([\w.\-]*)\s*\}}?', re.I)
+        self.INLINE = re.compile(rf'(?://|\{{)\s*Start\s+({alt})([\w.\-]*)', re.I)
+        self.Anodes = self._parse(self.A); self.Bnodes = self._parse(self.B)
+        self.Aby = {n['id']: n for n in self.Anodes}
+        self.Bby = {n['id']: n for n in self.Bnodes}
+        self.doc = self._parse_doc(self.A)
+        self.is_report = self.A[0].strip().upper().startswith('OBJECT REPORT')
+
+    def _parse(self, lines):
+        out = []; i = 0
+        while i < len(lines):
+            m = NODE.match(lines[i])
+            if m:
+                node = {'id': m.group(1), 'level': int(m.group(2) or 0),
+                        'type': m.group(3), 'line': i + 1, 'props': [lines[i]]}
+                depth = lines[i].count('{') - lines[i].count('}'); j = i
+                while depth > 0 and j + 1 < len(lines):
+                    j += 1; node['props'].append(lines[j])
+                    depth += lines[j].count('{') - lines[j].count('}')
+                node['props'] = '\n'.join(node['props']); out.append(node); i = j + 1
+            else:
+                i += 1
+        return out
+
+    def _parse_doc(self, lines):
+        entries = []
+        for l in lines:
+            m = DOC.match(l)
+            if m and not NODE.match(l):
+                entries.append({'tag': m.group(1).strip(), 'date': m.group(2),
+                                'who': m.group(3), 'desc': m.group(4).strip()})
+            elif entries and l.strip().startswith('-'):
+                entries[-1]['desc'] += ' ' + l.strip()
+        return entries
+
+    # --- helpers -------------------------------------------------------------
+    def _layer(self, tag):
+        p = prefix(tag)
+        if p in self.CUST: return 'customer'
+        if p in self.VEND: return 'vendor'
+        return 'unknown'
+
+    def _strip_lang(self, props):
+        """Drop the customer language-layer caption lines for comparison (handled separately)."""
+        out = []
+        for l in props.split('\n'):
+            if any(re.search(rf'\b{re.escape(code)}=', l) for code in self.LANGS):
+                continue
+            out.append(l)
+        return out
+
+    def _node_tags(self, node):
+        """All tags appearing in a node: inline code-block tags + Description= tokens."""
+        tags = []
+        for m in self.INLINE.finditer(node['props']):
+            tags.append(('code', m.group(1) + m.group(2)))
+        for d in re.findall(r'Description=([^;}\n]+)', node['props']):
+            for t in re.split(r'[,\s]+', d):
+                if t and prefix(t): tags.append(('desc', t))
+        return tags
+
+    def _doc_for(self, tag):
+        for e in self.doc:
+            if cf(e['tag']) == cf(tag) and self._layer(e['tag']) == 'customer':
+                return e
+        return None
+
+    def _doc_justifies(self, node):
+        """For an untagged A-only node, find a CUSTOMER doc entry whose quoted name(s) appear
+        in the node's props (pages have zero body tags; the doc trigger is the justification).
+        Returns (entry, tag) or (None, None)."""
+        for e in self.doc:
+            if self._layer(e['tag']) != 'customer':
+                continue
+            names = [x or y for x, y in re.findall(r"'([^']+)'|\"([^\"]+)\"", e['desc'])]
+            if any(nm and nm.lower() in node['props'].lower() for nm in names):
+                return e, e['tag']
+        return None, None
+
+    def _insertion_anchor(self, node):
+        idx = next((k for k, n in enumerate(self.Anodes) if n['id'] == node['id']), None)
+        if idx is None: return None
+        for k in range(idx - 1, -1, -1):
+            s = self.Anodes[k]
+            if s['level'] == node['level'] and s['id'] in self.Bby: return s['id']
+            if s['level'] < node['level']: break
+        return None
+
+    # --- the difference-driven classification -------------------------------
+    def classify(self):
+        rows = []
+        added   = [self.Aby[i] for i in self.Aby if i not in self.Bby]   # in A, not B
+        removed = [self.Bby[i] for i in self.Bby if i not in self.Aby]   # in B, not A
+        changed = [i for i in self.Aby if i in self.Bby
+                   and self._strip_lang(self.Aby[i]['props']) != self._strip_lang(self.Bby[i]['props'])]
+
+        # 1) A-only nodes: justify by tag layer, then by doc trigger
+        for n in added:
+            # for a WHOLE new field, identity is its Description tag (the field-level attribution);
+            # any code block inside travels with the field (no separate scorer anchor needed).
+            desc_ctags = [t for k, t in self._node_tags(n) if k == 'desc' and self._layer(t) == 'customer']
+            code_ctags = [t for k, t in self._node_tags(n) if k == 'code' and self._layer(t) == 'customer']
+            vtags = [t for k, t in self._node_tags(n) if self._layer(t) == 'vendor']
+            ctag = desc_ctags[0] if desc_ctags else (code_ctags[0] if code_ctags else None)
+            doc_e, doc_tag = self._doc_justifies(n)
+            if ctag:
+                anchor = self._insertion_anchor(n)
+                doc = self._doc_for(ctag)
+                restruct = doc and RES_V.search(doc['desc']) and not ADD_V.search(doc['desc'])
+                if anchor and not restruct:
+                    rows.append(self._row(n, ctag, 'CARRY', 'field-graft',
+                                          f'A-only field {n["id"]}, customer tag {ctag}; graft whole field after B {anchor}'))
+                else:
+                    rows.append(self._row(n, ctag, 'DEV', 'field-graft',
+                                          'A-only customer field but ' + ('restructure per doc' if restruct else 'no surviving anchor')))
+            elif doc_e:
+                # customer doc entry justifies it -> takes priority over a (possibly misleading)
+                # vendor Description tag on the field. The doc trigger is the customer's change manifest.
+                anchor = self._insertion_anchor(n)
+                restruct = RES_V.search(doc_e['desc']) and not ADD_V.search(doc_e['desc'])
+                if anchor and not restruct:
+                    rows.append(self._row(n, doc_tag, 'CARRY', 'doc-graft',
+                                          f'A-only field {n["id"]} untagged but doc {doc_tag} confirms add; graft after B {anchor}'))
+                else:
+                    rows.append(self._row(n, doc_tag, 'DEV', 'doc-graft',
+                                          f'doc {doc_tag} ({"restructure" if restruct else "no anchor"}) -> human review'))
+            elif vtags:
+                rows.append(self._row(n, vtags[0], 'TAKE_B', 'vendor-deletion',
+                                      f'A-only field {n["id"]} is vendor-tagged ({vtags[0]}) -> vendor removed it in B'))
+            else:
+                # whole untagged A-only field, no doc -> DEV (can fail silently; keep safe)
+                rows.append(self._row(n, None, 'DEV', 'untagged-A-only',
+                                      f'A-only field {n["id"]} untagged & undocumented -> human review'))
+
+        # 2) B-only nodes: new in B = vendor upgrade -> take B (no action, but reported)
+        for n in removed:
+            rows.append(self._row(n, None, 'TAKE_B', 'vendor-upgrade',
+                                  f'field {n["id"]} only in B -> vendor upgrade content, take B'))
+
+        # 3) changed nodes: justify the change(s) by tag layer
+        for nid in changed:
+            a, b = self.Aby[nid], self.Bby[nid]
+            ctags = [t for k, t in self._node_tags(a) if self._layer(t) == 'customer']
+            has_codeblock = any(self._layer(m.group(1)) == 'customer'
+                                for m in self.INLINE.finditer(a['props']))
+            cap_changed = self._caption_base_differs(a, b)
+            other_changed = self._nonlang_noncaption_differs(a, b)
+
+            if has_codeblock:
+                # customer code lives in this shared node's trigger -> scorer decides per block
+                sv = self._scorer_verdicts(ctags)
+                verdict = 'DEV' if any(v == 'DEV' for _, v in sv) else ('CARRY' if sv else 'SCORER')
+                detail = ', '.join(f'{t}:{v}' for t, v in sv) if sv else 'scorer'
+                rows.append(self._row(a, ctags[0] if ctags else None, verdict, 'code',
+                                      f'field {nid} customer code block -> scorer [{detail}]'))
+            elif ctags and cap_changed and not other_changed:
+                rows.append(self._row(a, ctags[0], 'CARRY', 'caption',
+                                      f'field {nid} caption override (customer {ctags[0]}): carry customer caption forward'))
+            elif ctags and other_changed:
+                rows.append(self._row(a, ctags[0], 'DEV', 'property-modify',
+                                      f'field {nid} customer-tagged property change beyond caption -> human review'))
+            elif not ctags:
+                # change explained by vendor tags / vendor drift -> take B
+                rows.append(self._row(a, None, 'TAKE_B', 'vendor-change',
+                                      f'field {nid} differs but no customer tag -> vendor upgrade, take B'))
+            else:
+                rows.append(self._row(a, ctags[0] if ctags else None, 'DEV', 'unexplained',
+                                      f'field {nid} change not coherently justified -> human review'))
+        return rows
+
+    def _caption_base_differs(self, a, b):
+        def cap(n):
+            m = re.search(r'CaptionML=\[?([A-Z]{3})=([^;\]\n]+)', n['props'])
+            return (m.group(1), norm(m.group(2))) if m else None
+        return cap(a) is not None and cap(a) != cap(b)
+
+    def _nonlang_noncaption_differs(self, a, b):
+        def keyset(n):
+            s = self._strip_lang(n['props'])
+            txt = '\n'.join(s)
+            txt = re.sub(r'CaptionML=\[?[A-Z]{3}=[^;\]\n]+;?', '', txt)   # drop caption
+            txt = re.sub(r'Description=[^;}\n]+', '', txt)                # drop tag-bearing Description
+            return norm(txt)
+        return keyset(a) != keyset(b)
+
+    def _scorer_verdicts(self, tags):
+        """Run the anchor scorer once (cached) and return [(tag, verdict)] for the given
+        customer tags. The scorer owns the TRANSPLANT/DEV decision for code blocks."""
+        if not hasattr(self, '_scache'):
+            self._scache = {}
+            try:
+                sc = Scorer(self._custfn, self._vendfn, self.CUST, self.CUST | self.VEND)
+                for b in sc.blocks():
+                    r = sc.score_block(b)
+                    self._scache.setdefault(cf(r['tag']), []).append(
+                        'CARRY' if r['verdict'] == 'TRANSPLANT' else 'DEV')
+            except Exception:
+                self._scache = {}
+        out = []
+        for t in tags:
+            for v in self._scache.get(cf(t), []):
+                out.append((t, v))
+        return out
+
+    def _row(self, node, tag, verdict, kind, reason):
+        return dict(node=node['id'] if node else None, tag=tag, verdict=verdict,
+                    kind=kind, line=node['line'] if node else None, reason=reason)
+
+
+if __name__ == '__main__':
+    OBJS = [('T14','Cust_T14.txt','20206Q1_T14.txt'), ('C80','Cust_C80.txt','20206Q1_C80.txt'),
+            ('T36','Cust_T36.txt','20206Q1_T36.txt'), ('R790','Cust_R790.txt','20206Q1_R790.txt'),
+            ('P21','Cust_P21.txt','20206Q1_P21.txt'), ('P5025649','Cust_P5025649.txt','20206Q1_P5025649.txt'),
+            ('R5025607','Cust_R5025607.txt','20206Q1_R5025607.txt'), ('T38','Cust_T38.txt','20206Q1_T38.txt'),
+            ('T39','Cust_T39.txt','20206Q1_T39.txt'), ('T5025400','Cust_T5025400.txt','20206Q1_T5025400.txt')]
+    CUST = {'AP', 'WBL'}; VEND = {'PA', 'PPA', 'EU', 'INC', 'IMM', 'PS'}; LANGS = {'ENZ'}
+    for name, a, b in OBJS:
+        e = DiffEngine(a, b, CUST, VEND, LANGS)
+        rows = e.classify()
+        interesting = [r for r in rows if r['verdict'] != 'TAKE_B']
+        print(f"\n#### {name}  [{e.A[0].split(None,2)[1]}]  diffs={len(rows)} (carry/dev/scorer={len(interesting)})")
+        for r in interesting:
+            print(f"   field={str(r['node']):11} {r['verdict']:7} {r['kind']:16} :: {r['reason']}")
+        tb = len(rows) - len(interesting)
+        if tb: print(f"   (+{tb} take-B: vendor upgrades/changes)")
