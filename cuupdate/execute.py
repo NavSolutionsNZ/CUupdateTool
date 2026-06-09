@@ -43,6 +43,39 @@ DOC_INDENT = '      '          # canonical 6-space doc-trigger indent
 DOC_TAG_WIDTH = 11             # tag column width before the date (from fixtures)
 
 
+def describe_blocker(r):
+    """Turn an internal classifier row into one line of operator English.
+
+    Rows carry: kind, verdict, node (field number or None), tag, line, span.
+    We surface what an operator can act on - the customer tag and the line
+    number to jump to in TortoiseMerge - and keep the field number when the
+    block sits in a numbered field. The internal kind/verdict is dropped from
+    the operator text (a compact form is kept for the developer in []).
+    """
+    kind = r.get('kind', 'change')
+    tag = r.get('tag')
+    line = r.get('line')
+    node = r.get('node')
+
+    if kind == 'code':
+        what = f"customer code block {tag!r}" if tag else "customer code block"
+    elif kind == 'caption':
+        what = "caption/option change"
+    elif kind == 'field-graft':
+        what = f"customer field {node}" if node else "customer field"
+    else:
+        what = f"{kind} change"
+
+    where = []
+    if node not in (None, ''):
+        where.append(f"in field {node}")
+    if line:
+        where.append(f"at line {line}")
+    loc = (" " + " ".join(where)) if where else ""
+
+    return f"{what}{loc} - needs manual merge"
+
+
 class GateToDev(Exception):
     """Raised when an object must route to DEV rather than auto-execute."""
     def __init__(self, reasons):
@@ -103,7 +136,9 @@ def execute(custfn, vendfn, cust, vend, langs, params):
     blockers = [r for r in actionable
                 if not (r['verdict'] == 'CARRY' and r['kind'] in _EXECUTABLE_KINDS)]
     if blockers:
-        raise GateToDev([f"{r['kind']}/{r['verdict']} node={r['node']}" for r in blockers])
+        g = GateToDev([describe_blocker(r) for r in blockers])
+        g.rows = blockers
+        raise g
 
     grafts = [r for r in actionable if r['kind'] in ('field-graft', 'code')]
     captions = [r for r in actionable if r['kind'] == 'caption']

@@ -120,8 +120,17 @@ def run(root, cu, initials, date, text='CU upgrade.',
         shown = os.path.relpath(dest, root) if os.path.sep in str(dest) else dest
         lines.append(f"  {stem:10} -> {shown}")
     lines.append(f"\nMANUAL REVIEW / DEV ({len(dev)}):  (left in A/ and B/)")
+    _suffix = " - needs manual merge"
     for stem, why in dev:
-        lines.append(f"  {stem:10} {why}")
+        reasons = [w.strip() for w in why.split(';') if w.strip()]
+        if len(reasons) <= 1:
+            lines.append(f"  {stem:10} {reasons[0] if reasons else why}")
+        else:
+            lines.append(f"  {stem:10} {len(reasons)} blocks need manual merge:")
+            for rsn in reasons:
+                # header already says "need manual merge"; trim the repeat
+                rsn = rsn[:-len(_suffix)] if rsn.endswith(_suffix) else rsn
+                lines.append(f"  {'':10}   - {rsn}")
     if errors:
         lines.append(f"\nERRORS ({len(errors)}):  (left in place)")
         for stem, why in errors:

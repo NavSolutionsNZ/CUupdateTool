@@ -537,3 +537,35 @@ cu.spec` (root, unchanged).
 **Deferred still:** run_batch consuming census_prefixes.json artifact (GUI derives cust live);
 §8.5.1 scorer↔field attribution by line range; §8.5.2 RDLC keyword→DEV; doc-trigger indent is
 spaces vs gold's tab (cosmetic, inside a comment — non-blocking; raised, not yet actioned).
+
+### 8.12 Session log — operator-readable DEV report
+**Outcome: gate reasons translated from internal `code/DEV node=None` jargon into actionable
+operator English (customer tag + line number); multi-block objects now list each block with a
+count header. Harnesses green (scorer 20/20, diffengine PASS, census 5/5).**
+
+**Driver (user):** `node=1 / node=None` means nothing to the operator. Real server report showed
+the DEV section as walls of `code/DEV node=None; code/DEV node=None; ...` - no way to find the
+blocks in TortoiseMerge.
+
+**Root insight:** every classifier row already carries `tag` and `line` (diffengine line 68/_row);
+the report was discarding both in favour of the useless `node` id. `node=None` just means the block
+isn't in a numbered field (trigger/body) - it still has a tag and a line.
+
+**Change:**
+- execute.py: new `describe_blocker(r)` formats a row as operator English -
+  `customer code block 'AP001691' at line 2995` (keeps `in field N` when node is set). GateToDev
+  now carries structured `.rows` too. Gate at the whole-object check uses describe_blocker.
+- run_batch.py: DEV report groups per object - single-block stays one line; multi-block prints
+  `N blocks need manual merge:` then one indented `- ...` per block (count = manual workload).
+- 'not coherently anchored at execution' messages (T80/T81 DC5.00 graft-anchor failures) left
+  as-is - distinct failure class, deliberately not folded in.
+
+**Verified on real DEV objects (T36/T38/T39/T5025400):** tags + lines surface correctly; e.g. T38's
+untagged customer field 70000 change now visible (was hidden behind node=). Wording deemed
+good-enough by user; refine later if needed.
+
+**Note:** the earlier 17/16 vs 20/13 scare was the stale exe, NOT a regression - user re-ran old vs
+new exe, both produced identical results. The 25acb10 DEV->TAKE_B fallback flip is being watched
+as-you-go, not reverted.
+
+**Files:** cuupdate/execute.py, cuupdate/run_batch.py.
