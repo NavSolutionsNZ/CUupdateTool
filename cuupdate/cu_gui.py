@@ -89,6 +89,10 @@ class App:
         ttk.Checkbutton(btns, text="Dry run (classify only, move nothing)",
                         variable=self.dry_var).pack(side='left', padx=12)
 
+        # Busy indicator (shown only while a run is in progress)
+        self.progress = ttk.Progressbar(btns, mode='indeterminate', length=120)
+        self.status = ttk.Label(btns, text="")
+
         # Log
         self.log = scrolledtext.ScrolledText(master, height=20, wrap='word',
                                              font=('Consolas', 9))
@@ -110,6 +114,21 @@ class App:
         self.log.insert('end', s)
         self.log.see('end')
 
+    def _set_busy(self, busy):
+        """Show + animate the spinner while working; hide + stop when done."""
+        if busy:
+            self.run_btn.config(state='disabled')
+            self.status.config(text="Working\u2026")
+            self.status.pack(side='left', padx=(12, 4))
+            self.progress.pack(side='left')
+            self.progress.start(12)          # ms per step
+        else:
+            self.progress.stop()
+            self.progress.pack_forget()
+            self.status.config(text="")
+            self.status.pack_forget()
+            self.run_btn.config(state='normal')
+
     def on_run(self):
         root = self.root_var.get().strip()
         cu = self.cu_var.get().strip()
@@ -128,7 +147,7 @@ class App:
             messagebox.showerror("Missing", "CU token and initials are required.")
             return
 
-        self.run_btn.config(state='disabled')
+        self._set_busy(True)
         self.log.delete('1.0', 'end')
         t = threading.Thread(target=self._work,
                              args=(root, cu, initials, date, text, self.dry_var.get()),
@@ -156,7 +175,7 @@ class App:
             while True:
                 item = self.q.get_nowait()
                 if isinstance(item, tuple) and item and item[0] == "DONE":
-                    self.run_btn.config(state='normal')
+                    self._set_busy(False)
                     r = item[1]
                     if r is not None:
                         n_m, n_d = len(r['merged']), len(r['dev'])
