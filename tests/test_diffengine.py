@@ -31,6 +31,7 @@ LANGS = {'ENZ'}
 # prefix for it. Defaults to CUST when an object isn't listed here.
 CUST_OVERRIDE = {
     'T77': {'AP', 'WBL', 'DC'},
+    'T80': {'AP', 'WBL', 'DC'},
 }
 
 
@@ -58,6 +59,8 @@ EXPECTED_VERDICTS = {
                     (None,  'code',        'DEV'):   3,     # AP001691 x2, AP001651
                     (None,  'code',        'CARRY'): 1}),   # AP2263
     'T77': Counter({(1, 'caption', 'CARRY'): 1}),           # OptionCaption/String carry
+    'T80': Counter({(9,    'caption', 'CARRY'): 1,          # option + Description carry
+                    (None, 'code',    'CARRY'): 1}),        # DC5.00 block transplant
 }
 
 # Objects that should auto-execute, and the fixture they must reproduce.
@@ -68,6 +71,9 @@ EXEC_CASES = {
     'T77': (os.path.join(FIX, 'EX-T77.stripped.txt'),
             os.path.join(FIX, 'CU-T77.stripped.txt'),
             os.path.join(FIX, 'MyMerged-T77.stripped.txt')),
+    'T80': (os.path.join(FIX, 'EX-T80.stripped.txt'),
+            os.path.join(FIX, 'CU-T80.stripped.txt'),
+            os.path.join(FIX, 'MyMerged-T80.stripped.txt')),
 }
 # Objects that should route to DEV in the narrow build (not execute).
 EXEC_GATED_TO_DEV = ['T36']
@@ -80,6 +86,8 @@ OBJ = {
             os.path.join(FIX, '20206Q1_T36.stripped.txt')),
     'T77': (os.path.join(FIX, 'EX-T77.stripped.txt'),
             os.path.join(FIX, 'CU-T77.stripped.txt')),
+    'T80': (os.path.join(FIX, 'EX-T80.stripped.txt'),
+            os.path.join(FIX, 'CU-T80.stripped.txt')),
 }
 
 
@@ -119,7 +127,9 @@ def run():
         got = _verdict_set(name, a, b)
         want = EXPECTED_VERDICTS[name]
         if got != want:
-            fails.append(f"[verdict] {name}: got {sorted(got.items())} want {sorted(want.items())}")
+            _k = lambda kv: (str(kv[0][0]), kv[0][1], kv[0][2])
+            fails.append(f"[verdict] {name}: got {sorted(got.items(), key=_k)} "
+                         f"want {sorted(want.items(), key=_k)}")
         else:
             print(f"[verdict] {name}: OK ({sum(got.values())} rows)")
 

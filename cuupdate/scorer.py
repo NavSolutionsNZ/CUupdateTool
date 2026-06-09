@@ -61,26 +61,42 @@ class Scorer:
         return out
 
     def _anchor(self, idx, step):
-        """walk outward but STOP at a structural boundary. prefer vendor tag, else distinctive code."""
-        j=idx; code=None
-        for _ in range(30):
+        """Walk outward but STOP at a structural boundary. Return the best
+        anchor by NEARNESS, with a tie/quality preference for vendor tags.
+
+        Both extremes were wrong: always preferring a vendor tag mis-anchored
+        blocks whose immediate neighbour is a strong non-vtag marker (e.g.
+        '//INC2.00') while a reused vtag sat several lines further out; always
+        taking the nearest line latched onto weak, ambiguous code lines. So we
+        record the nearest distinctive code line AND the nearest vtag, then
+        prefer the vtag only when it is at least as near as the code line
+        (vtags are more reliable, but not worth reaching far past a closer,
+        equally distinctive neighbour)."""
+        j=idx
+        code=None; code_d=None       # nearest distinctive code line + its distance
+        for d in range(1, 31):
             j+=step
             if j<0 or j>=len(self.A): break
             line=self.A[j]
-            # boundary check: if we hit a boundary, stop searching outward past it
             if BOUNDARY.match(line):
-                # the boundary line itself can be an anchor if distinctive & in B
+                # boundary terminates the search; it may itself anchor
                 k=self._vkey(line)
-                if k and k in self.Bvt: return ('vtag',k)
+                if k and k in self.Bvt:
+                    if code is not None and code_d < d: return ('code', code)
+                    return ('vtag', k)
                 n=norm(line)
-                if n and not BOILER.match(n): return ('boundary',n)
-                return code or ('none',None)
+                if code is not None: return ('code', code)
+                if n and not BOILER.match(n): return ('boundary', n)
+                return ('none', None)
             k=self._vkey(line)
-            if k and k in self.Bvt: return ('vtag',k)
+            if k and k in self.Bvt:
+                # vtag here: prefer a strictly-nearer code anchor if we have one
+                if code is not None and code_d < d: return ('code', code)
+                return ('vtag', k)
             n=norm(line)
             if n and not BOILER.match(n) and not self.is_tag(line) and code is None:
-                code=('code',n)
-        return code or ('none',None)
+                code=n; code_d=d
+        return ('code', code) if code is not None else ('none', None)
 
     def _locate(self,kind,val):
         if kind=='vtag': return self.Bvt.get(val,[])
@@ -104,15 +120,40 @@ class Scorer:
         vmod=(content=='VANILLA_MOD')
         bk,bv=self._anchor(b['start'],-1); ak,av=self._anchor(b['stop'],+1)
         bpos=self._locate(bk,bv); apos=self._locate(ak,av)
-        # POSITION VALIDATION: after must follow before within a bounded window in B
+        # POSITION VALIDATION: after must follow before within a bounded window
+        # in B. When the before-anchor occurs in B more than once (e.g. a vendor
+        # tag reused several times), the FIRST valid pair is not necessarily the
+        # right home for the block - it can anchor far too early. The block sits
+        # immediately before its after-anchor, so prefer the TIGHTEST bracket:
+        # the (pb,pa) pair with the smallest gap. Ties break on the later pb
+        # (closest to pa).
         coherent=False; chosen=None
         block_span=(b['stop']-b['start'])+1
         window=block_span+15
-        for pb in sorted(bpos):
+        best=None
+        for pb in bpos:
             cand=[pa for pa in apos if 0 < pa-pb <= window]
-            if cand: coherent=True; chosen=(pb,min(cand)); break
+            if not cand: continue
+            pa=min(cand); gap=pa-pb
+            key=(gap, -pb)            # smaller gap wins; tie -> larger pb (nearer pa)
+            if best is None or key<best[0]:
+                best=(key,(pb,pa))
+        if best is not None:
+            coherent=True; chosen=best[1]
         type_w={'vtag':1.0,'boundary':0.75,'code':0.6,'none':0.0}
         score=(type_w[bk]+type_w[ak])/2 if coherent else 0.0
+        PURE_T=0.75; VMOD_T=0.90
+        # A chosen bracket that is TIGHT relative to the block size is an
+        # unambiguous home even when the anchor strings recur elsewhere in B:
+        # the tightest-bracket selection above already picked the closest valid
+        # (before,after) pair, so a small gap means the block slots cleanly
+        # between two real neighbours. Credit that so a clean tight code bracket
+        # isn't rejected the way a loose/uncertain one would be. (Only lifts to
+        # the PURE_ADD bar - VANILLA_MOD still needs its originals validated.)
+        if coherent and chosen:
+            gap=chosen[1]-chosen[0]
+            if gap<=block_span+2:
+                score=max(score, PURE_T)
 
         orig_ok=None
         if vmod and coherent and chosen:
@@ -125,7 +166,6 @@ class Scorer:
                     o=norm(re.sub(r'^\s*//\s*','',x))
                     if any(sim(o,y)>=0.95 for y in region): orig_ok=True
         # verdict
-        PURE_T=0.75; VMOD_T=0.90
         if content=='PURE_ADD':
             verdict='TRANSPLANT' if score>=PURE_T else 'DEV'
         elif content=='VANILLA_SUPPRESS':

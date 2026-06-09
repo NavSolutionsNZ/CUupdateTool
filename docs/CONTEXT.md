@@ -569,3 +569,60 @@ new exe, both produced identical results. The 25acb10 DEV->TAKE_B fallback flip 
 as-you-go, not reverted.
 
 **Files:** cuupdate/execute.py, cuupdate/run_batch.py.
+
+### 8.13 Session log — T80 (DC5.00) fix: phantom row, anchor, coupled code+option, Description carry
+**Outcome: T80 now auto-merges byte-exact to the (tool-completed) hand-merge. Five engine changes,
+all suite-green (scorer 20/20, diffengine PASS incl. new T80, census 5/5). T80 added as a permanent
+known-answer fixture (verdict + execution layers).**
+
+**Reported symptom:** T80/T81 gated with "code block DC5.00 not coherently anchored at execution".
+User: this is the 2nd-simplest, extremely common merge shape - must fix. Files uploaded.
+
+**Root causes (several, compounding):**
+1. **Phantom spanless row.** A code block inside a FIELD's trigger was emitted TWICE: once by the
+   per-field loop (keyed to the field's line, no span/anchor) and once by the whole-object scorer
+   (correct span+anchor). The dedup keyed on line number, which differed (field line vs block line),
+   so both survived; the spanless one crashed the gate. Fix: per-field loop no longer emits an
+   executable code row - the scorer covers every Start/Stop block (verified). Added a coverage
+   safety net: a code-bearing field the scorer produced nothing for -> DEV (never silent-drop).
+2. **Anchor mis-selection (two parts).**
+   (a) `score_block` picked the FIRST valid (before,after) bracket; with a vendor tag reused
+       several times in B it anchored far too early. Fix: pick the TIGHTEST bracket (smallest gap,
+       tie -> larger pb nearer pa).
+   (b) `_anchor` preferred a vendor tag even when found far past a nearer distinctive code line
+       (e.g. '//INC2.00' right above the block). Fix: balance - record nearest code line AND
+       nearest vtag; prefer the vtag only when it's at least as near.
+   (c) Side-effect: T39@31 (clean unique adjacent code bracket) then scored 0.6 < PURE_T and
+       regressed to DEV. Fix: credit a TIGHT chosen bracket (gap <= block_span+2) up to PURE_T -
+       the tightest-bracket selection already guarantees the closest valid pair, so a small gap is
+       an unambiguous home even with code-type anchors. Re-verified whole scorer suite 20/20.
+3. **Coupled code + option in one field.** Field 9 (Type) had BOTH a DC5.00 CASE branch (code) AND
+   an extended OptionString/OptionCaptionML + Description tag. The `if has_codeblock:` branch was
+   exclusive, so the option carry never ran. Also `other_changed` is necessarily True for such a
+   field (the trigger differs by the code), which would have blocked the carry's usual
+   `and not other_changed` guard. Fix: in the code-bearing branch, also carry caption/option when
+   it differs, WITHOUT that guard (the "other" change is the code, handled by the scorer).
+   Factored `_caption_row`.
+4. **Description tag-list not carried.** `_carry_caption` replaced CaptionML/OptionCaptionML/
+   OptionString but not `Description=` (where the customer's DC tag lives). Fix: carry A's literal
+   Description value, SUBSET-GUARDED (only when B's tags are a subset of A's, i.e. customer
+   appended; never clobber a vendor-added tag A lacks). Literal carry preserves exact spacing.
+
+**Decisions (user):**
+- Anchor option 1 (tightest bracket) chosen over re-doing `_anchor` discovery wholesale.
+- END; indent: tool does VERBATIM transplant; the hand-merge had re-indented the block's inner
+  END; to its BEGIN scope. User: ignore the indent - it compiles, fixable later. Tool stays
+  verbatim. (Screenshot showed TortoiseMerge treating it as 2 changes - the re-position created
+  the diff.)
+- T80 fixture encoding: REGENERATE gold from the tool, because the user's hand-merge omitted the
+  doc-trigger stamp - the tool's output is actually the more complete artifact, and every
+  substantive part was independently verified against the hand-merge first.
+
+**Files:** cuupdate/scorer.py (anchor + tight-bracket credit), cuupdate/diffengine.py (phantom-row
+removal + coverage net + coupled caption/option), cuupdate/execute.py (Description carry),
+tests/test_diffengine.py (+T80 registration, robust failure-sort), tests/fixtures/{EX,CU,MyMerged}-
+T80.stripped.txt (NEW).
+
+**Watch:** the tight-bracket scoring credit widens what auto-merges (intentional, suite-green, user
+watching DEV->auto as-you-go). T81 was the same "not coherently anchored DC5.00" symptom as T80 -
+not separately verified here but should be fixed by the same changes; confirm on next run.

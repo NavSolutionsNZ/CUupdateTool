@@ -219,6 +219,30 @@ def _carry_caption(b_lines, engine, node_id):
         if m:
             a_prop_lines[m.group(1)] = l
 
+    # Description carries the field's tag list (e.g. 'PA032441,DC'). When the
+    # customer extends a field's options they also add their tag here. Carry
+    # A's Description, but ONLY when B's tags are a subset of A's - i.e. the
+    # customer appended tags and the vendor didn't add one of their own that A
+    # lacks. If the vendor added a tag A doesn't have, leave B's line alone (a
+    # genuine vendor change to preserve; it surfaces as a diff for review).
+    desc_re = _re.compile(r'(Description=)([^}\n]*)')
+
+    def _desc_tags(line):
+        m = desc_re.search(line)
+        return [t.strip() for t in m.group(2).split(',') if t.strip()] if m else None
+
+    # A's Description line (may sit on the same physical line as another prop,
+    # e.g. '...OptionString=...; Description=PA032441,DC }'). Keep A's literal
+    # value substring so exact spacing is preserved on transplant.
+    a_desc_tags = None
+    a_desc_literal = None
+    for l in a_node['props'].split('\n'):
+        m = desc_re.search(l)
+        if m:
+            a_desc_literal = m.group(2)
+            a_desc_tags = [t.strip() for t in m.group(2).split(',') if t.strip()]
+            break
+
     # B node occupies b_lines[start : start+count]
     start = b_node['line'] - 1
     count = b_node['props'].count('\n') + 1
@@ -227,6 +251,13 @@ def _carry_caption(b_lines, engine, node_id):
         m = prop_re.match(out[i])
         if m and m.group(1) in a_prop_lines:
             out[i] = a_prop_lines[m.group(1)]
+        # Description tag-list carry (subset guard): only when the customer
+        # appended tags (B's set is a subset of A's) - never clobber a vendor
+        # tag A lacks. Transplant A's literal value to preserve spacing.
+        if a_desc_tags is not None and desc_re.search(out[i]):
+            b_tags = _desc_tags(out[i]) or []
+            if set(b_tags) <= set(a_desc_tags) and a_desc_tags != b_tags:
+                out[i] = desc_re.sub(lambda mm: mm.group(1) + a_desc_literal, out[i])
     return out
 
 

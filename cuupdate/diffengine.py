@@ -142,6 +142,8 @@ class DiffEngine:
     # --- the difference-driven classification -------------------------------
     def classify(self):
         rows = []
+        fields_with_code = []   # field ids whose trigger holds customer code,
+                                # to assert the scorer pass covered each one
         added   = [self.Aby[i] for i in self.Aby if i not in self.Bby]   # in A, not B
         removed = [self.Bby[i] for i in self.Bby if i not in self.Aby]   # in B, not A
         changed = [i for i in self.Aby if i in self.Bby
@@ -201,27 +203,27 @@ class DiffEngine:
             other_changed = self._nonlang_noncaption_differs(a, b)
 
             if has_codeblock:
-                # customer code lives in this shared node's trigger -> scorer decides per block
-                sv = self._scorer_verdicts(ctags)
-                verdict = 'DEV' if any(v == 'DEV' for _, v in sv) else ('CARRY' if sv else 'SCORER')
-                detail = ', '.join(f'{t}:{v}' for t, v in sv) if sv else 'scorer'
-                rows.append(self._row(a, ctags[0] if ctags else None, verdict, 'code',
-                                      f'field {nid} customer code block -> scorer [{detail}]'))
+                # Customer code lives in this shared node's trigger. The
+                # whole-object scorer pass (below) scans EVERY Start/Stop block
+                # in the object - including ones inside field triggers - and
+                # emits a properly anchored 'code' row for each. Emitting a row
+                # here too produced a duplicate with the FIELD's line and no
+                # span/anchor, which (a) never deduped against the scorer row
+                # (different line) and (b) crashed the gate as "not coherently
+                # anchored". So we do NOT emit an executable code row here; we
+                # just remember the field so we can assert the scorer covered it.
+                fields_with_code.append(nid)
+                # A field can have BOTH a code block AND a caption/option change
+                # (e.g. an OptionString extended alongside a new CASE branch in
+                # its OnValidate). The code is handled by the scorer. Here
+                # 'other_changed' is necessarily True (the trigger differs by the
+                # code block), so we must NOT apply the usual 'and not
+                # other_changed' guard - that other change is explained by the
+                # code. Carry the caption/option whenever it differs.
+                if cap_changed or opt_changed:
+                    rows.append(self._caption_row(a, b, nid, ctags, cap_changed, opt_changed))
             elif (cap_changed or opt_changed) and not other_changed:
-                # Caption / OptionCaption / OptionString difference, nothing else.
-                # RULE (user decision): always carry the customer's caption/option
-                # values on any such difference (tag NOT required) - caption drift
-                # is low-risk and easy to catch in testing. Option lists carry the
-                # customer set; we WARN (not gate) if the vendor changed options
-                # mid-list (their set isn't a prefix of the customer's) since that
-                # can shift option ordinals - flagged for the tester to eyeball.
-                warn = opt_changed and not self._vendor_options_are_prefix(a, b)
-                rows.append(dict(node=a['id'], tag=(ctags[0] if ctags else None),
-                                 verdict='CARRY', kind='caption', line=a['line'],
-                                 reason=f'field {nid} caption/option override: carry customer '
-                                        f'caption/optioncaption/optionstring'
-                                        + (' [WARN: vendor also changed options mid-list]' if warn else ''),
-                                 warn=warn))
+                rows.append(self._caption_row(a, b, nid, ctags, cap_changed, opt_changed))
             elif ctags and other_changed:
                 rows.append(self._row(a, ctags[0], 'DEV', 'property-modify',
                                       f'field {nid} customer-tagged property change beyond caption -> human review'))
@@ -250,7 +252,33 @@ class DiffEngine:
                              reason=f"CODE-section block {sb['tag']} -> scorer "
                                     f"[{sb['content']}:{sb['verdict']} score={sb['score']}]",
                              span=(sb['start'], sb['stop']), chosen=sb['chosen']))
+
+        # Safety net: every field we saw customer code in (above) should now be
+        # covered by at least one scorer-emitted code row. If the scorer somehow
+        # produced none for the whole object yet a field clearly had a customer
+        # block, surface that as DEV rather than silently dropping it.
+        if fields_with_code and not any(r['kind'] == 'code' for r in rows):
+            for nid in fields_with_code:
+                a = self.Aby[nid]
+                ctags = [t for k, t in self._node_tags(a) if self._layer(t) == 'customer']
+                rows.append(self._row(a, ctags[0] if ctags else None, 'DEV', 'code',
+                                      f'field {nid} customer code block not resolved by scorer -> human review'))
         return rows
+
+    def _caption_row(self, a, b, nid, ctags, cap_changed, opt_changed):
+        """Build a caption/option CARRY row. RULE (user decision): always carry
+        the customer's caption/option values on any such difference (tag not
+        required) - caption drift is low-risk and easy to catch in testing.
+        Option lists carry the customer set; WARN (not gate) if the vendor
+        changed options mid-list (their set isn't a prefix of the customer's)
+        since that can shift option ordinals - flagged for the tester."""
+        warn = opt_changed and not self._vendor_options_are_prefix(a, b)
+        return dict(node=a['id'], tag=(ctags[0] if ctags else None),
+                    verdict='CARRY', kind='caption', line=a['line'],
+                    reason=f'field {nid} caption/option override: carry customer '
+                           f'caption/optioncaption/optionstring'
+                           + (' [WARN: vendor also changed options mid-list]' if warn else ''),
+                    warn=warn)
 
     def _caption_base_differs(self, a, b):
         def cap(n):
