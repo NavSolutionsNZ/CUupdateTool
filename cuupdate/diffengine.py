@@ -337,20 +337,3 @@ class DiffEngine:
         return dict(node=node['id'] if node else None, tag=tag, verdict=verdict,
                     kind=kind, line=node['line'] if node else None, reason=reason)
 
-
-if __name__ == '__main__':
-    OBJS = [('T14','Cust_T14.txt','20206Q1_T14.txt'), ('C80','Cust_C80.txt','20206Q1_C80.txt'),
-            ('T36','Cust_T36.txt','20206Q1_T36.txt'), ('R790','Cust_R790.txt','20206Q1_R790.txt'),
-            ('P21','Cust_P21.txt','20206Q1_P21.txt'), ('P5025649','Cust_P5025649.txt','20206Q1_P5025649.txt'),
-            ('R5025607','Cust_R5025607.txt','20206Q1_R5025607.txt'), ('T38','Cust_T38.txt','20206Q1_T38.txt'),
-            ('T39','Cust_T39.txt','20206Q1_T39.txt'), ('T5025400','Cust_T5025400.txt','20206Q1_T5025400.txt')]
-    CUST = {'AP', 'WBL'}; VEND = {'PA', 'PPA', 'EU', 'INC', 'IMM', 'PS'}; LANGS = {'ENZ'}
-    for name, a, b in OBJS:
-        e = DiffEngine(a, b, CUST, VEND, LANGS)
-        rows = e.classify()
-        interesting = [r for r in rows if r['verdict'] != 'TAKE_B']
-        print(f"\n#### {name}  [{e.A[0].split(None,2)[1]}]  diffs={len(rows)} (carry/dev/scorer={len(interesting)})")
-        for r in interesting:
-            print(f"   field={str(r['node']):11} {r['verdict']:7} {r['kind']:16} :: {r['reason']}")
-        tb = len(rows) - len(interesting)
-        if tb: print(f"   (+{tb} take-B: vendor upgrades/changes)")

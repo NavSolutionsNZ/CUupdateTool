@@ -1,6 +1,6 @@
 # Building and running the CU Update launcher
 
-`cu_gui.py` is a double-click launcher for the batch merge. It wraps the
+`cuupdate/cu_gui.py` is a double-click launcher for the batch merge. It wraps the
 existing engine (`run_batch` / `execute` / `diffengine`) and adds nothing to
 the merge logic — it only collects inputs, derives the customer tags from the
 Stage 0 census, runs the batch, and shows the report.
@@ -8,7 +8,7 @@ Stage 0 census, runs the batch, and shows the report.
 ## Run it directly (any machine with Python)
 
 ```
-python cu_gui.py
+python cuupdate/cu_gui.py
 ```
 
 tkinter ships with CPython, so no extra install is needed for local use.

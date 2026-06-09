@@ -6,14 +6,14 @@
 block_cipher = None
 
 a = Analysis(
-    ['cu_gui.py'],
-    pathex=['.'],
+    ['cuupdate/cu_gui.py'],
+    pathex=['cuupdate', '.'],
     binaries=[],
     datas=[],
     # Engine modules are imported normally; list as hiddenimports so the
     # freezer definitely bundles them even if it misses a dynamic import.
     hiddenimports=[
-        'census', 'run_batch', 'execute', 'diffengine', 'scorer', 'structdiff',
+        'census', 'run_batch', 'execute', 'diffengine', 'scorer',
     ],
     hookspath=[],
     runtime_hooks=[],

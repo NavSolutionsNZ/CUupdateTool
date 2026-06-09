@@ -1,4 +1,5 @@
-import sys; sys.path.insert(0,'/home/claude')
+import os, sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'cuupdate'))
 from scorer import Scorer, OBJS, CUST, ALL
 
 # expected verdicts (TRANSPLANT or DEV) keyed by (obj, tag@line)

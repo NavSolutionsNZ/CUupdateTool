@@ -136,10 +136,13 @@ class Scorer:
                     score=round(score,2),coherent=coherent,anchors=(bk,ak),orig_ok=orig_ok,verdict=verdict,
                     chosen=chosen)
 
-OBJS=[('T36','Cust_T36.txt','20206Q1_T36.txt'),('C80','Cust_C80.txt','20206Q1_C80.txt'),
-      ('R790','Cust_R790.txt','20206Q1_R790.txt'),('T14','Cust_T14.txt','20206Q1_T14.txt'),
-      ('T38','Cust_T38.txt','20206Q1_T38.txt'),('T39','Cust_T39.txt','20206Q1_T39.txt'),
-      ('T5025400','Cust_T5025400.txt','20206Q1_T5025400.txt')]
+import os as _os
+_SAMPLES=_os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))),'samples')
+def _s(fn): return _os.path.join(_SAMPLES, fn)
+OBJS=[('T36',_s('Cust_T36.txt'),_s('20206Q1_T36.txt')),('C80',_s('Cust_C80.txt'),_s('20206Q1_C80.txt')),
+      ('R790',_s('Cust_R790.txt'),_s('20206Q1_R790.txt')),('T14',_s('Cust_T14.txt'),_s('20206Q1_T14.txt')),
+      ('T38',_s('Cust_T38.txt'),_s('20206Q1_T38.txt')),('T39',_s('Cust_T39.txt'),_s('20206Q1_T39.txt')),
+      ('T5025400',_s('Cust_T5025400.txt'),_s('20206Q1_T5025400.txt'))]
 CUST={'AP','WBL'}; ALL={'AP','WBL','PA','PPA','EU','INC','IMM','PS'}
 
 if __name__=='__main__':

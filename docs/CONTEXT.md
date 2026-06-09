@@ -505,3 +505,35 @@ for the server (PyInstaller can't cross-compile, so that one build step must run
 samples off the root) was discussed then set aside to keep this change small and reviewable — can
 revisit. Wiring run_batch to consume `census_prefixes.json` artifact still deferred (GUI derives
 cust live instead).
+
+### 8.11 Session log — repo restructure (kill the noise)
+**Outcome: flat root reorganised into cuupdate/ (tool) + tests/ (+fixtures) + samples/ + docs/.
+structdiff retired. All harnesses green from new layout (scorer 20/20, diffengine PASS, census
+5/5). Behaviour-neutral; .exe rebuild path preserved. User delegated all structural decisions.**
+
+**Driver:** root held code, tests, fixtures, 20 flat sample pairs and docs in one namespace —
+hard to tell tool from test data, and unclear what deploys. (Resolved separately: the .exe is
+self-contained post-build and depends on NOTHING in the repo at runtime; only the exe goes to the
+server. The "TheTool" stale-copy bug was a non-git folder predating commit 411500b's option-carry
+fix — fixed by cloning current code and rebuilding.)
+
+**Decisions (Claude's call, user delegated):**
+- `cuupdate/` package (with __init__.py) holds the engine + cu_gui + run_one + strip_lang_fixture.
+- `tests/` holds the 3 harnesses; fixtures moved to `tests/fixtures/`.
+- `samples/` holds the 20 flat Cust_*/20206Q1_* pairs (ad-hoc/scorer/dev use, not runtime).
+- `docs/` holds ARCHITECTURE/CONTEXT/BUILD/README_run; new top-level README.md.
+- `cu.spec` STAYS at root so the build command is unchanged (`pyinstaller cu.spec`); spec entry
+  repointed to `cuupdate/cu_gui.py`, pathex=['cuupdate','.'], structdiff dropped from hiddenimports.
+- `structdiff.py` + `test_structdiff.py` RETIRED (git rm) — dead checkpoint, used by nothing live.
+- `diffengine.py` dev `__main__` block REMOVED (superseded by test_diffengine; referenced flat
+  samples). `scorer.OBJS/CUST/ALL` KEPT (test_scorer depends on them) but OBJS filenames now
+  resolve to ../samples/ via __file__ instead of bare CWD names.
+- Test sys.path shims repointed to ../cuupdate (test_scorer had a hardcoded /home/claude path —
+  fixed). test_diffengine FIX path already resolves to tests/fixtures correctly.
+
+**Run commands now:** GUI `python cuupdate/cu_gui.py`; tests from `tests/`; build `pyinstaller
+cu.spec` (root, unchanged).
+
+**Deferred still:** run_batch consuming census_prefixes.json artifact (GUI derives cust live);
+§8.5.1 scorer↔field attribution by line range; §8.5.2 RDLC keyword→DEV; doc-trigger indent is
+spaces vs gold's tab (cosmetic, inside a comment — non-blocking; raised, not yet actioned).
