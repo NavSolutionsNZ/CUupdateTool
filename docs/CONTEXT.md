@@ -626,3 +626,36 @@ T80.stripped.txt (NEW).
 **Watch:** the tight-bracket scoring credit widens what auto-merges (intentional, suite-green, user
 watching DEV->auto as-you-go). T81 was the same "not coherently anchored DC5.00" symptom as T80 -
 not separately verified here but should be fixed by the same changes; confirm on next run.
+
+### 8.14 Session log — T81: carry customer global VAR declarations
+**Outcome: customer global-variable declarations (present in A's global VAR, absent from B's) now
+carry into the merge. T81 auto-merges with VendBankAccG carried. T81 added as a fixture. Suite green
+(scorer 20/20, diffengine PASS incl T80+T81, census 5/5).**
+
+**Symptom (user):** T81 MyMerged line 2535 has `VendBankAccG@1101353000 : Record 288` - a global var
+the customer added, USED by carried code at lines 401-406, but the tool dropped the DECLARATION.
+Merged object wouldn't compile (var used, never declared).
+
+**Why it was invisible:** the node parser only captures object-level field/key `{ N ; ; }` nodes,
+not CODE-section VAR declarations. Globals usually carry NO Start/Stop tag, so neither the field
+classifier nor the block scorer ever saw it. Silent drop.
+
+**Fix (user decision: option 1 - simplest):** carry any global VAR declaration in A but not in B.
+New in execute.py: `_global_var_decls(lines)` locates the object-level (4-space) `    VAR` section
+and returns {name: line} for its `      name@id : type;` declarations (stops at first non-decl/
+non-blank so it never reaches into a following procedure). `_carry_global_vars(engine)` diffs A vs B
+BY VARIABLE NAME (the @id can differ), returns an insertion (added decls, in A's order, at the end
+of B's global VAR section) or None. Wired into the existing insertions list so it rides the same
+high-to-low application (no index drift). Objects with no customer globals get None -> no change
+(verified: T14/T36/T77/T80 untouched).
+
+**Result:** T81 byte-exact to hand-merge except the agreed-cosmetic END; indent (verbatim, per 8.13)
+and per-run doc-trigger param text. T80 fix from 8.13 also confirmed working on T81 (same DC5.00
+shape) - both auto-merge now; live run showed T80, T81, T5045517 auto-merging.
+
+**Scope note:** carry is by name-diff of the GLOBAL var section only (the single 4-space VAR).
+Local procedure VARs are deliberately not touched. If a customer adds a local var inside a vendor
+procedure that's a different (unhandled) case - none seen yet.
+
+**Files:** cuupdate/execute.py (+_global_var_decls, +_carry_global_vars, wired into execute),
+tests/test_diffengine.py (+T81), tests/fixtures/{EX,CU,MyMerged}-T81.stripped.txt (NEW).

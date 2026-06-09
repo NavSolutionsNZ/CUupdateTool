@@ -32,6 +32,7 @@ LANGS = {'ENZ'}
 CUST_OVERRIDE = {
     'T77': {'AP', 'WBL', 'DC'},
     'T80': {'AP', 'WBL', 'DC'},
+    'T81': {'AP', 'WBL', 'DC'},
 }
 
 
@@ -61,6 +62,9 @@ EXPECTED_VERDICTS = {
     'T77': Counter({(1, 'caption', 'CARRY'): 1}),           # OptionCaption/String carry
     'T80': Counter({(9,    'caption', 'CARRY'): 1,          # option + Description carry
                     (None, 'code',    'CARRY'): 1}),        # DC5.00 block transplant
+    'T81': Counter({(50000, 'field-graft', 'CARRY'): 1,     # AP field
+                    (None,  'code',        'CARRY'): 1}),   # DC5.00 block; global VAR
+                                                            # carry is execution-layer
 }
 
 # Objects that should auto-execute, and the fixture they must reproduce.
@@ -74,6 +78,9 @@ EXEC_CASES = {
     'T80': (os.path.join(FIX, 'EX-T80.stripped.txt'),
             os.path.join(FIX, 'CU-T80.stripped.txt'),
             os.path.join(FIX, 'MyMerged-T80.stripped.txt')),
+    'T81': (os.path.join(FIX, 'EX-T81.stripped.txt'),
+            os.path.join(FIX, 'CU-T81.stripped.txt'),
+            os.path.join(FIX, 'MyMerged-T81.stripped.txt')),
 }
 # Objects that should route to DEV in the narrow build (not execute).
 EXEC_GATED_TO_DEV = ['T36']
@@ -88,6 +95,8 @@ OBJ = {
             os.path.join(FIX, 'CU-T77.stripped.txt')),
     'T80': (os.path.join(FIX, 'EX-T80.stripped.txt'),
             os.path.join(FIX, 'CU-T80.stripped.txt')),
+    'T81': (os.path.join(FIX, 'EX-T81.stripped.txt'),
+            os.path.join(FIX, 'CU-T81.stripped.txt')),
 }
 
 

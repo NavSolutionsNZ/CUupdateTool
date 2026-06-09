@@ -121,6 +121,59 @@ def _doc_trigger_line(cu_token, merge_date_dots, initials, text):
     return f'{DOC_INDENT}{tag}{merge_date_dots} {initials} {text}'
 
 
+def _global_var_decls(lines):
+    """Locate the object-level (global) VAR section and return
+    (start_idx, end_idx, {name: full_line}). end_idx is the index of the first
+    line after the declarations (a PROCEDURE/closing brace), i.e. the insert
+    point. Declarations look like '      <name>@<id> : <type>;'. Returns
+    (None, None, {}) if no global VAR section is found.
+
+    The global VAR is the first top-level '    VAR' (four-space indent). Local
+    VARs inside procedures are indented deeper or sit after a PROCEDURE header;
+    we stop collecting at the first non-decl, non-blank line so we never reach
+    into a following procedure."""
+    decl = re.compile(r'^      (\w+)@(\d+)\s*:\s*.+;\s*$')
+    try:
+        i = next(k for k, l in enumerate(lines) if l.rstrip() == '    VAR')
+    except StopIteration:
+        return None, None, {}
+    decls = {}
+    j = i + 1
+    last_decl = i
+    while j < len(lines):
+        l = lines[j]
+        m = decl.match(l)
+        if m:
+            decls[m.group(1)] = l
+            last_decl = j
+        elif l.strip() == '':
+            pass
+        else:
+            break
+        j += 1
+    return i, last_decl + 1, decls
+
+
+def _carry_global_vars(engine):
+    """Return (after_idx, [decl lines]) to insert customer-added global VAR
+    declarations (present in A's global VAR, absent from B's) at the end of B's
+    global VAR section - or None if there are none. Carries the declarations a
+    customer code block may depend on but which carry no Start/Stop tag of their
+    own. Matched by variable NAME (the @id can differ); a name in A not in B is
+    a customer addition."""
+    _, _, a_decls = _global_var_decls(engine.A)
+    b_start, b_end, b_decls = _global_var_decls(engine.B)
+    if b_start is None:
+        return None
+    added = [name for name in a_decls if name not in b_decls]
+    if not added:
+        return None
+    # preserve A's declaration order
+    order = {l: k for k, l in enumerate(engine.A)}
+    added_lines = [a_decls[n] for n in sorted(added, key=lambda n: order.get(a_decls[n], 0))]
+    return (b_end, added_lines)
+
+
 def execute(custfn, vendfn, cust, vend, langs, params):
     """Run the engine, apply the gate, and return merged object text (LF) for an
     auto-executable object. Raise GateToDev otherwise.
@@ -180,6 +233,13 @@ def execute(custfn, vendfn, cust, vend, langs, params):
         else:
             raise GateToDev([f"unexpected executable kind {r['kind']}"])
         insertions.append((after, block))
+
+    # --- carry customer global VAR declarations (e.g. a Record var a carried
+    # code block depends on). Present in A's global VAR, absent from B's. Rides
+    # the same insertion list so the high-to-low application keeps indices sane.
+    var_ins = _carry_global_vars(e)
+    if var_ins is not None:
+        insertions.append(var_ins)
 
     out = list(b_lines)                                 # caption-carried B (LF)
     for after, block in sorted(insertions, key=lambda x: x[0], reverse=True):
