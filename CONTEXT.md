@@ -417,3 +417,54 @@ optionally delete superseded structdiff.
 Operating procedure UNTIL census exists: before running a customer, pass their FULL customer-prefix
 set via `--cust` (e.g. this customer = AP,WBL,DC — confirm there are no others). Wrong/missing prefix
 silently drops customer CODE BLOCKS.
+
+### 8.9 Session log — Stage 0 prefix census (`census.py`)
+**Outcome: Stage 0 prefix census built and tested. Determines the customer-tag set for a job by
+reading Version List headers. `census.py` + `test_census.py` added (5/5 groups pass). scorer 20/20
+and diffengine harness still green.**
+
+**CORRECTION to §8.8 framing (important):** §8.8 named the DOCUMENTATION TRIGGER as the prefix
+discovery source. That is wrong. The **Version List** header field is the authoritative, curated
+source — it is where the customer's declared tags live. The doc trigger is the OPPOSITE: the one
+place we merge blind by set-difference precisely because we do NOT mine it for prefixes (§8.8's
+caption/doc-trigger carry work stands; only the "doc trigger = census source" claim is superseded).
+
+**The census's one job (user's words):** determine customer tags. Downstream, when the scorer hits a
+merge decision on a `// Start TAG` block, it checks whether TAG is a customer tag → if so the customer
+code is carried into the merge. The census does NOT make merge decisions, does not know about code
+blocks, does not care where a tag appears. It hands the scorer a membership set, nothing more.
+
+**Rules (locked):**
+- Read `Version List=...;` from each A-side object's OBJECT-PROPERTIES.
+- Split on commas, strip whitespace, drop empties / trailing `;`.
+- Prefix = leading `[A-Za-z]+` run, uppercased (NAVW1.x→NAVW, N.7.2.1→N, AP001651→AP, WBL→WBL,
+  ESKER1.0→ESKER).
+- **Option A vendor filter (user choice):** a token is vendor if the raw uppercased token STARTS WITH
+  any exclusion entry. Default exclusions: `PA,EU,PPA,N.7,AR,LA,NAV,INC`. The filter is a CONVENIENCE
+  to keep the candidate list clean — NOT a merge-decision set, and deliberately NOT coupled to
+  run_batch's `--vend`. A prefix is vendor only if EVERY token under it is vendor; one
+  customer-looking token makes the whole prefix a candidate. Nothing auto-runs off the census; the
+  human confirms the proposed `--cust`.
+- Undeclared-prefix danger (the §8.8 worry) is RESOLVED by convention, not code: mis-tagged customer
+  code that escapes the census is removed/identified on test or compile and re-added with correct
+  tags. Census authority rests on the Version List being the curated truth; defects surface
+  downstream, so this doubles as housekeeping.
+
+**Discovery:** walks `A/<Type>/EX-*.txt` (matches run_batch). `--loose` also scans flat `Cust_*.txt`
+under root (pre-A/-tree convenience; used to validate against the repo's 10 sample objects).
+
+**Validated against the 10 repo objects:** customer tags = AP, ESKER, WBL; excluded vendor = N, NAVW.
+ESKER (from T38, `ESKER1.0`) confirmed by user as a real customer tag — the census surfaced it, user
+made the call (exactly the intended confirm-step behaviour).
+
+**Output:** plain confirmable table (customer tags + counts, excluded-vendor line) + optional JSON
+artifact (`--out census_prefixes.json`) carrying `cust` plus per-prefix evidence (tokens/objects) for
+audit. NOT auto-consumed by run_batch — kept as an inspectable boundary; user confirms then passes
+`--cust`. Wiring a `--census` reader into run_batch is a deferred separate change (not done; awaiting
+direction).
+
+**Files:** `census.py` (NEW), `test_census.py` (NEW, 5 groups). Committed + pushed this session.
+
+**Next-session candidates:** optionally wire run_batch `--census` artifact reader; §8.5.1
+field-trigger scorer↔field attribution by line range; §8.5.2 RDLC keyword→DEV; code-block-heavy 4th
+fixture; optionally delete superseded structdiff.
