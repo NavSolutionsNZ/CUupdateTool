@@ -468,3 +468,40 @@ direction).
 **Next-session candidates:** optionally wire run_batch `--census` artifact reader; §8.5.1
 field-trigger scorer↔field attribution by line range; §8.5.2 RDLC keyword→DEV; code-block-heavy 4th
 fixture; optionally delete superseded structdiff.
+
+### 8.10 Session log — double-click launcher (`cu_gui.py`) + freezable exe
+**Outcome: GUI launcher wrapping the existing batch, plus PyInstaller spec to freeze a
+standalone server .exe. `run_batch` refactored (extract-only) to expose a callable `run()`.
+All harnesses green (scorer 20/20, diffengine, census 5/5); CLI output unchanged; end-to-end
+GUI code path merges T14 correctly.**
+
+**Driver:** the tool was too disconnected to run end to end. Operator wants a double-click
+executable. Server constraint: **no Python on the server**, but a **bundled PyInstaller .exe is
+acceptable** (user confirmed). Work happens on the server folders in place — no file moving.
+
+**Decisions (user-confirmed):**
+- Operator picks ONE **job folder** that contains `A\` and `B\` (this is what `run_batch` needs —
+  do NOT redesign run_batch; match its inputs). Not two independent A/B pickers.
+- **Folder-to-folder batch** (run_batch), not single-object.
+- Census runs **automatically** off A's Version Lists to fill `--cust` (option a, silent — a
+  deliberate departure from the usual confirm-before-acting boundary, accepted for convenience).
+- Prompt for CU token, initials, changelog text (default "CU upgrade."), date (default today).
+- DEV/manual routing is **already handled** by run_batch: auto-merged → `Merged\` + sources moved
+  to `AautoMerged\`/`BautoMerged\`; DEV-gated/errors left in place in `A\`/`B\` = the manual queue.
+  GUI adds NO routing logic of its own.
+- GUI is a **thin wrapper** — one source of truth; the engine/harnesses still own correctness.
+
+**`run_batch` change is extract-only:** body moved into `run(root, cu, initials, date, text=...,
+cust=..., vend=..., langs=..., dry_run=...)` which builds the report as a string and returns
+`(report, results_dict)`; `main()` now just parses args and calls `run()`. Behaviour and CLI output
+verified identical. `cust/vend/langs` accept comma strings or iterables.
+
+**Files:** `cu_gui.py` (NEW, tkinter; imports census + run_batch), `cu.spec` (NEW, PyInstaller),
+`BUILD.md` (NEW, build/run/usage), `run_batch.py` (refactored). tkinter ships with CPython so the
+GUI runs locally as-is; freeze with `pyinstaller cu.spec` on a Windows box → single `dist\CUupdate.exe`
+for the server (PyInstaller can't cross-compile, so that one build step must run on Windows).
+
+**Deferred / not done:** the full package restructure (modules into a `cuupdate/` package, jobs/
+samples off the root) was discussed then set aside to keep this change small and reviewable — can
+revisit. Wiring run_batch to consume `census_prefixes.json` artifact still deferred (GUI derives
+cust live instead).

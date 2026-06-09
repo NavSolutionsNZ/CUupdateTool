@@ -61,25 +61,29 @@ def _moved(root, side, type_sub, src):
     shutil.move(src, os.path.join(dest_dir, os.path.basename(src)))
 
 
-def main():
-    p = argparse.ArgumentParser()
-    p.add_argument('--root', default='.')
-    p.add_argument('--cu', required=True)
-    p.add_argument('--initials', required=True)
-    p.add_argument('--text', default='CU upgrade.')
-    p.add_argument('--date', required=True, help='DD/MM/YY')
-    p.add_argument('--cust', default='AP,WBL')
-    p.add_argument('--vend', default='PA,PPA,EU,INC,IMM,PS')
-    p.add_argument('--langs', default='ENZ')
-    p.add_argument('--dry-run', action='store_true', help='classify only, move nothing')
-    a = p.parse_args()
+def run(root, cu, initials, date, text='CU upgrade.',
+        cust='AP,WBL', vend='PA,PPA,EU,INC,IMM,PS', langs='ENZ',
+        dry_run=False):
+    """Run the Stage 3 batch over <root>/A and <root>/B.
 
-    root = os.path.abspath(a.root)
-    CUST = {s.strip().upper() for s in a.cust.split(',') if s.strip()}
-    VEND = {s.strip().upper() for s in a.vend.split(',') if s.strip()}
-    LANGS = {s.strip().upper() for s in a.langs.split(',') if s.strip()}
-    params = dict(cu_token=a.cu, initials=a.initials, text=a.text,
-                  merge_date=a.date, merge_date_dots=a.date.replace('/', '.'))
+    Behaviour is identical to the CLI: auto-merged objects are written to
+    Merged/ and their sources moved to AautoMerged/ + BautoMerged/; DEV-gated
+    and error objects are left in place. Returns (report_str, results_dict)
+    where results_dict has keys merged/dev/errors/unmatched/pairs so callers
+    (CLI, GUI) can both print the report and inspect counts. Accepts cust/vend/
+    langs as comma strings or as iterables of prefixes.
+
+    Mutates the filesystem under root (moves/writes) unless dry_run=True.
+    """
+    def _as_set(v):
+        if isinstance(v, str):
+            return {s.strip().upper() for s in v.split(',') if s.strip()}
+        return {str(s).strip().upper() for s in v if str(s).strip()}
+
+    root = os.path.abspath(root)
+    CUST, VEND, LANGS = _as_set(cust), _as_set(vend), _as_set(langs)
+    params = dict(cu_token=cu, initials=initials, text=text,
+                  merge_date=date, merge_date_dots=date.replace('/', '.'))
 
     pairs, unmatched = find_pairs(root)
     merged, dev, errors = [], [], []
@@ -94,7 +98,7 @@ def main():
             errors.append((stem, f'{type(e).__name__}: {e}'))
             continue
 
-        if a.dry_run:
+        if dry_run:
             merged.append((stem, '(dry-run, not written)'))
             continue
 
@@ -107,23 +111,48 @@ def main():
         _moved(root, 'B', type_sub, b_path)
         merged.append((stem, out_path))
 
-    # ---- report ----
-    print(f"\n=== Batch complete: {len(pairs)} pairs "
-          f"({len(unmatched)} unmatched A files) ===")
-    print(f"\nAUTO-MERGED ({len(merged)}):")
+    # ---- report (built as a string so GUI and CLI share one source) ----
+    lines = []
+    lines.append(f"\n=== Batch complete: {len(pairs)} pairs "
+                 f"({len(unmatched)} unmatched A files) ===")
+    lines.append(f"\nAUTO-MERGED ({len(merged)}):")
     for stem, dest in merged:
-        print(f"  {stem:10} -> {os.path.relpath(dest, root) if os.path.sep in dest else dest}")
-    print(f"\nMANUAL REVIEW / DEV ({len(dev)}):  (left in A/ and B/)")
+        shown = os.path.relpath(dest, root) if os.path.sep in str(dest) else dest
+        lines.append(f"  {stem:10} -> {shown}")
+    lines.append(f"\nMANUAL REVIEW / DEV ({len(dev)}):  (left in A/ and B/)")
     for stem, why in dev:
-        print(f"  {stem:10} {why}")
+        lines.append(f"  {stem:10} {why}")
     if errors:
-        print(f"\nERRORS ({len(errors)}):  (left in place)")
+        lines.append(f"\nERRORS ({len(errors)}):  (left in place)")
         for stem, why in errors:
-            print(f"  {stem:10} {why}")
+            lines.append(f"  {stem:10} {why}")
     if unmatched:
-        print(f"\nUNMATCHED A FILES (no CU- counterpart):")
+        lines.append("\nUNMATCHED A FILES (no CU- counterpart):")
         for u in unmatched:
-            print(f"  {os.path.relpath(u, root)}")
+            lines.append(f"  {os.path.relpath(u, root)}")
+
+    report = "\n".join(lines)
+    results = dict(merged=merged, dev=dev, errors=errors,
+                   unmatched=unmatched, pairs=pairs)
+    return report, results
+
+
+def main():
+    p = argparse.ArgumentParser()
+    p.add_argument('--root', default='.')
+    p.add_argument('--cu', required=True)
+    p.add_argument('--initials', required=True)
+    p.add_argument('--text', default='CU upgrade.')
+    p.add_argument('--date', required=True, help='DD/MM/YY')
+    p.add_argument('--cust', default='AP,WBL')
+    p.add_argument('--vend', default='PA,PPA,EU,INC,IMM,PS')
+    p.add_argument('--langs', default='ENZ')
+    p.add_argument('--dry-run', action='store_true', help='classify only, move nothing')
+    a = p.parse_args()
+
+    report, _ = run(a.root, a.cu, a.initials, a.date, text=a.text,
+                    cust=a.cust, vend=a.vend, langs=a.langs, dry_run=a.dry_run)
+    print(report)
 
 
 if __name__ == '__main__':
