@@ -278,14 +278,25 @@ Remaining caveats:
   surfaces BOTH field-section AND object-level/CODE-section customer code (the latter was a prior
   silent-loss gap — fixed). `execute.py` narrow path auto-merges field-graft + code-block transplants
   with full bookkeeping (header + doc-trigger), under a whole-object gate (all-CARRY or whole object →
-  DEV). `test_diffengine.py` freezes verdict + execution (byte-exact vs hand-merged T14). `run_batch.py`
-  drives a whole job: auto-merged objects written to Merged/ and moved out of A/B into AautoMerged/
-  BautoMerged/; manual objects left in A/B as the worklist. See CONTEXT §8.7.
-  - Narrow path covers field-graft + clean code transplant. NOT yet executing: caption-carry (next),
-    VANILLA_MOD/SUPPRESS (DEV by rule), RDLC layout (DEV).
+  DEV). `test_diffengine.py` freezes verdict + execution (byte-exact vs hand-merged fixtures).
+  `run_batch.py` drives a whole job: auto-merged objects written to Merged/ and moved out of A/B into
+  AautoMerged/ BautoMerged/; manual objects left in A/B as the worklist. See CONTEXT §8.7–§8.14.
+- **Execute path now covers (all fixtured):** field-graft; clean code transplant; **caption / option
+  carry** (CaptionML/OptionCaptionML/OptionString, plus the field's `Description=` tag list, subset-
+  guarded) — §8.8, §8.13; **coupled code + option in one field** (a field with both a code block and
+  an option change carries both) — §8.13; **customer global VAR declarations** (present in A's global
+  VAR, absent from B's — carried so dependent code compiles) — §8.14. Anchor selection picks the
+  tightest valid bracket and balances nearest-code vs vendor-tag anchors (§8.13).
+  - NOT yet executing: VANILLA_MOD/SUPPRESS (DEV by rule); RDLC layout (DEV); local (in-procedure) VAR
+    additions; page/report structural diff beyond field-grafts.
+- **Stage 0 census BUILT:** `census.py` derives the customer-tag set from each object's Version List
+  (leading-alpha prefix, vendor-prefix filter); `cu_gui.py` runs it automatically to fill `--cust`.
+  See §8.9. (Languages still default-driven; full language census per §4 not yet wired.)
+- **GUI + deployment:** `cu_gui.py` (tkinter) is a double-click launcher wrapping `run_batch`; `cu.spec`
+  freezes it to a standalone `CUupdate.exe` (no Python on the server). See §8.10, BUILD.md.
 - Prototype, not production: anchor/confidence scorer (§9 — note §8.5.1 field-trigger attribution still
   open; CODE-section blocks now keyed by span).
 - Not started: page/report structural differ beyond field-grafts; PowerShell port (scorer + engine +
-  executor); merge-assist tool; Stage 0 census wiring (prefixes still hardcoded/overridable via flags).
+  executor); merge-assist tool; full language-census wiring; local-VAR carry.
 - Environment: instance-based (read A & B tiers; tool creates merged tier, non-prod gated).
   PowerShell module wrapping the NAV v14 dev-shell (Export/Import/Compile/Merge-NAVApplicationObject).

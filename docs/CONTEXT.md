@@ -213,6 +213,14 @@ PROCEDURE name, do not confuse). Then justify each difference by tag layer:
 - **removed** (B-only) node / any B-only tag → TAKE_B (new tags ONLY ever appear in B = vendor
   upgrade; a customer can never introduce a new tag in this 2-object compare).
 
+**Updates since original (§8.13–§8.14):** a changed shared node can be BOTH code AND caption/option —
+they are NOT either/or. A field with a code block in its trigger AND an extended OptionString/
+OptionCaptionML now emits a scorer-routed code row AND a caption CARRY (the caption carry also brings
+the field's `Description=` tag list, subset-guarded). Separately, EXECUTION-layer carries that aren't
+verdict rows: customer GLOBAL VAR declarations (A-only in the object-level VAR section) are carried so
+dependent code compiles (§8.14). Caption/option carry rule: ALWAYS carry customer caption/option on
+any such difference, tag not required (§8.8).
+
 Validated verdicts on the corpus (ALL CORRECT): T14 WBL 50000 graft; T36 AP001651 50090/91/96/97
 graft; T36 AP2308 11/100 caption-carry; P21 WBL10 doc-graft (anchor after B 5452600); P5025649 WBL
 doc-graft; T38 70000 DEV; code fields (T38 4/43/5050, T39 6/5025358, T5025400 1) → scorer.
@@ -234,7 +242,7 @@ The engine reports a verdict for EVERY diff; most are TAKE_B vendor upgrades (e.
   - `-DevelopmentLanguageId` defaults ENU but is inferred (a DEU-base customer needs DEU). Goal is
     COMPILE-CLEAN reattach only; translation correctness is the local dev's job; no drift reports.
 
-### 8.5 KNOWN ROUGH EDGES
+### 8.5 KNOWN ROUGH EDGES (current as of §8.14)
 1. **scorer↔field attribution** in `diffengine._scorer_verdicts` is keyed by TAG, so every block of
    a tag attaches to every field bearing that tag (verdict still correct — any DEV → field DEV — but
    the detail is noisy/misattributed). FIX: key scorer blocks by LINE RANGE; match each field's code
@@ -242,34 +250,58 @@ The engine reports a verdict for EVERY diff; most are TAKE_B vendor upgrades (e.
    CODE-section code-row path that IS keyed by line/span; the field-TRIGGER attribution issue remains.)
 2. **RDLC report layout** (R5025607 "Add header and footer") not surfaced — the change lives in the
    base64 RDLC blob which isn't parsed into nodes. Needs: detect a customer doc entry whose desc
-   matches RDLC/layout keywords → DEV with detail (the differ can't parse binary layout). STILL OPEN.
-3. ~~No known-answer harness for diffengine~~ **RESOLVED (§8.7)** — `test_diffengine.py` built (verdict
-   + execution layers, both passing). T38 bare `WBL` SIGNED OFF: stale VL token (declared in Version
-   List, zero body occurrences; real customisation is `WBL009`, manifests separately) → IGNORE: emit
-   no row, no DEV. Earlier "→DEV" was over-conservative noise.
-4. Census prefixes/languages still hardcoded (now in `run_batch.py`/`run_one.py` defaults, overridable
-   via `--cust/--vend/--langs`). Stage 0 census feeds these in production. STILL OPEN.
+   matches RDLC/layout keywords → DEV with detail. STILL OPEN.
+3. ~~No known-answer harness for diffengine~~ **RESOLVED (§8.7)** — `test_diffengine.py` (verdict +
+   execution layers). Fixtures now cover T14, T36, T77, T80, T81. T38 bare `WBL` SIGNED OFF: stale VL
+   token → IGNORE.
+4. ~~Census prefixes hardcoded~~ **RESOLVED (§8.9)** — `census.py` derives `--cust` from Version
+   Lists; `cu_gui` runs it automatically. (LANGUAGES still default-driven, not yet census-derived —
+   the per-customer language census of §4 / ARCHITECTURE is the remaining piece.)
+5. **END; indentation on transplant** — the tool does a VERBATIM block transplant, preserving the
+   customer's original indentation; a hand-merge may re-indent (e.g. a block's inner END; to its
+   BEGIN scope). Decided: leave verbatim (compiles; tidy later). The diffengine EXEC harness encodes
+   the verbatim form. (§8.13)
+6. **Local (in-procedure) VAR additions not carried.** §8.14 carries customer GLOBAL var
+   declarations (object-level VAR). A customer adding a LOCAL var inside a vendor procedure is a
+   different, unhandled case — none seen yet; would surface as an undeclared-local compile error.
+7. **Tight-bracket scoring credit widens auto-merge** (§8.13). Intentional and suite-green, but it
+   lowers the bar for what auto-merges; user is watching DEV→auto transitions as-you-go.
+8. **T270 / T288** (multi-DC5.00 objects) still gate to DEV despite the §8.13 DC5.00 fixes — likely
+   a shape those fixes don't cover. Next candidates to investigate if more auto-merge coverage wanted.
 
-### 8.6 Repo state / files (current as of §8.7 session)
-- `scorer.py` + `test_scorer.py` — anchor scorer, 20/20. COMMITTED+PUSHED. §8.7 added a `chosen`
-  field to `score_block`'s return (the validated before/after anchor positions) — additive, no
-  verdict change, harness still 20/20.
-- `diffengine.py` — difference-driven engine. §8.7 added CODE-section visibility (see §8.7) +
-  `_scorer_blocks` helper. PUSHED (commit b133b01).
-- `execute.py` — NEW (§8.7). Stage 3 narrow-path executor. PUSHED (b133b01).
-- `test_diffengine.py` — NEW (§8.7). Known-answer harness, PASSES. PUSHED (b133b01).
-- `strip_lang_fixture.py` — NEW (§8.7). FIXTURE-PREP ONLY (not production language handling — that
-  stays the native cmdlet). PUSHED (b133b01).
-- `fixtures/` — NEW (§8.7). Frozen language-normalised known-answer set (T14, T36 stripped A/B/Merged,
-  plus raw Merged uploads). PUSHED (b133b01).
-- `run_batch.py` + `run_one.py` — NEW (§8.7). Job/single-object drivers. PUSHED (commit 8c145d1).
-- `README_run.md` — NEW (§8.7). Quick-start for the runners. (Presented to user; commit if not yet in.)
-- `structdiff.py` + `test_structdiff.py` — SUPERSEDED tag-driven differ; still in repo, still passes
-  (2/2). Safe to delete now that diffengine has its harness; left as reference.
-- Test objects `Cust_*.txt` / `20206Q1_*.txt` — CONFIRMED OK to remain in repo (no customer-sensitive
-  info; §5 confidentiality flag CLEARED by user).
+### 8.6 Repo state / files (current as of §8.14 — RESTRUCTURED layout, see §8.11)
+
+**Layout (§8.11 restructure):**
+```
+cuupdate/   the tool (what the .exe is built from), a package with __init__.py
+            cu_gui.py    double-click launcher (entry point) — §8.10
+            census.py    Stage 0 customer-tag census from Version Lists — §8.9
+            run_batch.py callable run() + CLI — drives a whole job
+            execute.py   Stage 3 executor (transplant, caption/option+Description
+                         carry, global-VAR carry, header, doc-trigger)
+            diffengine.py difference-driven classifier
+            scorer.py    anchor/confidence scorer (20/20)
+            run_one.py, strip_lang_fixture.py   dev utilities
+tests/      test_scorer.py, test_diffengine.py, test_census.py
+            fixtures/    known-answer data (T14,T36 stripped; T77,T80,T81 EX/CU/MyMerged)
+samples/    the flat Cust_*/20206Q1_* pairs (ad-hoc/dev use, NOT runtime)
+docs/       ARCHITECTURE.md, CONTEXT.md, BUILD.md, README_run.md
+cu.spec     PyInstaller recipe (kept at ROOT; build cmd: `pyinstaller cu.spec`)
+README.md   top-level layout overview
+```
+
+**Key facts:**
+- `structdiff.py` + `test_structdiff.py` were **RETIRED** (§8.11 — dead checkpoint, used by nothing
+  live). Do not expect them in the repo.
+- Build: `pyinstaller cu.spec` on Windows → single `dist\CUupdate.exe` (no Python on server). The exe
+  bundles `cuupdate/` at build time and depends on nothing in the repo at runtime — only the exe goes
+  to the server. Confirmed working on the server (§8.12 era). BUILD.md has details.
+- Run GUI from source: `python cuupdate/cu_gui.py`. Tests: from `tests/`, `python test_*.py`.
+- All three harnesses pass: scorer 20/20, diffengine PASS (T14/T36/T77/T80/T81), census 5/5.
+- Test objects `Cust_*` / `20206Q1_*` (now in `samples/`) CONFIRMED OK to remain (no sensitive info).
 - PAT note: user is aware; do not re-raise.
 - Prototype is Python; production target is PowerShell (must call dev-shell cmdlets).
+- "Discuss first, push later" — confirm decisions before coding; no push without explicit approval.
 
 ### 8.7 Session log — Stage 3 EXECUTION engine + CODE-section visibility fix + runners
 **Outcome: the tool now actually MERGES, not just triages. T14 (the common basic case) auto-merges
