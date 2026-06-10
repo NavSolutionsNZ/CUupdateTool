@@ -691,3 +691,56 @@ procedure that's a different (unhandled) case - none seen yet.
 
 **Files:** cuupdate/execute.py (+_global_var_decls, +_carry_global_vars, wired into execute),
 tests/test_diffengine.py (+T81), tests/fixtures/{EX,CU,MyMerged}-T81.stripped.txt (NEW).
+
+### 8.15 Session log — per-type dispatch layer (Commit 1: Table + Codeunit)
+**Outcome: the engine is now object-type-aware via a front-gate in `classify()`. Type is read from
+line 1 of the body; Table + Codeunit are validated and run their scoped rule sets; Page/Report/
+XMLport route the WHOLE object to DEV until each gets a validated handler. All five existing
+fixtures reproduce byte-exact (zero regression); six new type-dispatch assertions added. Suite green
+(scorer 20/20, diffengine PASS, census 5/5).**
+
+**Why (user):** "Currently we treat all object types the same." Some rules right for one type misfire
+on others — Table-shaped field/caption logic was running against Page CONTROLS / Report DATASET
+nodes. Move to per-type functionality.
+
+**Design decisions (user-confirmed before coding):**
+1. **Type source: body line 1 ONLY.** `OBJECT <Type> <ID>` is intrinsic and authoritative; filename
+   and folder ignored for type. (The old `self.is_report` flag was DEAD — set, read nowhere — so
+   nothing depended on it; removed.) A/B type disagreement (or unreadable header) = hard DEV gate.
+2. **Rollout order: Table → Codeunit → Page → Report → XMLport.** Table first as it is the proven
+   path (T14/T36/T77/T80/T81); Commit 1 really just *formalises* what already works and gates the
+   rest. Page is the next real work (nested CONTROLS tree). User will supply Page/Report/XMLport
+   real paired samples.
+3. **Handler interface:** small per-type scope dict — `fields` / `code` / `doc` / `validated`.
+
+**What changed (`diffengine.py`):**
+- `OBJTYPE` regex + `_detect_type()` → `self.obj_type`, `self.type_mismatch` (A vs B). Replaces the
+  dead `is_report`.
+- `HANDLERS` registry: TABLE=`fields+code+doc,validated`; CODEUNIT=`code+doc,validated`; PAGE/REPORT/
+  XMLPORT=`validated=False`. `self.scope` = lookup (unknown type → `_DEFAULT_SCOPE`, not validated).
+- `classify()` FRONT-GATE: `type_mismatch` → single `type-mismatch` DEV row, return; not-validated →
+  single `type-unsupported` DEV row, return. Both BEFORE any rule runs (no Table rule can touch an
+  unvalidated type).
+- Field-node sets (`added`/`removed`/`changed`, steps 1–3) gated on `scope['fields']`; step 4 (CODE-
+  section scorer pass) stays unconditional (Table + Codeunit both use it). For a Codeunit the field
+  sets are empty anyway — gating is belt-and-braces + intent.
+
+**`execute.py`:** `describe_blocker` now renders `type-unsupported` / `type-mismatch` in operator
+English ("object type not yet auto-merged by the tool — manual merge").
+
+**`tests/test_diffengine.py`:** new TYPE_CASES against real `samples/` pairs — T14→TABLE(validated),
+C80→CODEUNIT(validated), P21/P5025649→PAGE(gated), R790→REPORT(gated) — plus an A/B mismatch case
+(Table A + Codeunit B → single DEV row). No new fixtures needed (uses existing samples).
+
+**Verified:** scorer 20/20; diffengine PASS (all 5 exec/verdict fixtures byte-exact + 6 type rows);
+census 5/5. Confirmed on samples: T14 runs caption/code/field-graft; C80 runs code only; P21/
+P5025649/R790 gate to DEV; Table-A+Codeunit-B gates as mismatch.
+
+**Next (Commit 2): Page handler.** Needs nested CONTROLS-tree parsing (`{ N ; indent ; ControlType }`
+parent/child via the indent field — the current flat NODE regex captures id/indent/type but not the
+tree), Page-appropriate carries, validated against a new Page known-answer fixture from real pairs.
+Then Report (incl. RDLDATA §8.5.2) and XMLport.
+
+**Rough-edge update:** §8.5.2 (RDLC report layout) now sits behind the Report handler — Report gates
+to DEV wholesale until that handler is built, so the RDLC blind-spot is no longer a silent-loss risk
+(the whole Report is surfaced for manual merge).

@@ -63,6 +63,10 @@ def describe_blocker(r):
         what = "caption/option change"
     elif kind == 'field-graft':
         what = f"customer field {node}" if node else "customer field"
+    elif kind == 'type-unsupported':
+        return "object type not yet auto-merged by the tool - manual merge"
+    elif kind == 'type-mismatch':
+        return "A and B are different object types (or header unreadable) - manual merge"
     else:
         what = f"{kind} change"
 

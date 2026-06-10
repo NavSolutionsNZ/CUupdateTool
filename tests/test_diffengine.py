@@ -85,6 +85,27 @@ EXEC_CASES = {
 # Objects that should route to DEV in the narrow build (not execute).
 EXEC_GATED_TO_DEV = ['T36']
 
+# ---- type-dispatch layer (commit 1) ----------------------------------------
+# Real sample pairs (samples/, not fixtures/) exercising the per-type front
+# gate: type is read from line 1 of the body; validated types (Table/Codeunit)
+# proceed; un-validated types (Page/Report) route the WHOLE object to DEV.
+SAMPLES = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'samples')
+
+
+def _spair(stem):
+    return (os.path.join(SAMPLES, f'Cust_{stem}.txt'),
+            os.path.join(SAMPLES, f'20206Q1_{stem}.txt'))
+
+
+# stem -> (expected_type, expected_validated)
+TYPE_CASES = {
+    'T14':      ('TABLE',    True),
+    'C80':      ('CODEUNIT', True),
+    'P21':      ('PAGE',     False),
+    'P5025649': ('PAGE',     False),
+    'R790':     ('REPORT',   False),
+}
+
 # Source objects for the verdict layer (stripped fixtures where present, else raw)
 OBJ = {
     'T14': (os.path.join(FIX, 'Cust_T14.stripped.txt'),
@@ -165,6 +186,39 @@ def run():
             fails.append(f"[gate] {name}: executed but should route to DEV")
         except ex.GateToDev:
             print(f"[gate] {name}: OK (routes to DEV)")
+
+    # ---- type-dispatch layer: detection + validated/unvalidated gating ----
+    for stem, (want_type, want_valid) in TYPE_CASES.items():
+        a, b = _spair(stem)
+        if not (os.path.isfile(a) and os.path.isfile(b)):
+            continue                       # sample not present in this checkout
+        e = DiffEngine(a, b, _cust_for(stem), VEND, LANGS)
+        if e.obj_type != want_type:
+            fails.append(f"[type] {stem}: detected {e.obj_type!r} want {want_type!r}")
+            continue
+        if e.scope['validated'] != want_valid:
+            fails.append(f"[type] {stem}: validated={e.scope['validated']} want {want_valid}")
+            continue
+        rows = e.classify()
+        gated = any(r['kind'] == 'type-unsupported' for r in rows)
+        if want_valid and gated:
+            fails.append(f"[type] {stem}: validated type wrongly gated as unsupported")
+        elif not want_valid and not gated:
+            fails.append(f"[type] {stem}: unvalidated type NOT gated -> would run wrong rules")
+        else:
+            print(f"[type] {stem}: OK ({want_type}, validated={want_valid})")
+
+    # ---- type-dispatch layer: A/B type mismatch -> DEV ----
+    a_tbl, _ = _spair('T14')
+    _, b_cu = _spair('C80')
+    if os.path.isfile(a_tbl) and os.path.isfile(b_cu):
+        e = DiffEngine(a_tbl, b_cu, CUST, VEND, LANGS)
+        rows = e.classify()
+        if e.type_mismatch and [r['kind'] for r in rows] == ['type-mismatch']:
+            print("[type] mismatch: OK (Table/Codeunit pair -> single DEV row)")
+        else:
+            fails.append(f"[type] mismatch: not gated correctly "
+                         f"(mismatch={e.type_mismatch}, rows={[r['kind'] for r in rows]})")
 
     print()
     if fails:

@@ -29,6 +29,30 @@ from scorer import Scorer
 
 NODE  = re.compile(r'^\s*\{\s*(\d+)\s*;\s*(\d)?\s*;\s*([A-Za-z]+)')
 DOC   = re.compile(r'^\s*([A-Za-z]{2,4}[-\.]?[\w.\-]*?)\s+(\d{2}\.\d{2}\.\d{2})\s+([A-Z]{1,3})\s+(.*)$')
+# Object declaration: line 1 is `OBJECT <Type> <ID> <Name>` (NAV v14 export).
+# Type is read from the body (intrinsic, authoritative) - never from filename
+# or folder. A and B must agree on type (a disagreement is a hard DEV gate).
+OBJTYPE = re.compile(r'^\s*OBJECT\s+([A-Za-z]+)\s+\d', re.I)
+
+# Per-type handler scope. Each entry declares which difference-classes the
+# engine should evaluate for that object type. `validated` gates whether the
+# type may auto-merge at all: an un-validated (or unknown) type routes the
+# WHOLE object to DEV before any rule runs, so Table rules can never misfire on
+# a type we have not proven against real paired objects.
+#   fields  - parse/classify { N ; ; } field nodes (field-graft, caption/option)
+#   code    - scorer-driven CODE-section / trigger code-block transplant
+#   doc     - doc-trigger carry + doc-justified grafts
+# Table and Codeunit are validated by the existing fixture suite (T14/T36/T77/
+# T80/T81). Page/Report/XMLport are registered but NOT yet validated - they
+# gate to DEV until each gets a handler proven against real samples.
+HANDLERS = {
+    'TABLE':    dict(validated=True,  fields=True,  code=True,  doc=True),
+    'CODEUNIT': dict(validated=True,  fields=False, code=True,  doc=True),
+    'PAGE':     dict(validated=False, fields=True,  code=True,  doc=True),
+    'REPORT':   dict(validated=False, fields=True,  code=True,  doc=True),
+    'XMLPORT':  dict(validated=False, fields=True,  code=True,  doc=True),
+}
+_DEFAULT_SCOPE = dict(validated=False, fields=True, code=True, doc=True)
 ADD_V = re.compile(r'\b(add|added|adds|new|create[d]?)\b', re.I)
 RES_V = re.compile(r'\b(divid|restructur|split|moved?|modif|chang|remov|delet|replac|re-?organi)', re.I)
 RDLC  = re.compile(r'\b(header|footer|layout|rdlc|section|font|logo)\b', re.I)
@@ -57,7 +81,21 @@ class DiffEngine:
         self.Aby = {n['id']: n for n in self.Anodes}
         self.Bby = {n['id']: n for n in self.Bnodes}
         self.doc = self._parse_doc(self.A)
-        self.is_report = self.A[0].strip().upper().startswith('OBJECT REPORT')
+        self.obj_type, self.type_mismatch = self._detect_type()
+        self.scope = HANDLERS.get(self.obj_type, _DEFAULT_SCOPE)
+
+    def _detect_type(self):
+        """Object type from line 1 of the body (intrinsic, authoritative).
+        Returns (TYPE_UPPER_or_None, mismatch_bool). mismatch is True when A and
+        B disagree on type (or A's type is unreadable) - a hard DEV condition,
+        since we cannot trust a merge of two differently-typed objects."""
+        def t(lines):
+            m = OBJTYPE.match(lines[0]) if lines else None
+            return m.group(1).upper() if m else None
+        ta, tb = t(self.A), t(self.B)
+        if ta is None:
+            return None, True
+        return ta, (tb is not None and tb != ta)
 
     def _parse(self, lines):
         out = []; i = 0
@@ -142,12 +180,41 @@ class DiffEngine:
     # --- the difference-driven classification -------------------------------
     def classify(self):
         rows = []
+
+        # --- TYPE FRONT-GATE -------------------------------------------------
+        # Detect type from the body and route the WHOLE object to DEV before any
+        # rule runs when (a) A and B disagree on type / type is unreadable, or
+        # (b) the type has no validated handler yet (Page/Report/XMLport).
+        # This is the safety property that lets per-type handlers ship
+        # incrementally: a type we have not proven can never get the wrong rules
+        # run on it - it is surfaced for manual merge instead.
+        if self.type_mismatch:
+            rows.append(dict(node=None, tag=None, verdict='DEV', kind='type-mismatch',
+                             line=1,
+                             reason=f'A/B object-type disagreement or unreadable header '
+                                    f'(A={self.obj_type!r}) -> human review'))
+            return rows
+        if not self.scope['validated']:
+            rows.append(dict(node=None, tag=None, verdict='DEV', kind='type-unsupported',
+                             line=1,
+                             reason=f'object type {self.obj_type!r} has no validated '
+                                    f'handler yet -> human review'))
+            return rows
+
         fields_with_code = []   # field ids whose trigger holds customer code,
                                 # to assert the scorer pass covered each one
-        added   = [self.Aby[i] for i in self.Aby if i not in self.Bby]   # in A, not B
-        removed = [self.Bby[i] for i in self.Bby if i not in self.Aby]   # in B, not A
-        changed = [i for i in self.Aby if i in self.Bby
-                   and self._strip_lang(self.Aby[i]['props']) != self._strip_lang(self.Bby[i]['props'])]
+        # Field-node classification (steps 1-3) runs only for types whose
+        # handler declares `fields`. Code-only types (Codeunit) skip straight to
+        # the CODE-section scorer pass (step 4). For a Codeunit these sets are
+        # empty anyway (no field nodes); gating makes the intent explicit and
+        # prevents field rules ever running on a non-field type.
+        if self.scope['fields']:
+            added   = [self.Aby[i] for i in self.Aby if i not in self.Bby]   # in A, not B
+            removed = [self.Bby[i] for i in self.Bby if i not in self.Aby]   # in B, not A
+            changed = [i for i in self.Aby if i in self.Bby
+                       and self._strip_lang(self.Aby[i]['props']) != self._strip_lang(self.Bby[i]['props'])]
+        else:
+            added = removed = changed = []
 
         # 1) A-only nodes: justify by tag layer, then by doc trigger
         for n in added:

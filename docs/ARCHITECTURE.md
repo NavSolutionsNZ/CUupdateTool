@@ -65,6 +65,32 @@ caption localisations, layout) are **frequently untagged** because there is no n
 an inline tag (evidence: P21 — added ENZ caption localisations + minor code, zero body tags).
 Absence of tags here is NOT evidence of "unchanged". These use a structural diff, not tag logic.
 
+### Type-dispatch layer (IMPLEMENTED — `diffengine.py`)
+The intent above is now **enforced in code**, not just described.
+
+- **Type detection: body line 1 only.** `OBJECT <Type> <ID> <Name>` is parsed from the first line
+  of A (intrinsic, authoritative). Filename and folder are IGNORED for type (user decision) — a
+  convention can drift; the body cannot. B's type is read too: if A and B disagree (or A's header is
+  unreadable), that is a hard DEV gate (`type-mismatch`) — we never merge two differently-typed
+  objects.
+- **Per-type handler scope** (`HANDLERS` registry). Each type declares which difference-classes run:
+  `fields` (field-node graft + caption/option), `code` (scorer-driven block transplant), `doc`
+  (doc-trigger carry), and `validated` (may auto-merge at all).
+    - **Table** — `fields+code+doc`, validated. Full current rule set.
+    - **Codeunit** — `code+doc`, validated. Field rules do not run (a Codeunit has no field nodes;
+      gating makes that explicit so field logic can never misfire on a code-only object).
+    - **Page / Report / XMLport** — registered but **`validated=False`**: the WHOLE object routes to
+      DEV (`type-unsupported`) before any rule runs. This is the safety property that lets per-type
+      handlers ship incrementally — a type we have not proven against real paired objects can never
+      get the wrong (Table-shaped) rules run on it. Each becomes `validated=True` only once its
+      handler is built and a known-answer fixture passes.
+- **Rollout order (agreed):** Table (done — already the proven path) → Codeunit (done) → Page (next;
+  nested CONTROLS tree parsing is the real new work) → Report (incl. RDLDATA) → XMLport. Page/Report/
+  XMLport real paired samples to be supplied by the developer.
+
+> Before this layer, every type ran the same Table-shaped field/caption logic; a Page's CONTROLS
+> nodes were being classified by field rules. They now gate to DEV explicitly until validated.
+
 ## 4. Stage 0 — Tag census (agentic, per customer)
 
 Scan all in-scope objects; for each distinct alpha-prefix gather evidence and infer layer:
