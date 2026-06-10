@@ -1,0 +1,779 @@
+OBJECT Page 5206201 Vehicle Sales Manager RC
+{
+  OBJECT-PROPERTIES
+  {
+    Date=11/14/23;
+    Time=[ 4:44:49 PM];
+    Modified=Yes;
+    Version List=N.7.2.1,AP1880,AP1979;
+  }
+  PROPERTIES
+  {
+    CaptionML=ENU=Vehicle Sales Manager RC;
+    Description=PA032656,EU.0027972;
+    PageType=RoleCenter;
+    RefreshOnActivate=Yes;
+    ActionList=ACTIONS
+    {
+      { 1900000006;0 ;ActionContainer;
+                      ActionContainerType=Reports }
+      { 1109400015;1 ;ActionGroup;
+                      CaptionML=ENU=Inventory;
+                      Description=PA036549.33223 }
+      { 1119432070;2 ;Separator ;
+                      CaptionML=ENU=Inventory;
+                      IsHeader=Yes }
+      { 1119432023;2 ;Action    ;
+                      CaptionML=ENU=&Vehicle Inventory Valuation;
+                      RunObject=Report 5028849;
+                      Image=Report }
+      { 1109400016;2 ;Action    ;
+                      CaptionML=ENU=Vehicle &Wash Out;
+                      RunObject=Report 5025441;
+                      Image=Report }
+      { 1101353002;2 ;Action    ;
+                      CaptionML=ENU=" Vehicle Invent. on Status Date";
+                      RunObject=Report 5045517;
+                      Image=Report }
+      { 1119432025;2 ;Action    ;
+                      CaptionML=ENU=Days &Carried Analysis;
+                      RunObject=Report 5025486;
+                      Image=Report }
+      { 1109400017;1 ;ActionGroup;
+                      CaptionML=ENU=Sales }
+      { 1119432071;2 ;Separator ;
+                      CaptionML=ENU=Sales;
+                      IsHeader=Yes }
+      { 1119432032;2 ;Action    ;
+                      CaptionML=ENU=Sales Invoice &Overview;
+                      RunObject=Report 5028837;
+                      Image=Report }
+      { 1119432035;2 ;Action    ;
+                      CaptionML=ENU=Vehicle Sales / &Gross Profit;
+                      RunObject=Report 5025488;
+                      Image=Report }
+      { 1101353000;2 ;Action    ;
+                      CaptionML=ENU=Delete Invoiced Purch. Orders;
+                      RunObject=Report 499;
+                      Image=Report }
+      { 1109400041;2 ;Action    ;
+                      CaptionML=ENU=Analysis View List Sales;
+                      Description=PA037533;
+                      RunObject=Page 9371;
+                      Visible=FALSE;
+                      Image=Report;
+                      PromotedCategory=Report }
+      { 1109400018;1 ;ActionGroup;
+                      CaptionML=ENU=Analysis }
+      { 1119432072;2 ;Separator ;
+                      CaptionML=ENU=Analysis;
+                      IsHeader=Yes }
+      { 1119432024;2 ;Action    ;
+                      CaptionML=ENU=Vehicle &Analysis Overview;
+                      RunObject=Report 5025479;
+                      Image=Report }
+      { 1119432034;2 ;Action    ;
+                      CaptionML=ENU=&Top Cust. Total Busi. Analysis;
+                      RunObject=Report 5028678;
+                      Promoted=No;
+                      Visible=FALSE;
+                      Image=Report;
+                      PromotedCategory=Report }
+      { 1109400046;2 ;Action    ;
+                      CaptionML=ENU=Customer Information Management;
+                      Description=PA037533;
+                      RunObject=Report 5028838;
+                      Visible=FALSE;
+                      Image=Report;
+                      PromotedCategory=Report }
+      { 1109400052;1 ;ActionGroup;
+                      CaptionML=ENU=Opportunity;
+                      Description=PA037533 }
+      { 1109400053;2 ;Action    ;
+                      CaptionML=ENU=Salersperson - Opportunities;
+                      Description=PA037533;
+                      RunObject=Report 5058;
+                      Visible=FALSE;
+                      Image=Report;
+                      PromotedCategory=Report }
+      { 1109400039;2 ;Action    ;
+                      CaptionML=ENU=Opportunity - List;
+                      Description=PA037533;
+                      RunObject=Report 5061;
+                      Visible=FALSE;
+                      Image=Report;
+                      PromotedCategory=Report }
+      { 1109400040;2 ;Action    ;
+                      CaptionML=ENU=Sales Cycle - Analysis;
+                      Description=PA037533;
+                      RunObject=Report 5062;
+                      Visible=FALSE;
+                      Image=Report;
+                      PromotedCategory=Report }
+      { 1101353001;2 ;Action    ;
+                      CaptionML=ENU=Vehicle Inventory Valuation;
+                      Description=PA037533;
+                      RunObject=Report 5028849;
+                      Visible=True;
+                      Image=Report;
+                      PromotedCategory=Report }
+      { 1109400051;2 ;Action    ;
+                      CaptionML=ENU=Opportunity - Details;
+                      Description=PA037533;
+                      RunObject=Report 5068;
+                      Visible=FALSE;
+                      Image=Report;
+                      PromotedCategory=Report }
+      { 1109400042;1 ;ActionGroup;
+                      CaptionML=ENU=Vehicle;
+                      Description=PA037533 }
+      { 1109400043;2 ;Action    ;
+                      CaptionML=ENU=New Vehicle;
+                      Description=PA037533;
+                      RunObject=Report 5025459;
+                      Visible=FALSE;
+                      Image=Report;
+                      PromotedCategory=Report }
+      { 1109400044;2 ;Action    ;
+                      CaptionML=ENU=Used Vehicle;
+                      Description=PA037533;
+                      RunObject=Report 5025460;
+                      Visible=FALSE;
+                      Image=Report;
+                      PromotedCategory=Report }
+      { 1109400045;1 ;ActionGroup;
+                      CaptionML=ENU=Lead;
+                      Description=PA037533 }
+      { 1109400047;2 ;Action    ;
+                      CaptionML=ENU=Lead Statistics;
+                      Description=PA037533;
+                      RunObject=Report 5207801;
+                      Visible=FALSE;
+                      Image=Report;
+                      PromotedCategory=Report }
+      { 1109400050;2 ;Action    ;
+                      CaptionML=ENU=Lead List;
+                      Description=PA037533;
+                      RunObject=Report 5207803;
+                      Visible=FALSE;
+                      Image=Report;
+                      PromotedCategory=Report }
+      { 1109400048;1 ;ActionGroup;
+                      CaptionML=ENU=Salesperson;
+                      Description=PA037533 }
+      { 1109400049;2 ;Action    ;
+                      CaptionML=ENU=Salesperson Lead Follow-Up;
+                      Description=PA037533;
+                      RunObject=Report 5207802;
+                      Visible=FALSE;
+                      Image=Report;
+                      PromotedCategory=Report }
+      { 1900000011;0 ;ActionContainer;
+                      ActionContainerType=HomeItems }
+      { 1119432005;1 ;Action    ;
+                      CaptionML=ENU=Vehicles;
+                      RunObject=Page 5025404;
+                      Image=LinkWithExisting }
+      { 1109400021;1 ;Action    ;
+                      CaptionML=ENU=Anticipated/Inventory Vehicles;
+                      RunObject=Page 5045470;
+                      Image=LinkWithExisting }
+      { 1109400022;1 ;Action    ;
+                      CaptionML=ENU=Vendors;
+                      RunObject=Page 27;
+                      Image=TeamSales }
+      { 1109400026;1 ;Action    ;
+                      CaptionML=ENU=Vehicle Purchase Orders;
+                      RunObject=Page 5205809 }
+      { 1109400025;1 ;Action    ;
+                      CaptionML=ENU=Vehicle Purchase Receipts;
+                      RunObject=Page 5205812 }
+      { 1109400024;1 ;Action    ;
+                      CaptionML=ENU=Vehicle Purchase Invoices;
+                      RunObject=Page 5205810 }
+      { 1109400023;1 ;Action    ;
+                      CaptionML=ENU=Vehicle Purchase Credit Memos;
+                      RunObject=Page 5205811 }
+      { 1109400058;1 ;Action    ;
+                      Name=Open Trade-Ins;
+                      CaptionML=ENU=Open Trade-Ins;
+                      Description=PA042846;
+                      RunObject=Page 5205969 }
+      { 1119432049;1 ;Action    ;
+                      CaptionML=ENU=Contacts;
+                      RunObject=Page 5052;
+                      Image=ExportSalesPerson }
+      { 1119432061;1 ;Action    ;
+                      CaptionML=ENU=Customers;
+                      RunObject=Page 22;
+                      Image=TeamSales }
+      { 1119432066;1 ;Action    ;
+                      CaptionML=ENU=Vehicle Sales Quotes;
+                      RunObject=Page 5205814 }
+      { 1119432067;1 ;Action    ;
+                      CaptionML=ENU=Vehicle Sales Orders;
+                      RunObject=Page 5205815 }
+      { 1119432068;1 ;Action    ;
+                      CaptionML=ENU=Vehicle Sales Invoices;
+                      RunObject=Page 5205816 }
+      { 1119432069;1 ;Action    ;
+                      CaptionML=ENU=Vehicle Sales Credit Memos;
+                      RunObject=Page 5205818 }
+      { 1109400019;1 ;Action    ;
+                      CaptionML=ENU=Vehicle Status Change;
+                      RunObject=Page 5206817 }
+      { 1109400020;1 ;Action    ;
+                      CaptionML=ENU=Vehicle Branch Orders;
+                      RunObject=Page 5206816 }
+      { 1900000012;0 ;ActionContainer;
+                      ActionContainerType=ActivityButtons }
+      { 1119432029;1 ;ActionGroup;
+                      CaptionML=ENU=Marketing;
+                      Image=Marketing }
+      { 1119432063;2 ;Action    ;
+                      CaptionML=ENU=Campaigns;
+                      RunObject=Page 5087;
+                      Image=SelectEntries }
+      { 1119432064;2 ;Action    ;
+                      CaptionML=ENU=Segments;
+                      RunObject=Page 5093;
+                      Image=Segment }
+      { 1119432065;2 ;Action    ;
+                      CaptionML=ENU=Opportunities;
+                      Description=PA040025;
+                      RunObject=Page 5123;
+                      RunPageView=WHERE(Closed=FILTER(No));
+                      Image=OpportunitiesList }
+      { 1119432073;2 ;Action    ;
+                      CaptionML=ENU=To-Dos;
+                      Description=PA032651.Defect2559014;
+                      RunObject=Page 5096;
+                      RunPageView=WHERE(Closed=FILTER(No),
+                                        System To-do Type=FILTER(Organizer|Salesperson Attendee));
+                      Image=TaskList;
+                      RunPageMode=Create }
+      { 1119432008;1 ;ActionGroup;
+                      CaptionML=ENU=Vehicle Purchase;
+                      Image=Purchasing }
+      { 1119432077;2 ;Action    ;
+                      CaptionML=ENU=Vendors;
+                      RunObject=Page 27;
+                      Image=TeamSales }
+      { 1119432004;2 ;Action    ;
+                      CaptionML=ENU=Vehicle Purchase Orders;
+                      RunObject=Page 5205809 }
+      { 1119432009;2 ;Action    ;
+                      CaptionML=ENU=Vehicle Purchase Receipts;
+                      RunObject=Page 5205812 }
+      { 1119432010;2 ;Action    ;
+                      CaptionML=ENU=Vehicle Purchase Invoices;
+                      RunObject=Page 5205810 }
+      { 1119432011;2 ;Action    ;
+                      CaptionML=ENU=Vehicle Purchase Credit Memos;
+                      RunObject=Page 5205811 }
+      { 1119432001;2 ;Action    ;
+                      CaptionML=ENU=Posted Vehicle Purchase Receipts;
+                      RunObject=Page 5205800 }
+      { 1119432007;2 ;Action    ;
+                      CaptionML=ENU=Posted Vehicle Purchase Invoices;
+                      RunObject=Page 5205801 }
+      { 1119432012;2 ;Action    ;
+                      CaptionML=ENU=Posted Vehicle Purchase Credit Memos;
+                      Description=PA032651;
+                      RunObject=Page 5205803 }
+      { 1119432014;2 ;Separator ;
+                      IsHeader=Yes }
+      { 1119432054;1 ;ActionGroup;
+                      CaptionML=ENU=Sales History;
+                      Image=Sales }
+      { 1119432078;2 ;Action    ;
+                      CaptionML=ENU=Closed Opportunities;
+                      RunObject=Page 5132;
+                      RunPageView=WHERE(Closed=FILTER(Yes)) }
+      { 1119432079;2 ;Action    ;
+                      CaptionML=ENU=Closed To-Dos;
+                      Description=PA032651.Defect2559014;
+                      RunObject=Page 5096;
+                      RunPageView=WHERE(Closed=FILTER(Yes)) }
+      { 1119432055;2 ;Action    ;
+                      CaptionML=ENU=Posted Vehicle Sales Shipments;
+                      RunObject=Page 5205821 }
+      { 1119432056;2 ;Action    ;
+                      CaptionML=ENU=Posted Vehicle Sales Invoices;
+                      RunObject=Page 5205822 }
+      { 1119432057;2 ;Action    ;
+                      CaptionML=ENU=Posted Vehicle Sales Return Receipts;
+                      RunObject=Page 5205823 }
+      { 1119432058;2 ;Action    ;
+                      CaptionML=ENU=Posted Vehicle Sales Credit Memos;
+                      RunObject=Page 5205824 }
+      { 1119432059;2 ;Action    ;
+                      CaptionML=ENU=Archived Vehicle Sales Quotes;
+                      RunObject=Page 5205819 }
+      { 1119432060;2 ;Action    ;
+                      CaptionML=ENU=Archived Vehicle Sales Orders;
+                      RunObject=Page 5205820 }
+      { 1119432015;2 ;Action    ;
+                      CaptionML=ENU=Archived Service Orders;
+                      RunObject=Page 5206309 }
+      { 1119432016;2 ;Action    ;
+                      CaptionML=ENU=Posted Service Invoices;
+                      Description=PA033019.Defect8319026;
+                      RunObject=Page 5206307 }
+      { 1119432041;2 ;Action    ;
+                      CaptionML=ENU=Posted Service Credit Memos;
+                      Description=PA033019.Defect8319026;
+                      RunObject=Page 5206308 }
+      { 1119432006;1 ;ActionGroup;
+                      CaptionML=ENU=Vehicle Management;
+                      Image=ReferenceData }
+      { 1119432042;2 ;Action    ;
+                      CaptionML=ENU=Models;
+                      RunObject=Page 5025423;
+                      Image=Splitlines }
+      { 1119432043;2 ;Action    ;
+                      CaptionML=ENU=Manufacturer Options;
+                      RunObject=Page 5025428;
+                      Image=ProdBOMMatrixPerVersion }
+      { 1119432044;2 ;Action    ;
+                      CaptionML=ENU=Own Options;
+                      RunObject=Page 5025495;
+                      Image=Delegate }
+      { 1119432045;2 ;Action    ;
+                      CaptionML=ENU=Transfer Fees;
+                      RunObject=Page 5025583 }
+      { 1119432046;2 ;Action    ;
+                      CaptionML=ENU=Calculated Costs Setup;
+                      RunObject=Page 5025487 }
+      { 1119432047;2 ;Action    ;
+                      CaptionML=ENU=Vehicle Sales Incentives;
+                      RunObject=Page 5045451 }
+      { 1119432048;2 ;Action    ;
+                      CaptionML=ENU=Salespeople;
+                      RunObject=Page 14;
+                      Promoted=No;
+                      Image=ExportSalesPerson;
+                      PromotedCategory=Report }
+      { 1119432080;2 ;Action    ;
+                      CaptionML=ENU=Teams;
+                      RunObject=Page 5105;
+                      Image=TeamSales }
+      { 1101329807;1 ;ActionGroup;
+                      Name=BIButton;
+                      CaptionML=ENU=incadea.bi;
+                      Image=Dimensions }
+      { 1101329809;2 ;Action    ;
+                      CaptionML=ENU=incadea.bi Links;
+                      RunObject=Page 5218825 }
+      { 1900000004;0 ;ActionContainer;
+                      ActionContainerType=ActionItems }
+      { 1109400002;1 ;ActionGroup;
+                      CaptionML=ENU=Customer }
+      { 1109400029;2 ;Action    ;
+                      CaptionML=ENU=Contact / Vehicle Search;
+                      Description=PA042814;
+                      RunObject=Page 5205917;
+                      Image=Find;
+                      PromotedCategory=Process }
+      { 1109400005;2 ;Action    ;
+                      CaptionML=ENU=C&ontact;
+                      RunObject=Page 5050;
+                      Image=ExportSalesPerson;
+                      RunPageMode=Create }
+      { 1109400004;2 ;Action    ;
+                      CaptionML=ENU=&Customer;
+                      RunObject=Page 21;
+                      Image=TeamSales;
+                      RunPageMode=Create }
+      { 1109400003;1 ;ActionGroup;
+                      CaptionML=ENU=Purchase;
+                      Description=PA036549.33223 }
+      { 1109400032;2 ;Action    ;
+                      CaptionML=ENU=Vehicle Purchase Orders;
+                      Description=PA036549.33223;
+                      RunObject=Page 5025448;
+                      Image=Document;
+                      RunPageMode=Create }
+      { 1109400031;2 ;Action    ;
+                      CaptionML=ENU=Vehicle Purchase Receipts;
+                      Description=PA036549.33223;
+                      RunObject=Page 5025456;
+                      Image=NewWarehouseReceipt;
+                      RunPageMode=Create }
+      { 1109400030;2 ;Action    ;
+                      CaptionML=ENU=Vehicle Purchase Invoices;
+                      Description=PA036549.33223;
+                      RunObject=Page 5025452;
+                      Image=Invoice;
+                      RunPageMode=Create }
+      { 1109400006;1 ;ActionGroup;
+                      CaptionML=ENU=Sale }
+      { 1109400012;2 ;Separator ;
+                      CaptionML=ENU=New Sales;
+                      IsHeader=Yes }
+      { 1109400011;2 ;Action    ;
+                      CaptionML=ENU=Vehicle Sales &Quote;
+                      RunObject=Page 5025442;
+                      Image=Document;
+                      RunPageMode=Create }
+      { 1109400010;2 ;Action    ;
+                      CaptionML=ENU=Vehicle Sales &Order;
+                      RunObject=Page 5025440;
+                      Image=Document;
+                      RunPageMode=Create }
+      { 1109400009;2 ;Action    ;
+                      CaptionML=ENU=Vehicle Sales &Invoice;
+                      RunObject=Page 5025446;
+                      Image=Invoice;
+                      RunPageMode=Create }
+      { 1109400008;2 ;Action    ;
+                      CaptionML=ENU=Vehicle Sales &Return Order;
+                      RunObject=Page 5045504;
+                      Visible=FALSE;
+                      Image=ReturnOrder;
+                      RunPageMode=Create }
+      { 1109400013;1 ;ActionGroup;
+                      CaptionML=ENU=Credit Memo }
+      { 1109400033;2 ;Action    ;
+                      CaptionML=ENU=Vehicle Purchase Credit Memo;
+                      Description=PA036549.33223;
+                      RunObject=Page 5025450;
+                      Image=CreditMemo;
+                      RunPageMode=Create }
+      { 1109400014;2 ;Action    ;
+                      CaptionML=ENU=Vehicle Sales &Cre&dit Memo;
+                      RunObject=Page 5025444;
+                      Image=CreditMemo;
+                      RunPageMode=Create }
+      { 1109400007;1 ;ActionGroup;
+                      CaptionML=ENU=Quick Creation;
+                      Visible=FALSE }
+      { 1119432052;2 ;Separator ;
+                      CaptionML=ENU=Quick Creation;
+                      IsHeader=Yes }
+      { 1119432062;2 ;Action    ;
+                      CaptionML=ENU=&Quick Contact;
+                      RunObject=Page 5207850;
+                      Image=AddAction;
+                      RunPageMode=Create }
+      { 1119432076;2 ;Action    ;
+                      CaptionML=ENU=Quick &Vehicle;
+                      RunObject=Page 5205881;
+                      Image=AddAction;
+                      RunPageMode=Create }
+      { 1119432075;2 ;Action    ;
+                      CaptionML=ENU=Quick &Customer;
+                      RunObject=Page 5206880;
+                      Image=AddAction;
+                      RunPageMode=Create }
+      { 1109400034;1 ;ActionGroup;
+                      CaptionML=ENU=Vehicle;
+                      Description=PA036549.33223 }
+      { 1109400036;2 ;Action    ;
+                      CaptionML=ENU=Vehicle Status &Change;
+                      Description=PA036549.33223;
+                      RunObject=Page 5045558;
+                      Image=ChangeStatus;
+                      RunPageMode=Create }
+      { 1109400035;2 ;Action    ;
+                      CaptionML=ENU=&Branch Order Vehicle;
+                      Description=PA036549.33223;
+                      RunObject=Page 5045550;
+                      Image=SwitchCompanies;
+                      RunPageMode=Create }
+      { 1109400057;2 ;Action    ;
+                      Name=Vehicle Locator;
+                      ShortCutKey=Ctrl+Q;
+                      CaptionML=ENU=Vehicle Locator;
+                      Description=PA038126.50429,PA042814;
+                      RunObject=Page 5205930;
+                      Image=FindCreditMemo }
+      { 1109400037;1 ;ActionGroup;
+                      CaptionML=ENU=Process;
+                      Description=PA038128 }
+      { 1109400059;2 ;Action    ;
+                      Name=Create Sales Lead;
+                      CaptionML=ENU=Create Sales Lead;
+                      Description=PA041187.92919;
+                      RunObject=Page 5207857;
+                      Image=New }
+      { 1109400038;2 ;Action    ;
+                      CaptionML=ENU=Create Opportunity;
+                      Description=PA038128,PA040025,EU.0124939.126715;
+                      RunObject=Page 5046860;
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=NewOpportunity;
+                      PromotedCategory=Process;
+                      RunPageMode=Create }
+      { 1119432031;1 ;Separator ;
+                      CaptionML=ENU=New;
+                      IsHeader=Yes }
+      { 1119432027;1 ;Action    ;
+                      CaptionML=ENU=V&ehicle;
+                      RunObject=Page 5025401;
+                      Promoted=No;
+                      Visible=FALSE;
+                      Image=LinkWithExisting;
+                      PromotedCategory=Process;
+                      RunPageMode=Create }
+      { 1119432037;1 ;Action    ;
+                      CaptionML=ENU=&Model;
+                      RunObject=Page 5025407;
+                      Promoted=No;
+                      Visible=FALSE;
+                      Image=Splitlines;
+                      PromotedCategory=Process;
+                      RunPageMode=Create }
+      { 1119432039;1 ;Separator  }
+      { 1101140604;1 ;Action    ;
+                      CaptionML=ENU=To-Do;
+                      RunObject=Page 5096;
+                      Visible=FALSE;
+                      Image=TaskList }
+      { 1119432074;1 ;Separator ;
+                      CaptionML=ENU=Search;
+                      IsHeader=Yes }
+      { 1101208982;1 ;Action    ;
+                      CaptionML=ENU=&Lead Buffer Worksheet;
+                      Description=PA034389;
+                      RunObject=Page 5207800;
+                      Visible=FALSE;
+                      Image=CreateInteraction }
+      { 1119432051;1 ;Action    ;
+                      CaptionML=ENU=&Anticipated/Inventory Vehicles;
+                      RunObject=Page 5045470;
+                      Visible=FALSE;
+                      Image=LinkWithExisting }
+      { 1119432030;1 ;Action    ;
+                      CaptionML=ENU=Navi&gate;
+                      RunObject=Page 344;
+                      Image=Navigate }
+      { 1109400055;1 ;Action    ;
+                      CaptionML=ENU=To-Dos Matrix;
+                      Description=PA038127,PA042504.82931;
+                      RunObject=Page 5099;
+                      Image=ShowMatrix }
+      { 1109400000;1 ;Separator  }
+      { 1109400001;1 ;Action    ;
+                      CaptionML=ENU=Time Clock;
+                      Description=PA032871;
+                      RunObject=Page 5046859;
+                      Visible=FALSE;
+                      Image=History }
+      { 1109400028;1 ;Separator  }
+      { 1109400027;1 ;Action    ;
+                      CaptionML=ENU=My Web Pl@ces;
+                      Description=PA036549,PA036549.33223;
+                      RunObject=Page 5210045;
+                      Visible=FALSE;
+                      Image=LinkWeb }
+      { 1109400054;1 ;Action    ;
+                      CaptionML=ENU=Opportunity Analysis;
+                      Description=PA040025,PA040025.84097;
+                      RunObject=Page 5131;
+                      Image=Forecast }
+      { 2102100 ;1   ;ActionGroup;
+                      CaptionML=ENU=Scheduling;
+                      Description=EU.0021021;
+                      Visible=FALSE }
+      { 2102102 ;2   ;Action    ;
+                      CaptionML=ENU=Service Planner;
+                      Description=EU.0021021;
+                      RunObject=Codeunit 5204730;
+                      Visible=FALSE;
+                      Image=ServiceLedger }
+      { 2102101 ;2   ;Action    ;
+                      CaptionML=ENU=New Service Appointment;
+                      Description=EU.0021021;
+                      RunObject=Codeunit 5204735;
+                      Visible=FALSE;
+                      Image=NewOrder }
+      { 3182301 ;1   ;ActionGroup;
+                      CaptionML=ENU=Location }
+      { 3182300 ;2   ;Action    ;
+                      Name=Change Location;
+                      CaptionML=ENU=Change Location;
+                      Description=EU.0049875,EU.0111610.112870;
+                      RunObject=Codeunit 5028650;
+                      Image=Change }
+    }
+  }
+  CONTROLS
+  {
+    { 1900000008;0;Container;
+                ContainerType=RoleCenterArea }
+
+    { 1900724808;1;Group  ;
+                Name=Left;
+                GroupType=Group }
+
+    { 1904768608;2;Part   ;
+                PagePartID=Page5206221;
+                PartType=Page }
+
+    { 1904827208;2;Part   ;
+                PagePartID=Page5206223;
+                PartType=Page }
+
+    { 1170000000;2;Part   ;
+                CaptionML=ENU=Case Activities;
+                Description=PA038391;
+                PagePartID=Page5208082;
+                Visible=FALSE;
+                PartType=Page }
+
+    { 1109400056;2;Part   ;
+                Description=PA041960;
+                PagePartID=Page5207334;
+                Visible=FALSE;
+                PartType=Page }
+
+    { 1901420308;2;Part   ;
+                PartType=System;
+                SystemPartID=Outlook }
+
+    { 1900383208;2;Part   ;
+                Visible=FALSE;
+                PartType=System;
+                SystemPartID=RecordLinks }
+
+    { 1900724708;1;Group  ;
+                Name=Right;
+                GroupType=Group }
+
+    { 11394301;2;Part     ;
+                Description=EU.0116019;
+                PagePartID=Page681;
+                Visible=FALSE;
+                PartType=Page }
+
+    { 535800;2 ;Part      ;
+                CaptionML=ENU=Role Center Picture;
+                Description=EU.0005464;
+                PagePartID=Page5028652;
+                Visible=FALSE;
+                PartType=Page }
+
+    { 1901377608;2;Part   ;
+                PartType=System;
+                SystemPartID=MyNotes }
+
+    { 1901867408;2;Part   ;
+                PagePartID=Page5205807;
+                Visible=FALSE;
+                PartType=Page }
+
+    { 1906261508;2;Part   ;
+                PagePartID=Page5205806;
+                Visible=FALSE;
+                PartType=Page }
+
+    { 1905648908;2;Part   ;
+                PagePartID=Page5208030;
+                Visible=FALSE;
+                PartType=Page }
+
+    { 1907819508;2;Part   ;
+                PagePartID=Page5207305;
+                Visible=FALSE;
+                PartType=Page }
+
+    { 1905559708;2;Part   ;
+                Description=EU.0027972;
+                PagePartID=Page5208480;
+                Visible=FALSE;
+                PartType=Page;
+                UpdatePropagation=Both }
+
+    { 1907382708;2;Part   ;
+                PagePartID=Page5204496;
+                PartType=Page }
+
+    { 1905004408;2;Part   ;
+                PagePartID=Page5207851;
+                Visible=FALSE;
+                PartType=Page }
+
+  }
+  CODE
+  {
+
+    BEGIN
+    {
+      // @ Area VehicleSales
+      // @ Area RelationshipManagement
+      +----------------------------------------------+
+      | Copyright (c) incadea                        |
+      +----------------------------------------------+
+      PA-Number  Date
+      ------------------------------------------------
+      PA031550   09.08.10 New object
+      PA032178   11.11.10 KP Modified the 'Vehicle Sales Credit Memos' property of 'Home' menubutton.
+      PA032103   21.04.11 AA Added "My Web Places" to Home menu
+      PA032656   24.08.11 PR 4582443: Modified Page properties 'Name' and 'Caption'.
+      PA032651   29.12.11 SS 4889933 - Changed the caption of Report "Top Cust. Total Busi. Analysis"
+      PA032651   12.01.12 DR 5175462: Page Layout changed to show full captions in Menu Buttos in design mode.
+      PA032651   23.01.12 DR 6012646: Captions changed.
+                             "Posted Vehicle Purch. Credit Memos" -> "Posted Vehicle Purchase Credit Memos"
+      PA032651   21.03.12 DR 2559014: All incorrect spelling variants of Caption "To-Dos" or "To-Do" corrected.
+      PA033067   12.04.12 DR DE Captions implemented
+      PA032651   25.04.12 DR 6012646: DEU and ENU Captions corrected
+      PA033328   21.06.12 GL New Homepart: My Time Clock Status
+      PA032871   26.01.12 GL Action "Time Clock" added
+      PA033187   26.03.12 GL Merge of RET to Ongoing 611 objects
+      PA033328   19.06.12 KC Merge of RET to Ongoing 612 objects
+      PA033019   07.08.12 DR 8319026: Change Names and ENU Caption for fields changed where "Posted" appeared as second word after
+                             "Vehicle", "Part" or "Service". The correct witing is "Posted Vehicle.." Posted Part.." or "Posted Service.."
+      PA033259   18.09.12 DR Variable names changed according to incadea style guide
+      PA033387   23.11.12 GB New Menu Item Added "incadea.BI Links"
+      PA033733   10.12.12 DR DE Captions added for version: N.6.1.2
+      PA034029   18.02.13 DD Added Homepart Location Info Frame
+      PA033895   16.04.13 GE Added new homepart for Special Functions
+      PA034389   06.08.13 AN New Menu Item Added "Lead Buffer Worksheet" (Actions)
+      PA034074   12.09.13 GM Added new homepart My Cockpit Vehicle Purchase
+      PA034402   23.09.13 GM New action 'To-Do' added
+                 09.10.13 LR I002032 Open the 'To-Do' in blank
+      PA034402   23.09.13 GM Added new Homepart 'My Open To-Dos'
+      PA036090   07.07.14 GD 24092 Removed Action call reference to report 5025480-"Salesperson - Sales Statistics"
+      PA036090   07.07.14 GD 24094 Removed Action call reference to report 5025573-"Open Vehicle Sales Quotes"
+      PA035903   03.10.14 LR NAV 2013 UI Enhancement
+      PA035903   03.10.14 LR 29732 NAV 2013 UI Enhancement Create New Home actions "Anticipated/Inventory Vehicles", "Vendors",
+                             "Vehicle Purchase Orders", "Vehicle Purchase Receipts", "Vehicle Purchase Invoices", "Vehicle Purchase Credit Memos"
+      PA036547   07.11.14 MC Merge N.6.1.4 to N.7.1.0
+      PA036549   07.11.14 TS 28023 My Web Places moved from Home Items to Action Items.
+      PA036549   13.01.15 LR 32491 Delete reference to Contact Search because object has been deleted
+      PA036549   05.02.15 LR 33223 Create action Address Search. Create Purchase Group in action ribbon, and Vehicle one
+                                   Add Vehicle Purchase Credit Memo action, Hide My Web Places, Create Inventory Group in Reports
+      PA038391   10.09.15 SR Case Activities has been added
+      PA038128   10.11.15 LR Substitude Create Oportunity action by Quick Opportunity
+      PA037533   23.11.15 UX 50281 GUI Enhancements for a default Page viewing.
+      PA038126   01.12.15 LR 50429 Create action Vehicle Search.
+      PA038127   10.11.16 GP Action To-Dos Matrix added to Action Items
+      PA040025   14.12.16 GI Changed the icons on the Opportunities and Create Opportunity actions.
+                             - Added the Opportunity Analysis action
+      PA040025   09.01.16 GI 84097 Added CaptionML for the Action Opportunity Analysis.
+      PA040025   10.01.17 GI 84097 Added image for the Opportunity Analysis.
+      PA042504   11.01.17 GY 82931 Added image for the To-Dos Matrix.
+      PA041960   12.01.17 GN Added new activities page hidden by default
+      PA042846   01.02.17 JM Added new Homepart "Not completed Trade-ins"
+      PA042814   31.01.17 SD Replaced "Address Search" with "Contact / Vehicle Search", renamed action "Vehicle Search" to "Vehicle Locator"
+      PA041187   13.04.17 KK 92919 "Create Sales Lead" action added
+      EU.0005464 18.09.17 JV Added Part "Role Center Picture" to display company logo on Role center
+      --- 7.2.0 ---
+      EU.0027972 15.06.18 DG Changed RefreshOnActivate property of the parent page to Yes and UpdatePropagation property of the subpage to Both
+      EU.0021021 21.06.18 LL Added "Service Planner" action, visible FALSE.
+                 19.09.18 LL Added "New Service Appointment" action, visible FALSE.
+      EU.0047698 10.12.18 KK Merge of Feature 21021
+      EU.0049875 03.01.19 GI Removed Change Location Page Part and added corresponding Action instead
+      --- 7.2.1 ---
+      EU.0111610 03.02.21 JV Missing caption added for "Change Location" action
+      EU.0116019 19.03.21 DR Add new part page 681 "Report Inbox Part" to enable Schedule printing.
+      EU.0124939 05.10.21 AD 126715 Modified RunObject property of "Create Opportunity" action item, from 5208090 to 5046860.
+      AP001880   13.10.23 CY Add 'Vehicle Inventory Valuation' report in the ribbon.
+      AP001979   14.11.23 CY Add 'Vehicle Invent. on Statu' report in the ribbon.
+    }
+    END.
+  }
+}
+

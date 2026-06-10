@@ -1,0 +1,361 @@
+OBJECT Table 49 Invoice Post. Buffer
+{
+  OBJECT-PROPERTIES
+  {
+    Date=04/10/17;
+    Time=[ 6:29:30 PM];
+    Version List=NAVW16.00.01,N.7.1.5;
+  }
+  PROPERTIES
+  {
+    CaptionML=ENU=Invoice Post. Buffer;
+  }
+  FIELDS
+  {
+    { 1   ;   ;Type                ;Option        ;CaptionML=ENU=Type;
+                                                   OptionCaptionML=ENU=,G/L Account,Item,Resource,Fixed Asset;
+                                                   OptionString=,G/L Account,Item,Resource,Fixed Asset }
+    { 2   ;   ;G/L Account         ;Code20        ;TableRelation="G/L Account";
+                                                   CaptionML=ENU=G/L Account }
+    { 4   ;   ;Global Dimension 1 Code;Code20     ;TableRelation=Department;
+                                                   CaptionML=ENU=Global Dimension 1 Code;
+                                                   Description=PA032441,PA035597;
+                                                   CaptionClass='1,1,1' }
+    { 5   ;   ;Global Dimension 2 Code;Code20     ;TableRelation=Make;
+                                                   CaptionML=ENU=Global Dimension 2 Code;
+                                                   Description=PA032441,PA035597;
+                                                   CaptionClass='1,1,2' }
+    { 6   ;   ;Job No.             ;Code20        ;CaptionML=ENU=Job No. }
+    { 7   ;   ;Amount              ;Decimal       ;CaptionML=ENU=Amount;
+                                                   AutoFormatType=1 }
+    { 8   ;   ;VAT Amount          ;Decimal       ;CaptionML=ENU=VAT Amount;
+                                                   AutoFormatType=1 }
+    { 10  ;   ;Gen. Bus. Posting Group;Code10     ;TableRelation="Gen. Business Posting Group";
+                                                   CaptionML=ENU=Gen. Bus. Posting Group }
+    { 11  ;   ;Gen. Prod. Posting Group;Code10    ;TableRelation="Gen. Product Posting Group";
+                                                   CaptionML=ENU=Gen. Prod. Posting Group }
+    { 12  ;   ;VAT Calculation Type;Option        ;CaptionML=ENU=VAT Calculation Type;
+                                                   OptionCaptionML=ENU=Normal VAT,Reverse Charge VAT,Full VAT,Sales Tax,,,,,Differential Tax;
+                                                   OptionString=Normal VAT,Reverse Charge VAT,Full VAT,Sales Tax,,,,,Differential Tax;
+                                                   Description=PA032441 }
+    { 14  ;   ;VAT Base Amount     ;Decimal       ;CaptionML=ENU=VAT Base Amount;
+                                                   AutoFormatType=1 }
+    { 17  ;   ;System-Created Entry;Boolean       ;CaptionML=ENU=System-Created Entry }
+    { 18  ;   ;Tax Area Code       ;Code20        ;TableRelation="Tax Area";
+                                                   CaptionML=ENU=Tax Area Code }
+    { 19  ;   ;Tax Liable          ;Boolean       ;CaptionML=ENU=Tax Liable }
+    { 20  ;   ;Tax Group Code      ;Code10        ;TableRelation="Tax Group";
+                                                   CaptionML=ENU=Tax Group Code }
+    { 21  ;   ;Quantity            ;Decimal       ;CaptionML=ENU=Quantity;
+                                                   DecimalPlaces=1:5 }
+    { 22  ;   ;Use Tax             ;Boolean       ;CaptionML=ENU=Use Tax }
+    { 23  ;   ;VAT Bus. Posting Group;Code10      ;TableRelation="VAT Business Posting Group";
+                                                   CaptionML=ENU=VAT Bus. Posting Group }
+    { 24  ;   ;VAT Prod. Posting Group;Code10     ;TableRelation="VAT Product Posting Group";
+                                                   CaptionML=ENU=VAT Prod. Posting Group }
+    { 25  ;   ;Amount (ACY)        ;Decimal       ;CaptionML=ENU=Amount (ACY);
+                                                   AutoFormatType=1 }
+    { 26  ;   ;VAT Amount (ACY)    ;Decimal       ;CaptionML=ENU=VAT Amount (ACY);
+                                                   AutoFormatType=1 }
+    { 29  ;   ;VAT Base Amount (ACY);Decimal      ;CaptionML=ENU=VAT Base Amount (ACY);
+                                                   AutoFormatType=1 }
+    { 30  ;   ;Dimension Entry No. ;Integer       ;CaptionML=ENU=Dimension Entry No. }
+    { 31  ;   ;VAT Difference      ;Decimal       ;CaptionML=ENU=VAT Difference;
+                                                   AutoFormatType=1 }
+    { 32  ;   ;VAT %               ;Decimal       ;CaptionML=ENU=VAT %;
+                                                   DecimalPlaces=1:1 }
+    { 480 ;   ;Dimension Set ID    ;Integer       ;TableRelation="Dimension Set Entry";
+                                                   CaptionML=ENU=Dimension Set ID;
+                                                   Description=PA035597;
+                                                   Editable=No }
+    { 5600;   ;FA Posting Date     ;Date          ;CaptionML=ENU=FA Posting Date }
+    { 5601;   ;FA Posting Type     ;Option        ;CaptionML=ENU=FA Posting Type;
+                                                   OptionCaptionML=ENU=" ,Acquisition Cost,Maintenance";
+                                                   OptionString=[ ,Acquisition Cost,Maintenance] }
+    { 5602;   ;Depreciation Book Code;Code10      ;TableRelation="Depreciation Book";
+                                                   CaptionML=ENU=Depreciation Book Code }
+    { 5603;   ;Salvage Value       ;Decimal       ;CaptionML=ENU=Salvage Value;
+                                                   AutoFormatType=1 }
+    { 5605;   ;Depr. until FA Posting Date;Boolean;CaptionML=ENU=Depr. until FA Posting Date }
+    { 5606;   ;Depr. Acquisition Cost;Boolean     ;CaptionML=ENU=Depr. Acquisition Cost }
+    { 5609;   ;Maintenance Code    ;Code10        ;TableRelation=Maintenance;
+                                                   CaptionML=ENU=Maintenance Code }
+    { 5610;   ;Insurance No.       ;Code20        ;TableRelation=Insurance;
+                                                   CaptionML=ENU=Insurance No. }
+    { 5611;   ;Budgeted FA No.     ;Code20        ;TableRelation="Fixed Asset";
+                                                   CaptionML=ENU=Budgeted FA No. }
+    { 5612;   ;Duplicate in Depreciation Book;Code10;
+                                                   TableRelation="Depreciation Book";
+                                                   CaptionML=ENU=Duplicate in Depreciation Book }
+    { 5613;   ;Use Duplication List;Boolean       ;CaptionML=ENU=Use Duplication List }
+    { 5614;   ;Fixed Asset Line No.;Integer       ;CaptionML=ENU=Fixed Asset Line No. }
+    { 5025350;;Sales Income Surplus Account;Code20;TableRelation="G/L Account";
+                                                   CaptionML=ENU=Sales Income Surplus Account;
+                                                   Description=INC }
+    { 5025351;;Exch. Parts Tax Base;Decimal       ;CaptionML=ENU=Exch. Parts Tax Base;
+                                                   Description=INC }
+    { 5025352;;Exch. Parts Tax %   ;Decimal       ;CaptionML=ENU=Exch. Parts Tax %;
+                                                   Description=INC }
+    { 5025353;;Exch. Parts Tax Amount;Decimal     ;CaptionML=ENU=Exch. Parts Tax Amount;
+                                                   Description=INC }
+    { 5025354;;Orig. Exch. Parts VAT Tax Base;Decimal;
+                                                   CaptionML=ENU=Orig. Exch. Parts VAT Tax Base;
+                                                   Description=INC }
+    { 5025355;;Orig. Exch. Parts VAT Amount;Decimal;
+                                                   CaptionML=ENU=Orig. Exch. Parts VAT Amount;
+                                                   Description=INC }
+    { 5025356;;Exch. Parts Tax Account;Code20     ;TableRelation="G/L Account";
+                                                   CaptionML=ENU=Exch. Parts Tax Account;
+                                                   Description=INC }
+    { 5025357;;Exch. Parts Tax VAT Prod. PG;Code10;TableRelation="VAT Product Posting Group";
+                                                   CaptionML=ENU=Exch. Parts Tax VAT Prod. PG;
+                                                   Description=INC }
+    { 5025358;;VIN                 ;Code20        ;CaptionML=ENU=VIN;
+                                                   Description=INC;
+                                                   AutoFormatExpr='JMD' }
+    { 5025359;;Book No.            ;Code20        ;CaptionML=ENU=Book No.;
+                                                   Description=INC;
+                                                   AutoFormatExpr='JMD' }
+    { 5025360;;Veh. Source Code    ;Option        ;CaptionML=ENU=Veh. Source Code;
+                                                   OptionCaptionML=ENU=" ,Sales Invoice,Sales Credit Memo";
+                                                   OptionString=[ ,Sales Invoice,Sales Credit Memo];
+                                                   Description=INC }
+    { 5025361;;Diff Tax VAT Prod Posting Grp;Code10;
+                                                   TableRelation="VAT Product Posting Group";
+                                                   CaptionML=ENU=Diff. Taxation VAT Prod. Posting Grp.;
+                                                   Description=INC }
+    { 5025362;;Combined Key        ;Text55        ;CaptionML=ENU=Combined Key;
+                                                   Description=INC }
+    { 5025840;;Factory No.         ;Code20        ;CaptionML=ENU=Factory No.;
+                                                   Description=INC;
+                                                   Editable=No }
+    { 5025841;;Branch Code         ;Code10        ;CaptionML=ENU=Branch Code;
+                                                   Description=PA042464,PA041187.93102 }
+  }
+  KEYS
+  {
+    {    ;Type,G/L Account,Gen. Bus. Posting Group,Gen. Prod. Posting Group,VAT Bus. Posting Group,VAT Prod. Posting Group,Tax Area Code,Tax Group Code,Tax Liable,Use Tax,Dimension Set ID,Job No.,Fixed Asset Line No.,Sales Income Surplus Account,Combined Key;
+                                                   MaintainSIFTIndex=No;
+                                                   Clustered=Yes }
+  }
+  FIELDGROUPS
+  {
+  }
+  CODE
+  {
+
+    PROCEDURE PrepareSales@1(VAR SalesLine@1000 : Record 37);
+    BEGIN
+      CLEAR(Rec);
+      Type := SalesLine.Type;
+      "System-Created Entry" := TRUE;
+      "Gen. Bus. Posting Group" := SalesLine."Gen. Bus. Posting Group";
+      "Gen. Prod. Posting Group" := SalesLine."Gen. Prod. Posting Group";
+      "VAT Bus. Posting Group" := SalesLine."VAT Bus. Posting Group";
+      "VAT Prod. Posting Group" := SalesLine."VAT Prod. Posting Group";
+      "VAT Calculation Type" := SalesLine."VAT Calculation Type";
+      // Start PA032441
+      "Global Dimension 1 Code" := SalesLine."Shortcut Dimension 1 Code";
+      "Global Dimension 2 Code" := SalesLine."Shortcut Dimension 2 Code";
+      // Stop PA032441
+      // Start PA035597
+      "Dimension Set ID" := SalesLine."Dimension Set ID";
+      // Stop PA035597
+      // Start PA031882
+      // Stop PA031882
+      "VAT %" := SalesLine."VAT %";
+      // Start PA032441
+      VIN := SalesLine.VIN;
+      // Stop PA032441
+      // Start PA032441
+      // Stop PA032441
+      IF "VAT Calculation Type" = "VAT Calculation Type"::"Sales Tax" THEN BEGIN
+        "Tax Area Code" := SalesLine."Tax Area Code";
+        "Tax Group Code" := SalesLine."Tax Group Code";
+        "Tax Liable" := SalesLine."Tax Liable";
+        "Use Tax" := FALSE;
+        Quantity := SalesLine."Qty. to Invoice (Base)";
+      END;
+    END;
+
+    PROCEDURE CalcDiscount@2(PricesInclVAT@1000 : Boolean;DiscountAmount@1001 : Decimal;DiscountAmountACY@1002 : Decimal);
+    VAR
+      CurrencyLCY@1003 : Record 4;
+      CurrencyACY@1004 : Record 4;
+      GLSetup@1005 : Record 98;
+    BEGIN
+      CurrencyLCY.InitRoundingPrecision;
+      GLSetup.GET;
+      IF GLSetup."Additional Reporting Currency" <> '' THEN
+        CurrencyACY.GET(GLSetup."Additional Reporting Currency")
+      ELSE
+        CurrencyACY := CurrencyLCY;
+      "VAT Amount" := ROUND(
+          CalcVATAmount(PricesInclVAT,DiscountAmount,"VAT %"),
+          CurrencyLCY."Amount Rounding Precision",
+          CurrencyLCY.VATRoundingDirection);
+      "VAT Amount (ACY)" := ROUND(
+          CalcVATAmount(PricesInclVAT,DiscountAmountACY,"VAT %"),
+          CurrencyACY."Amount Rounding Precision",
+          CurrencyACY.VATRoundingDirection);
+
+      IF PricesInclVAT AND ("VAT %" <> 0) THEN BEGIN
+        "VAT Base Amount" := DiscountAmount - "VAT Amount";
+        "VAT Base Amount (ACY)" := DiscountAmountACY - "VAT Amount (ACY)";
+      END ELSE BEGIN
+        "VAT Base Amount" := DiscountAmount;
+        "VAT Base Amount (ACY)" := DiscountAmountACY;
+      END;
+      Amount := "VAT Base Amount";
+      "Amount (ACY)" := "VAT Base Amount (ACY)";
+    END;
+
+    LOCAL PROCEDURE CalcVATAmount@3(ValueInclVAT@1000 : Boolean;Value@1001 : Decimal;"VAT%"@1002 : Decimal) : Decimal;
+    BEGIN
+      IF "VAT%" = 0 THEN
+        EXIT(0);
+      IF ValueInclVAT THEN
+        EXIT(Value / (1 + ("VAT%" / 100)) * ("VAT%" / 100));
+
+      EXIT(Value * ("VAT%" / 100));
+    END;
+
+    PROCEDURE SetAccount@4(Account@1000 : Code[20];VAR TotalVAT@1004 : Decimal;VAR TotalVATACY@1003 : Decimal;VAR TotalAmount@1002 : Decimal;VAR TotalAmountACY@1001 : Decimal);
+    BEGIN
+      TotalVAT := TotalVAT - "VAT Amount";
+      TotalVATACY := TotalVATACY - "VAT Amount (ACY)";
+      TotalAmount := TotalAmount - Amount;
+      TotalAmountACY := TotalAmountACY - "Amount (ACY)";
+      "G/L Account" := Account;
+    END;
+
+    PROCEDURE SetAmounts@5(TotalVAT@1003 : Decimal;TotalVATACY@1002 : Decimal;TotalAmount@1001 : Decimal;TotalAmountACY@1000 : Decimal;VATDifference@1004 : Decimal);
+    BEGIN
+      Amount := TotalAmount;
+      "VAT Base Amount" := TotalAmount;
+      "VAT Amount" := TotalVAT;
+      "Amount (ACY)" := TotalAmountACY;
+      "VAT Base Amount (ACY)" := TotalAmountACY;
+      "VAT Amount (ACY)" := TotalVATACY;
+      "VAT Difference" := "VAT Difference";
+    END;
+
+    PROCEDURE PreparePurchase@6(VAR PurchLine@1000 : Record 39);
+    BEGIN
+      CLEAR(Rec);
+      Type := PurchLine.Type;
+      "System-Created Entry" := TRUE;
+      "Gen. Bus. Posting Group" := PurchLine."Gen. Bus. Posting Group";
+      "Gen. Prod. Posting Group" := PurchLine."Gen. Prod. Posting Group";
+      "VAT Bus. Posting Group" := PurchLine."VAT Bus. Posting Group";
+      "VAT Prod. Posting Group" := PurchLine."VAT Prod. Posting Group";
+      "VAT Calculation Type" := PurchLine."VAT Calculation Type";
+      // Start PA032441
+      "Global Dimension 1 Code" := PurchLine."Shortcut Dimension 1 Code";
+      "Global Dimension 2 Code" := PurchLine."Shortcut Dimension 2 Code";
+      VIN := PurchLine.VIN;
+      // Stop PA032441
+      // Start PA035597
+      "Dimension Set ID" := PurchLine."Dimension Set ID";
+      // Stop PA035597
+      // Start PA031882
+      // Stop PA031882
+      "VAT %" := PurchLine."VAT %";
+      // Start PA032441
+      // Stop PA032441
+
+      IF Type = Type::"Fixed Asset" THEN BEGIN
+        "FA Posting Date" := PurchLine."FA Posting Date";
+        "Depreciation Book Code" := PurchLine."Depreciation Book Code";
+        "Depr. until FA Posting Date" := PurchLine."Depr. until FA Posting Date";
+        "Duplicate in Depreciation Book" := PurchLine."Duplicate in Depreciation Book";
+        "Use Duplication List" := PurchLine."Use Duplication List";
+        "FA Posting Type" := PurchLine."FA Posting Type";
+        "Depreciation Book Code" := PurchLine."Depreciation Book Code";
+        "Salvage Value" := PurchLine."Salvage Value";
+        "Depr. Acquisition Cost" := PurchLine."Depr. Acquisition Cost";
+        "Maintenance Code" := PurchLine."Maintenance Code";
+        "Insurance No." := PurchLine."Insurance No.";
+        "Budgeted FA No." := PurchLine."Budgeted FA No.";
+      END;
+
+      IF "VAT Calculation Type" = "VAT Calculation Type"::"Sales Tax" THEN BEGIN
+        "Tax Area Code" := PurchLine."Tax Area Code";
+        "Tax Group Code" := PurchLine."Tax Group Code";
+        "Tax Liable" := PurchLine."Tax Liable";
+        "Use Tax" := FALSE;
+        Quantity := PurchLine."Qty. to Invoice (Base)";
+      END;
+    END;
+
+    PROCEDURE CalcDiscountNoVAT@7(DiscountAmount@1001 : Decimal;DiscountAmountACY@1002 : Decimal);
+    BEGIN
+      "VAT Base Amount" := DiscountAmount;
+      "VAT Base Amount (ACY)" := DiscountAmountACY;
+      Amount := "VAT Base Amount";
+      "Amount (ACY)" := "VAT Base Amount (ACY)";
+    END;
+
+    PROCEDURE SetSalesTax@8(PurchaseLine@1000 : Record 39);
+    BEGIN
+      "Tax Area Code" := PurchaseLine."Tax Area Code";
+      "Tax Liable" := PurchaseLine."Tax Liable";
+      "Tax Group Code" := PurchaseLine."Tax Group Code";
+      "Use Tax" := PurchaseLine."Use Tax";
+      Quantity := PurchaseLine."Qty. to Invoice (Base)";
+    END;
+
+    PROCEDURE ReverseAmounts@9();
+    BEGIN
+      Amount := -Amount;
+      "VAT Base Amount" := -"VAT Base Amount";
+      "Amount (ACY)" := -"Amount (ACY)";
+      "VAT Base Amount (ACY)" := -"VAT Base Amount (ACY)";
+      "VAT Amount" := -"VAT Amount";
+      "VAT Amount (ACY)" := -"VAT Amount (ACY)";
+    END;
+
+    PROCEDURE SetAmountsNoVAT@10(TotalAmount@1001 : Decimal;TotalAmountACY@1000 : Decimal;VATDifference@1004 : Decimal);
+    BEGIN
+      Amount := TotalAmount;
+      "VAT Base Amount" := TotalAmount;
+      "VAT Amount" := 0;
+      "Amount (ACY)" := TotalAmountACY;
+      "VAT Base Amount (ACY)" := TotalAmountACY;
+      "VAT Amount (ACY)" := 0;
+      "VAT Difference" := "VAT Difference";
+    END;
+
+    PROCEDURE __INCADEA__@5025350();
+    BEGIN
+    END;
+
+    PROCEDURE FillCombinedKey@5025400();
+    BEGIN
+      // Start INC
+      "Combined Key" := STRSUBSTNO('[%1]/[%2]/[%3]', VIN,
+        "Book No.", COPYSTR(FORMAT("Veh. Source Code"),1,1));
+      // Stop INC
+    END;
+
+    BEGIN
+    {
+      // @ Area GeneralLedger
+      PA-Number  Date
+      ------------------------------------------------
+      PA032441   01.07.11 GC NAV 2009 SP1 W1 General Ledger Integration
+                          Function PrepareService Deleted
+      PA033067   12.04.12 DR DE Captions implemented
+      PA033259   08.08.12 AI Deletion of Start/Stop History in Code, update copyright and Version List
+      PA033259   18.09.12 DR Variable names changed according to incadea styleguide
+      PA033733   10.12.12 DR DE Captions added for version: N.6.1.2
+      PA035597   10.02.14 GC NAV 2013 R2 Technical Upgrade
+      PA035597   16.07.14 DR 25914: - Table Relation of field Dimension Set ID changed to "Dimension Set Entry".
+                             - MaintainSIFTIndex=No removed
+      PA042464   12.12.16 SP Added new field "Branch Code".
+      PA041187   10.04.17 AK 93102 inserted Missing Caption
+    }
+    END.
+  }
+}
+

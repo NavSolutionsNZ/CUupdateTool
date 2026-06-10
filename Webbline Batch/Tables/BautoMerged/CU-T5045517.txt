@@ -1,0 +1,492 @@
+OBJECT Table 5045517 Vehicle Inventory Buffer
+{
+  OBJECT-PROPERTIES
+  {
+    Date=11/03/25;
+    Time=[ 7:03:48 AM];
+    Version List=N.7.2.1;
+  }
+  PROPERTIES
+  {
+    CaptionML=ENU=Vehicle Inventory Buffer;
+  }
+  FIELDS
+  {
+    { 1   ;   ;VIN                 ;Code20        ;TableRelation=Vehicle;
+                                                   ValidateTableRelation=No;
+                                                   CaptionML=ENU=VIN }
+    { 2   ;   ;Book No.            ;Code20        ;CaptionML=ENU=Book No. }
+    { 3   ;   ;User ID             ;Code50        ;TableRelation=User."User Name";
+                                                   ValidateTableRelation=No;
+                                                   TestTableRelation=No;
+                                                   CaptionML=ENU=User ID }
+    { 20  ;   ;License No.         ;Code11        ;CaptionML=ENU=License No. }
+    { 21  ;   ;Model               ;Text50        ;CaptionML=ENU=Model Description }
+    { 22  ;   ;Vehicle Status      ;Option        ;CaptionML=ENU=Vehicle Status;
+                                                   OptionCaptionML=ENU=" ,New Vehicle,Used Vehicle,Demo Vehicle,Customer Vehicle,Prospect Vehicle,Consignment Vehicle,Rental Vehicle";
+                                                   OptionString=[ ,New Vehicle,Used Vehicle,Demo Vehicle,Customer Vehicle,Prospect Vehicle,Consignment Vehicle,Rental Vehicle] }
+    { 23  ;   ;Engine Type Code    ;Code20        ;TableRelation="Engine Type";
+                                                   ValidateTableRelation=No;
+                                                   CaptionML=ENU=Engine Type Code;
+                                                   AutoFormatExpr='JMD' }
+    { 24  ;   ;Transmission Type Code;Code20      ;TableRelation="Transmission Type";
+                                                   ValidateTableRelation=No;
+                                                   CaptionML=ENU=Transmission Type Code }
+    { 25  ;   ;Cylinder Capacity (ccm);Decimal    ;CaptionML=ENU=Cylinder Capacity (ccm);
+                                                   DecimalPlaces=0:0 }
+    { 26  ;   ;Power (kW)          ;Integer       ;CaptionML=ENU=Power (kW) }
+    { 27  ;   ;Color Description   ;Text50        ;CaptionML=ENU=Color Description;
+                                                   Editable=No }
+    { 28  ;   ;Upholstery Description;Text50      ;CaptionML=ENU=Upholstery Description;
+                                                   Editable=No }
+    { 29  ;   ;Model Code          ;Text20        ;CaptionML=ENU=Model Code }
+    { 30  ;   ;No. of Doors        ;Integer       ;CaptionML=ENU=No. of Doors }
+    { 31  ;   ;Vehicle Category Code;Code10       ;TableRelation="Vehicle Category".Code WHERE (Make Code=FIELD(Make Code));
+                                                   ValidateTableRelation=No;
+                                                   CaptionML=ENU=Vehicle Category Code;
+                                                   AutoFormatExpr='JMD' }
+    { 32  ;   ;Market Segment Code ;Code10        ;TableRelation="Market Segment".Code;
+                                                   ValidateTableRelation=No;
+                                                   CaptionML=ENU=Market Segment Code }
+    { 33  ;   ;Make Code           ;Code20        ;TableRelation=Make;
+                                                   ValidateTableRelation=No;
+                                                   CaptionML=ENU=Make Code }
+    { 34  ;   ;Vehicle Type Code   ;Code10        ;TableRelation="Vehicle Type";
+                                                   ValidateTableRelation=No;
+                                                   CaptionML=ENU=Vehicle Type Code;
+                                                   AutoFormatExpr='JMD' }
+    { 35  ;   ;Initial Registration;Date          ;CaptionML=ENU=Initial Registration }
+    { 36  ;   ;Deregistration Date ;Date          ;CaptionML=ENU=Deregistration Date }
+    { 37  ;   ;Days Carried        ;Integer       ;CaptionML=ENU=Days Carried;
+                                                   Editable=No }
+    { 38  ;   ;Customer            ;Code20        ;CaptionML=ENU=Customer }
+    { 200 ;   ;Location Code       ;Code10        ;TableRelation=Location;
+                                                   ValidateTableRelation=No;
+                                                   CaptionML=ENU=Location Code }
+    { 201 ;   ;Branch Code         ;Code10        ;TableRelation="Branch Description";
+                                                   CaptionML=ENU=Branch Code }
+    { 202 ;   ;Inv. Posting Group  ;Code10        ;TableRelation="Inventory Posting Group";
+                                                   CaptionML=ENU=Inv. Posting Group }
+    { 203 ;   ;Inventory Account   ;Code20        ;CaptionML=ENU=Inventory Account }
+    { 204 ;   ;Purchase Date       ;Date          ;CaptionML=ENU=Purchase Date }
+    { 205 ;   ;G/L Account Value   ;Decimal       ;FieldClass=Normal;
+                                                   CaptionML=ENU=G/L Account Value;
+                                                   AutoFormatType=1 }
+    { 206 ;   ;Inventory Value     ;Decimal       ;FieldClass=Normal;
+                                                   CaptionML=ENU=Inventory Value;
+                                                   AutoFormatType=1 }
+    { 207 ;   ;Total Price         ;Decimal       ;CaptionML=ENU=Total Price;
+                                                   AutoFormatType=2 }
+    { 208 ;   ;Total Price incl. VAT;Decimal      ;CaptionML=ENU=Total Price incl. VAT;
+                                                   AutoFormatType=2 }
+    { 209 ;   ;Purchase Total      ;Decimal       ;CaptionML=ENU=Purchase Total;
+                                                   AutoFormatType=1 }
+    { 210 ;   ;Vehicle             ;Decimal       ;CaptionML=ENU=Vehicle;
+                                                   AutoFormatType=1 }
+    { 211 ;   ;Manufacturer Options;Decimal       ;CaptionML=ENU=Manufacturer Options;
+                                                   AutoFormatType=1 }
+    { 212 ;   ;Own Options         ;Decimal       ;CaptionML=ENU=Own Options;
+                                                   AutoFormatType=1 }
+    { 213 ;   ;Veh. Trasfer        ;Decimal       ;CaptionML=ENU=Veh. Trasfer;
+                                                   AutoFormatType=1 }
+    { 214 ;   ;Sales Incentive (Received);Decimal ;FieldClass=Normal;
+                                                   CaptionML=ENU=Sales Incentive (Received);
+                                                   AutoFormatType=1 }
+    { 215 ;   ;Sales Incentives (Expected);Decimal;CaptionML=ENU=Sales Incentives (Expected);
+                                                   AutoFormatType=1 }
+    { 216 ;   ;Service Internal    ;Decimal       ;CaptionML=ENU=Service Internal;
+                                                   AutoFormatType=1 }
+    { 217 ;   ;Miscellaneous       ;Decimal       ;CaptionML=ENU=Miscellaneous;
+                                                   AutoFormatType=1 }
+    { 218 ;   ;Calculated Costs    ;Decimal       ;CaptionML=ENU=Calculated Costs;
+                                                   AutoFormatType=1 }
+    { 219 ;   ;Charging Price Difference;Decimal  ;CaptionML=ENU=Charging Price Difference;
+                                                   AutoFormatType=2 }
+    { 220 ;   ;Sales Total         ;Decimal       ;CaptionML=ENU=Sales Total;
+                                                   AutoFormatType=1 }
+    { 221 ;   ;Date of Sale        ;Date          ;CaptionML=ENU=Date of Sale }
+    { 222 ;   ;Sales Document No.  ;Code20        ;CaptionML=ENU=Sales Document No. }
+    { 223 ;   ;Gross Profit        ;Decimal       ;FieldClass=Normal;
+                                                   CaptionML=ENU=Gross Profit;
+                                                   AutoFormatType=1 }
+    { 224 ;   ;Adjust              ;Boolean       ;CaptionML=ENU=Adjust }
+  }
+  KEYS
+  {
+    {    ;VIN,Book No.,User ID                    ;Clustered=Yes }
+  }
+  FIELDGROUPS
+  {
+  }
+  CODE
+  {
+    VAR
+      VehicleG@18884300 : Record 5025400;
+
+    PROCEDURE FillBuffer@1260700(StatusDateP@1260700 : Date);
+    VAR
+      InvPostSetupL@1260705 : Record 5813;
+      VehicleInventBufferL@1260703 : Record 5045517;
+      ValueEntryL@1260702 : Record 5802;
+      VehicleCollectUnitL@1260704 : Codeunit 5025409;
+      VehicleInventQueryL@1260701 : Query 5045517;
+      VehicleInventQuery2L@1260706 : Query 5045517;
+      ItemLedgEntryL@1260707 : Record 32;
+    BEGIN
+      // @ This function is used to read data from 'Value Entry' table and save it in 'Vehicle Inventory Buffer' table
+      // @ param StatusDateP - Date
+
+      IF FINDSET THEN
+        DELETEALL;
+      VehicleInventQueryL.SETFILTER(StatusDate, '<=%1', StatusDateP);
+      VehicleInventQueryL.OPEN;
+      WHILE VehicleInventQueryL.READ DO BEGIN
+        VehicleInventQuery2L.SETRANGE(VIN, VehicleInventQueryL.VIN);
+        VehicleInventQuery2L.SETRANGE(Book_No, VehicleInventQueryL.Book_No);
+        VehicleInventQuery2L.SETFILTER(StatusDate, '<=%1', StatusDateP);
+        VehicleInventQuery2L.SETFILTER(ItemType, '<>%1', ValueEntryL."Item Type"::Item);
+        VehicleInventQuery2L.SETFILTER(ExpectedCost, '%1', FALSE);
+        VehicleInventQuery2L.SETFILTER(AdjustedCost, '<>%1', 0);
+        VehicleInventQuery2L.OPEN;
+        IF VehicleInventQuery2L.READ THEN
+          InsertLine(VehicleInventQuery2L.VIN, VehicleInventQuery2L.Book_No, StatusDateP)
+        ELSE BEGIN
+          ItemLedgEntryL.SETCURRENTKEY(VIN,"Book No.");
+          ItemLedgEntryL.SETRANGE(VIN, VehicleInventQueryL.VIN);
+          ItemLedgEntryL.SETRANGE("Book No.", VehicleInventQueryL.Book_No);
+          ItemLedgEntryL.SETRANGE("Item Type", ItemLedgEntryL."Item Type"::Vehicle);
+          ItemLedgEntryL.SETFILTER("Posting Date", '<=%1', StatusDateP);
+          ItemLedgEntryL.CALCSUMS(Quantity);
+          IF ItemLedgEntryL.Quantity <> 0 THEN
+            InsertLine(VehicleInventQueryL.VIN, VehicleInventQueryL.Book_No, StatusDateP);
+        END;
+      END;
+    END;
+
+    LOCAL PROCEDURE AssignValuesFromVehicleCard@1260707(VAR VehicleInventBufferP@1260700 : Record 5045517);
+    VAR
+      VehicleL@1260701 : Record 5025400;
+    BEGIN
+      // @ This function is used to copy values from Vehicle table to VehicleInventBufferP
+      // @ param VehicleInventBufferP - Record Vehicle Inventory Buffer
+
+      IF VehicleL.GET(VehicleInventBufferP.VIN) THEN BEGIN
+        VehicleL.CALCFIELDS("Color Description", "Upholstery Description");
+        VehicleInventBufferP."License No." :=  VehicleL."License No.";
+        VehicleInventBufferP.Model := VehicleL.Model;
+        VehicleInventBufferP."Model Code" := VehicleL."Model Code";
+        VehicleInventBufferP."Engine Type Code" := VehicleL."Engine Type Code";
+        VehicleInventBufferP."Transmission Type Code" := VehicleL."Transmission Type Code";
+        VehicleInventBufferP."Cylinder Capacity (ccm)" := VehicleL."Cylinder Capacity (ccm)";
+        VehicleInventBufferP."Power (kW)" := VehicleL."Power (kW)";
+
+        VehicleInventBufferP."Color Description" := VehicleL."Color Description";
+        VehicleInventBufferP."Upholstery Description" := VehicleL."Upholstery Description";
+        VehicleInventBufferP."No. of Doors" := VehicleL."No. of Doors";
+        VehicleInventBufferP."Vehicle Category Code" := VehicleL."Vehicle Category Code";
+        VehicleInventBufferP."Market Segment Code" := VehicleL."Market Segment Code";
+        VehicleInventBufferP."Vehicle Type Code" := VehicleL."Vehicle Type Code";
+        VehicleInventBufferP."Initial Registration" := VehicleL."Initial Registration";
+        VehicleInventBufferP."Deregistration Date" := VehicleL."Deregistration Date";
+      // Start EU.0203951.206578
+        VehicleInventBufferP."Make Code" := VehicleL."Make Code";
+      // Stop EU.0203951.206578
+
+      // Start EU.0188843.191149
+        SetVehicleStatus(VehicleInventBufferP,VehicleL."Vehicle Status");
+      // Stop EU.0188843.191149
+      END;
+    END;
+
+    LOCAL PROCEDURE AssignValuesFromVehiclePriceSticker@1260710(VAR VehicleInventBufferP@1260700 : Record 5045517;StatusDateP@1260702 : Date);
+    VAR
+      VehiclePriceStickerHdrL@1260701 : Record 5025432;
+    BEGIN
+      // @ This function is used to copy values from 'Veh. Price Sticker Header' table to VehicleInventBufferP
+      // @ param VehicleInventBufferP - Record Vehicle Inventory Buffer
+      // @ param StatusDateP - Date
+
+      VehiclePriceStickerHdrL.RESET;
+      VehiclePriceStickerHdrL.SETCURRENTKEY(VIN,"Vehicle Book No.");
+      VehiclePriceStickerHdrL.SETRANGE(VIN, VehicleInventBufferP.VIN);
+      VehiclePriceStickerHdrL.SETRANGE("Vehicle Book No.", VehicleInventBufferP."Book No.");
+      VehiclePriceStickerHdrL.SETFILTER("Price Sticker Date", '<=%1', StatusDateP);
+      IF VehiclePriceStickerHdrL.FINDLAST THEN BEGIN
+        VehicleInventBufferP."Total Price" := VehiclePriceStickerHdrL."Total Quote Amount";
+        VehicleInventBufferP."Total Price incl. VAT" := VehiclePriceStickerHdrL."Total Quote Amount incl. VAT";
+      END;
+    END;
+
+    LOCAL PROCEDURE AssignValuesFromVehicleLedgEntry@1260715(VAR VehicleInventBufferP@1260700 : Record 5045517;StatusDateP@1260701 : Date);
+    VAR
+      VehicleLedgerEntryL@1260702 : Record 5025405;
+    BEGIN
+      // @ This function is used to copy values from 'Vehicle Ledger Entry' table to VehicleInventBufferP
+      // @ param VehicleInventBufferP - Record Vehicle Inventory Buffer
+      // @ param StatusDateP - Date
+
+      // Start EU.0161734.165413
+      // Start EU.0166467.166817
+      VehicleLedgerEntryL.RESET;
+      VehicleLedgerEntryL.SETRANGE("Entry Type", VehicleLedgerEntryL."Entry Type"::"Service Internal Sale");
+      VehicleLedgerEntryL.SETRANGE("Book No.", VehicleInventBufferP."Book No.");
+      VehicleLedgerEntryL.SETRANGE(VIN, VehicleInventBufferP.VIN);
+      IF VehicleInventBufferP."Date of Sale" = 0D THEN
+        VehicleLedgerEntryL.SETRANGE("Posting Date", 0D, StatusDateP);
+      VehicleLedgerEntryL.CALCSUMS("Misc. Portion");
+      VehicleInventBufferP."Service Internal" := VehicleLedgerEntryL."Misc. Portion";
+
+      VehicleLedgerEntryL.SETRANGE("Entry Type", VehicleLedgerEntryL."Entry Type"::Transfer);
+      VehicleLedgerEntryL.CALCSUMS("Branch Fee Amount");
+      VehicleInventBufferP."Charging Price Difference" := VehicleLedgerEntryL."Branch Fee Amount";
+
+      VehicleLedgerEntryL.SETRANGE(Vehicle, TRUE);
+      VehicleLedgerEntryL.SETRANGE("Sales Incentive No.", '');
+      VehicleLedgerEntryL.SETFILTER("Entry Type", '%1|%2|%3', VehicleLedgerEntryL."Entry Type"::Purchase, VehicleLedgerEntryL."Entry Type"::"Pos. Adjmt.", VehicleLedgerEntryL."Entry Type"::Transfer);
+      VehicleLedgerEntryL.SETFILTER("Line Type", '%1|%2', VehicleLedgerEntryL."Line Type"::Item, VehicleLedgerEntryL."Line Type"::Vehicle);
+      VehicleLedgerEntryL.CALCSUMS("Vehicle Portion", "Manuf. Option Portion");
+      VehicleInventBufferP.Vehicle := VehicleLedgerEntryL."Vehicle Portion";
+      VehicleInventBufferP."Manufacturer Options" := VehicleLedgerEntryL."Manuf. Option Portion";
+
+      VehicleLedgerEntryL.SETRANGE("Line Type", VehicleLedgerEntryL."Line Type"::Item);
+      VehicleLedgerEntryL.SETFILTER("Sales Incentive No.", '<>%1', '');
+      VehicleLedgerEntryL.CALCSUMS("Vehicle Portion");
+      VehicleInventBufferP."Sales Incentive (Received)" := VehicleLedgerEntryL."Vehicle Portion";
+
+      VehicleLedgerEntryL.SETRANGE("Sales Incentive No.");
+      VehicleLedgerEntryL.SETRANGE(Vehicle, FALSE);
+      VehicleLedgerEntryL.SETRANGE("Line Type", VehicleLedgerEntryL."Line Type"::"Own Option");
+      VehicleLedgerEntryL.CALCSUMS("Own Option Portion");
+      VehicleInventBufferP."Own Options" := VehicleLedgerEntryL."Own Option Portion";
+
+      VehicleLedgerEntryL.SETRANGE("Line Type", VehicleLedgerEntryL."Line Type"::"Veh. Transfer");
+      VehicleLedgerEntryL.CALCSUMS("Veh. Transfer Portion");
+      VehicleInventBufferP."Veh. Trasfer" := VehicleLedgerEntryL."Veh. Transfer Portion";
+
+      VehicleLedgerEntryL.SETFILTER("Entry Type", '%1|%2', VehicleLedgerEntryL."Entry Type"::"Other Costs", VehicleLedgerEntryL."Entry Type"::"Other Income");
+      VehicleLedgerEntryL.SETRANGE("Line Type", VehicleLedgerEntryL."Line Type"::"G/L Account");
+      VehicleLedgerEntryL.SETFILTER("Sales Incentive No.", '<>%1', '');
+      VehicleLedgerEntryL.CALCSUMS("Misc. Portion");
+      VehicleInventBufferP."Sales Incentives (Expected)" := VehicleLedgerEntryL."Misc. Portion";
+
+      VehicleLedgerEntryL.SETFILTER("Entry Type", '%1|%2', VehicleLedgerEntryL."Entry Type"::Purchase, VehicleLedgerEntryL."Entry Type"::Transfer);
+      VehicleLedgerEntryL.SETRANGE("Sales Incentive No.", '');
+      VehicleLedgerEntryL.CALCSUMS("Misc. Portion");
+      VehicleInventBufferP.Miscellaneous := VehicleLedgerEntryL."Misc. Portion";
+      // Stop EU.0166467.166817
+      VehicleInventBufferP."Purchase Total" :=
+         VehicleInventBufferP.Vehicle +
+         VehicleInventBufferP."Manufacturer Options" +
+         VehicleInventBufferP."Own Options" +
+         VehicleInventBufferP."Veh. Trasfer" +
+         VehicleInventBufferP."Sales Incentive (Received)" +
+         VehicleInventBufferP."Sales Incentives (Expected)" +
+         VehicleInventBufferP."Service Internal" +
+         VehicleInventBufferP.Miscellaneous +
+         VehicleInventBufferP."Calculated Costs";
+
+      IF VehicleInventBufferP."Sales Total" <> 0 THEN
+        VehicleInventBufferP."Gross Profit" := VehicleInventBufferP."Sales Total" - VehicleInventBufferP."Purchase Total";
+    END;
+
+    LOCAL PROCEDURE AssignCalcCostFromVehicleLedgEntry@1260702(VAR VehicleInventBufferP@1260701 : Record 5045517;StatusDateP@1260700 : Date);
+    VAR
+      VehicleLedgerEntryL@1260702 : Record 5025405;
+    BEGIN
+      // @ This function is used to copy values for Calculated Costs from 'Vehicle Ledger Entry' table to VehicleInventBufferP
+      // @ param VehicleInventBufferP - Record Vehicle Inventory Buffer
+      // @ param StatusDateP - Date
+
+      VehicleLedgerEntryL.RESET;
+      // Start EU.0166467.166817
+      // Stop EU.0166467.166817
+      VehicleLedgerEntryL.SETRANGE("Entry Type", VehicleLedgerEntryL."Entry Type"::"Calcd. Costs");
+      VehicleLedgerEntryL.SETRANGE("Book No.", VehicleInventBufferP."Book No.");
+      VehicleLedgerEntryL.SETRANGE(VIN, VehicleInventBufferP.VIN);
+      IF VehicleInventBufferP."Date of Sale" = 0D THEN
+        VehicleLedgerEntryL.SETFILTER("Posting Date", '<=%1', StatusDateP);
+      VehicleLedgerEntryL.CALCSUMS("Calculated Costs Portion");
+      VehicleInventBufferP."Calculated Costs" := VehicleLedgerEntryL."Calculated Costs Portion";
+    END;
+
+    LOCAL PROCEDURE AssignSalesData@1260701(VAR VehicleInventBufferP@1260700 : Record 5045517;StatusDateP@1260702 : Date);
+    VAR
+      VehicleLedgerEntryL@1260701 : Record 5025405;
+    BEGIN
+      // @ This function is used to copy sales data from 'Vehicle Ledger Entry' table to VehicleInventBufferP
+      // @ param VehicleInventBufferP - Record Vehicle Inventory Buffer
+      // @ param StatusDateP - Date
+
+      VehicleLedgerEntryL.RESET;
+      // Start EU.0166467.166817
+      // Stop EU.0166467.166817
+      VehicleLedgerEntryL.SETRANGE("Book No.", VehicleInventBufferP."Book No.");
+      VehicleLedgerEntryL.SETRANGE(VIN, VehicleInventBufferP.VIN);
+      // Start EU.0177226.177066
+      VehicleLedgerEntryL.SETRANGE("Posting Date", 0D, StatusDateP);
+      // Stop EU.0177226.177066
+      VehicleLedgerEntryL.SETRANGE("Line Type", VehicleLedgerEntryL."Line Type"::Vehicle);
+      VehicleLedgerEntryL.SETRANGE(Vehicle, TRUE);
+      VehicleLedgerEntryL.CALCSUMS(Quantity);
+      IF VehicleLedgerEntryL.Quantity = 0 THEN BEGIN
+        VehicleLedgerEntryL.SETRANGE("Entry Type", VehicleLedgerEntryL."Entry Type"::Sale);
+        VehicleLedgerEntryL.SETFILTER("Line Type",'%1|%2|%3|%4',
+           VehicleLedgerEntryL."Line Type"::Vehicle,
+           VehicleLedgerEntryL."Line Type"::"Own Option",
+           VehicleLedgerEntryL."Line Type"::"Veh. Transfer",
+           VehicleLedgerEntryL."Line Type"::"G/L Account");
+        VehicleLedgerEntryL.SETRANGE(Vehicle);
+        VehicleLedgerEntryL.CALCSUMS("Total Price");
+        VehicleInventBufferP."Sales Total" := ABS(VehicleLedgerEntryL."Total Price");
+        IF VehicleLedgerEntryL.FINDLAST THEN BEGIN
+          VehicleInventBufferP.Customer := VehicleLedgerEntryL."Source No.";
+          VehicleInventBufferP."Date of Sale" := VehicleLedgerEntryL."Date of Sale";
+          VehicleInventBufferP."Sales Document No." := VehicleLedgerEntryL."Document No.";
+      // Start EU.0106426.108439
+      // Start EU.0172844.172952
+      // Start EU.0188843.191149
+         SetVehicleStatus(VehicleInventBufferP,VehicleLedgerEntryL."Vehicle Status");
+      // Stop EU.0188843.191149
+      // Stop EU.0172844.172952
+      // Stop EU.0106426.108439
+        END;
+      END;
+    END;
+
+    LOCAL PROCEDURE CheckAdjustmentNeeded@1260704(VAR VehicleInventBufferP@1260701 : Record 5045517;StatusDateP@1260700 : Date);
+    VAR
+      ValueEntryL@1260702 : Record 5802;
+    BEGIN
+      IF VehicleInventBufferP."Sales Total" <> 0 THEN BEGIN
+        ValueEntryL.RESET;
+      // Start EU.0166467.166817
+      // Stop EU.0166467.166817
+        ValueEntryL.SETRANGE(VIN, VehicleInventBufferP.VIN);
+        ValueEntryL.SETRANGE("Book No.", VehicleInventBufferP."Book No.");
+        IF VehicleInventBufferP."Date of Sale" = 0D THEN
+          ValueEntryL.SETFILTER("Posting Date", '<=%1', StatusDateP);
+        ValueEntryL.SETFILTER("Item Type", '<>%1', ValueEntryL."Item Type"::Item);
+        ValueEntryL.SETRANGE("Expected Cost", FALSE);
+        ValueEntryL.CALCSUMS("Adjusted Cost");
+        VehicleInventBufferP.Adjust := ValueEntryL."Adjusted Cost" <> 0;
+      END;
+    END;
+
+    LOCAL PROCEDURE InsertLine@1260703(VINP@1260700 : Code[17];BookNoP@1260701 : Code[20];StatusDateP@1260704 : Date);
+    VAR
+      ValueEntryL@1260702 : Record 5802;
+      VehicleInventBufferL@1260703 : Record 5045517;
+      InvPostSetupL@1260705 : Record 5813;
+    BEGIN
+      // @ This function is used to insert a new line in 'Vehicle Inventory Buffer' table
+      // @ param VINP - Code 17
+      // @ param BookNoP - Code 20
+      // @ param StatusDateP - Date
+
+      IF VehicleInventBufferL.GET(VINP, BookNoP, USERID) THEN
+        EXIT;
+      ValueEntryL.RESET;
+      // Start EU.0166467.166817
+      // Start EU.0158119.159359
+      ValueEntryL.SETCURRENTKEY(VIN,"Book No.","Posting Date","Item Type");
+      // Stop EU.0158119.159359
+      ValueEntryL.SETRANGE(VIN, VINP);
+      ValueEntryL.SETRANGE("Book No.", BookNoP);
+      ValueEntryL.SETFILTER("Posting Date", '<=%1', StatusDateP);
+      ValueEntryL.SETFILTER("Item Type", '<>%1', ValueEntryL."Item Type"::Item);
+      IF ValueEntryL.FINDFIRST THEN BEGIN
+        VehicleInventBufferL.INIT;
+        VehicleInventBufferL.VIN := VINP;
+        VehicleInventBufferL."Book No." := BookNoP;
+        VehicleInventBufferL."User ID" := USERID;
+        ValueEntryL.SETRANGE("Expected Cost", FALSE);
+        ValueEntryL.CALCSUMS("Cost Posted to G/L");
+        VehicleInventBufferL."G/L Account Value" := ValueEntryL."Cost Posted to G/L";
+
+        ValueEntryL.CALCSUMS("Adjusted Cost");
+        VehicleInventBufferL."Inventory Value" := ValueEntryL."Adjusted Cost";
+
+        ValueEntryL.SETRANGE("Item Type", ValueEntryL."Item Type"::Vehicle);
+        ValueEntryL.SETRANGE("Expected Cost");
+        VehicleInventBufferL."Purchase Date" := ValueEntryL."Posting Date";
+
+        ValueEntryL.FINDLAST;
+        VehicleInventBufferL."Vehicle Status" := ValueEntryL."Vehicle Status";
+        VehicleInventBufferL."Location Code" := ValueEntryL."Location Code";
+        VehicleInventBufferL."Branch Code" := ValueEntryL."Branch Code";
+        VehicleInventBufferL."Inv. Posting Group" := ValueEntryL."Inventory Posting Group";
+        InvPostSetupL.RESET;
+        IF InvPostSetupL.GET(VehicleInventBufferL."Location Code", VehicleInventBufferL."Inv. Posting Group") THEN
+          VehicleInventBufferL."Inventory Account" := InvPostSetupL."Inventory Account";
+
+        AssignSalesData(VehicleInventBufferL, StatusDateP);
+      // Start EU.0177226.177066
+        IF ValueEntryL."Invoiced Quantity" = 0 THEN
+          VehicleInventBufferL."Sales Total" := 0;
+      // Stop EU.0177226.177066
+        IF StatusDateP < VehicleInventBufferL."Date of Sale" THEN
+          VehicleInventBufferL."Days Carried" := VehicleInventBufferL."Date of Sale" - VehicleInventBufferL."Purchase Date"
+        ELSE
+          VehicleInventBufferL."Days Carried" := StatusDateP - VehicleInventBufferL."Purchase Date";
+
+        AssignValuesFromVehicleCard(VehicleInventBufferL);
+        AssignValuesFromVehiclePriceSticker(VehicleInventBufferL, StatusDateP);
+      // Start EU.0177226.177066
+        ValueEntryL.SETFILTER("Invoiced Quantity" ,'>%1', 0);
+        IF ValueEntryL.FINDLAST THEN
+          AssignValuesFromVehicleLedgEntry(VehicleInventBufferL, StatusDateP);
+      // Stop EU.0177226.177066
+        AssignCalcCostFromVehicleLedgEntry(VehicleInventBufferL, StatusDateP);
+        CheckAdjustmentNeeded(VehicleInventBufferL, StatusDateP);
+        VehicleInventBufferL.INSERT;
+      END;
+      // Stop EU.0166467.166817
+    END;
+
+    LOCAL PROCEDURE SetVehicleStatus@18884300(VAR RecP@18884300 : Record 5045517;VehicleStatusP@18884301 : Option);
+    BEGIN
+      // Start EU.0188843.191149
+      CASE VehicleStatusP OF
+        VehicleG."Vehicle Status"::"New Vehicle":
+          RecP."Vehicle Status" := RecP."Vehicle Status"::"New Vehicle";
+        VehicleG."Vehicle Status"::"Used Vehicle":
+          RecP."Vehicle Status" := RecP."Vehicle Status"::"Used Vehicle";
+        VehicleG."Vehicle Status"::"Demo Vehicle":
+          RecP."Vehicle Status" := RecP."Vehicle Status"::"Demo Vehicle";
+        VehicleG."Vehicle Status"::"Customer Vehicle":
+          RecP."Vehicle Status" := RecP."Vehicle Status"::"Customer Vehicle";
+        VehicleG."Vehicle Status"::"Prospect Vehicle":
+          RecP."Vehicle Status" := RecP."Vehicle Status"::"Prospect Vehicle";
+        VehicleG."Vehicle Status"::"Consignment Vehicle":
+          RecP."Vehicle Status" := RecP."Vehicle Status"::"Consignment Vehicle";
+        VehicleG."Vehicle Status"::"Rental Vehicle":
+          RecP."Vehicle Status" := RecP."Vehicle Status"::"Rental Vehicle";
+      END;
+      // Stop EU.0188843.191149
+    END;
+
+    BEGIN
+    {
+      // @ Area Vehicle, VehicleInventory
+      +----------------------------------------------+
+      | Copyright (c) incadea                        |
+      +----------------------------------------------+
+      PA-Number  Date
+      ------------------------------------------------
+      EU.0012607 08.02.18 ER Object creation
+      --- 7.2.1 ---
+      EU.0099197 11.06.20 RR Downmerge of EU.0012607
+      EU.0106426 22.10.20 AD Update "Vehicle Status" field in AssignSalesData().
+      EU.0158119 11.05.23 BS 159359 Modify the code function InsertLine() for get the last record based on filter
+      EU.0161734 07.09.23 JN 165413 Added SetCurrentKey to avoid Deadlock issue.
+      EU.0166467 28.09.23 JN 166817 Code optimized for the performance of deadlocks against EU.0161734.165413
+      EU.0172844 05.02.24 BK 172952 Modify has been done "function name()" to update "Vehicle Status" based on from Vehicle Ledger Entry
+      EU.0177226 07.05.24 JN 177066 Modify the code to avoid updation of Purchase Total field if Purchase Order is not Invoiced & Sales Total
+                             also not show against sales order is Invoiced.
+      EU.0188843 17.01.25 KM 191149 Added function "SetVehicleStatus" and Modify has been done to update "Vehicle Status" based on from Vehicle.
+      EU.0203951 03.11.25 HT 206578 Assigned the MakeCode value from Vehicle to "Vehicle Inventory Buffer" for filtering the report "Vehicle Invent. on Status Date".
+    }
+    END.
+  }
+}
+

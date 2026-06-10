@@ -1,0 +1,549 @@
+OBJECT Page 459 Sales & Receivables Setup
+{
+  OBJECT-PROPERTIES
+  {
+    Date=08/27/23;
+    Time=11:18:01 AM;
+    Modified=Yes;
+    Version List=NAVW1.x,N.7.2.1,AP001662;
+  }
+  PROPERTIES
+  {
+    CaptionML=ENU=Sales & Receivables Setup;
+    InsertAllowed=No;
+    DeleteAllowed=No;
+    SourceTable=Table311;
+    PageType=Card;
+    OnInit=BEGIN
+             PageNoEnable := TRUE;
+           END;
+
+    OnOpenPage=BEGIN
+                 RESET;
+                 IF NOT GET THEN BEGIN
+                   INIT;
+                   INSERT;
+                 END;
+                 // Start INC
+                 PageNoEnable := "Autom. Stock Information";
+                 // Stop INC
+               END;
+
+    OnAfterGetRecord=VAR
+                       FieldCaptionL@1100812959 : Record 5045614;
+                     BEGIN
+                       // Start PA036728
+                       "Part Sales Capt. Salesperson2" := GetCaption(DATABASE::"Sales & Receivables Setup",FIELDNO("Part Sales Capt. Salesperson2"),
+                       FieldCaptionL.Type::"Parts Sales & Purchases");
+                       "Veh. Sales Capt. Salesperson2" := GetCaption(DATABASE::"Sales & Receivables Setup",FIELDNO("Veh. Sales Capt. Salesperson2"),
+                       FieldCaptionL.Type::"Vehicle Sales & Purchases");
+                       // Stop PA036728
+                     END;
+
+  }
+  CONTROLS
+  {
+    { 1900000001;0;Container;
+                ContainerType=ContentArea }
+
+    { 1   ;1   ;Group     ;
+                CaptionML=ENU=General }
+
+    { 18  ;2   ;Field     ;
+                SourceExpr="Discount Posting" }
+
+    { 14  ;2   ;Field     ;
+                SourceExpr="Line Discount Calculation" }
+
+    { 3   ;2   ;Field     ;
+                SourceExpr="Credit Warnings" }
+
+    { 20  ;2   ;Field     ;
+                SourceExpr="Stockout Warning" }
+
+    { 16  ;2   ;Field     ;
+                SourceExpr="Shipment on Invoice" }
+
+    { 109 ;2   ;Field     ;
+                SourceExpr="Return Receipt on Credit Memo" }
+
+    { 8   ;2   ;Field     ;
+                SourceExpr="Invoice Rounding" }
+
+    { 9   ;2   ;Field     ;
+                SourceExpr="Ext. Doc. No. Mandatory" }
+
+    { 22  ;2   ;Field     ;
+                SourceExpr="Calc. Inv. Discount" }
+
+    { 44  ;2   ;Field     ;
+                SourceExpr="Appln. between Currencies" }
+
+    { 1109400006;2;Field  ;
+                SourceExpr="Autom. Stock Information";
+                OnValidate=BEGIN
+                             // Start INC
+                             PageNoEnable := "Autom. Stock Information";
+                             // Stop INC
+                           END;
+                            }
+
+    { 40  ;2   ;Field     ;
+                SourceExpr="Copy Comments Order to Invoice" }
+
+    { 42  ;2   ;Field     ;
+                SourceExpr="Copy Comments Order to Shpt." }
+
+    { 99  ;2   ;Field     ;
+                SourceExpr="Copy Cmts Ret.Ord. to Ret.Rcpt" }
+
+    { 113 ;2   ;Field     ;
+                SourceExpr="Copy Cmts Ret.Ord. to Cr. Memo" }
+
+    { 1109400008;2;Field  ;
+                SourceExpr="Page ID";
+                Enabled=PageNoEnable }
+
+    { 1109400010;2;Field  ;
+                SourceExpr="Page Caption";
+                Editable=FALSE }
+
+    { 52  ;2   ;Field     ;
+                SourceExpr="Archive Order" }
+
+    { 53  ;2   ;Field     ;
+                SourceExpr="Archive Quote" }
+
+    { 3245300;2;Field     ;
+                Description=EU.0032453;
+                SourceExpr="Lost Parts Sales Detection" }
+
+    { 3245301;2;Field     ;
+                Description=EU.0032453;
+                SourceExpr="Shopping Cart Expiry Formula" }
+
+    { 77  ;2   ;Field     ;
+                ToolTipML=ENU=Parameters that allows to send new Cockpit sales documents immediately after they have been created.;
+                SourceExpr="Send Cockpit Doc. immediately" }
+
+    { 97  ;2   ;Field     ;
+                SourceExpr="Consider Default Sales Bin" }
+
+    { 5931601;2;Field     ;
+                Description=EU.0060704;
+                SourceExpr="Show Bins w/o Avail. Qty. I.Q." }
+
+    { 111 ;2   ;Field     ;
+                SourceExpr="Exact Cost Reversing Mandatory" }
+
+    { 1109400000;2;Field  ;
+                SourceExpr="Allow turnover taxation" }
+
+    { 1101221267;2;Field  ;
+                SourceExpr="EU Tire Label Regulation" }
+
+    { 1101353000;2;Field  ;
+                SourceExpr="Merchant Bank Fee Account" }
+
+    { 1101219227;2;Field  ;
+                Description=PA034291;
+                SourceExpr="Default Prepmt. GL Account" }
+
+    { 1101219229;2;Field  ;
+                Description=PA034291;
+                SourceExpr="Def. Prepmt. Cust. Post. Gr." }
+
+    { 1101219231;2;Field  ;
+                Description=PA034291;
+                SourceExpr="Default Payment Terms Code" }
+
+    { 1101219233;2;Field  ;
+                Description=PA034291;
+                SourceExpr="Default Payment Method Code" }
+
+    { 1101219235;2;Field  ;
+                Description=PA034291;
+                SourceExpr="Default Reason Code" }
+
+    { 5931600;2;Field     ;
+                Description=EU.0060704;
+                SourceExpr="Default Purch. Order Type I.Q." }
+
+    { 1109400001;2;Field  ;
+                SourceExpr="Vehicle Quote Validity" }
+
+    { 1109400003;2;Field  ;
+                SourceExpr="Service Quote Validity" }
+
+    { 1109400004;2;Field  ;
+                SourceExpr="Parts Quote Validity" }
+
+    { 1900309501;1;Group  ;
+                CaptionML=ENU=Dimensions;
+                Description=PA035597 }
+
+    { 1000000001;2;Field  ;
+                SourceExpr="Customer Group Dimension Code" }
+
+    { 1000000000;2;Field  ;
+                SourceExpr="Salesperson Dimension Code" }
+
+    { 1904569201;1;Group  ;
+                CaptionML=ENU=Numbering }
+
+    { 85  ;2   ;Field     ;
+                SourceExpr="Customer Nos." }
+
+    { 36  ;2   ;Field     ;
+                SourceExpr="Item Inquiry Nos." }
+
+    { 24  ;2   ;Field     ;
+                SourceExpr="Quote Nos." }
+
+    { 26  ;2   ;Field     ;
+                SourceExpr="Order Nos." }
+
+    { 101 ;2   ;Field     ;
+                SourceExpr="Return Order Nos." }
+
+    { 75  ;2   ;Field     ;
+                SourceExpr="Invoice Nos." }
+
+    { 30  ;2   ;Field     ;
+                SourceExpr="Posted Invoice Nos." }
+
+    { 74  ;2   ;Field     ;
+                SourceExpr="Credit Memo Nos." }
+
+    { 32  ;2   ;Field     ;
+                SourceExpr="Posted Credit Memo Nos." }
+
+    { 57  ;2   ;Field     ;
+                SourceExpr="Packing Slip Nos." }
+
+    { 28  ;2   ;Field     ;
+                SourceExpr="Posted Shipment Nos." }
+
+    { 103 ;2   ;Field     ;
+                SourceExpr="Posted Return Receipt Nos." }
+
+    { 6   ;2   ;Field     ;
+                SourceExpr="Reminder Nos." }
+
+    { 10  ;2   ;Field     ;
+                SourceExpr="Issued Reminder Nos." }
+
+    { 34  ;2   ;Field     ;
+                SourceExpr="Fin. Chrg. Memo Nos." }
+
+    { 12  ;2   ;Field     ;
+                SourceExpr="Issued Fin. Chrg. M. Nos." }
+
+    { 1101219241;2;Field  ;
+                Description=PA034291;
+                SourceExpr="Prepmt. Inv. Nos" }
+
+    { 1101219237;2;Field  ;
+                Description=PA034291;
+                SourceExpr="Posted Prepmt. Inv. Nos" }
+
+    { 1101219239;2;Field  ;
+                Description=PA034291;
+                SourceExpr="Posted Prepmt. Cr. Memo. Nos" }
+
+    { 25  ;2   ;Field     ;
+                SourceExpr="Direct Debit Mandate Nos." }
+
+    { 1902466201;1;Group  ;
+                CaptionML=ENU=Vehicle Sales && Purchases }
+
+    { 38  ;2   ;Field     ;
+                SourceExpr="Vehicle Inquiry Nos." }
+
+    { 46  ;2   ;Field     ;
+                SourceExpr="Vehicle Quote Nos." }
+
+    { 48  ;2   ;Field     ;
+                SourceExpr="Vehicle Order Nos." }
+
+    { 105 ;2   ;Field     ;
+                SourceExpr="Vehicle Return Order Nos." }
+
+    { 59  ;2   ;Field     ;
+                SourceExpr="Vehicle Invoice Nos." }
+
+    { 61  ;2   ;Field     ;
+                SourceExpr="Posted Vehicle Invoice Nos." }
+
+    { 63  ;2   ;Field     ;
+                SourceExpr="Vehicle Credit Memo Nos." }
+
+    { 65  ;2   ;Field     ;
+                SourceExpr="Posted Vehicle Cr. Memo Nos." }
+
+    { 71  ;2   ;Field     ;
+                SourceExpr="Export Process - Price Sticker" }
+
+    { 67  ;2   ;Field     ;
+                SourceExpr="Posted Vehicle Shipment Nos." }
+
+    { 107 ;2   ;Field     ;
+                SourceExpr="Posted Veh. Ret. Receipt Nos." }
+
+    { 21  ;1   ;Group     ;
+                CaptionML=ENU=General Sales & Purchases;
+                Description=EU.0114065;
+                GroupType=Group }
+
+    { 11406500;2;Field    ;
+                Description=EU.0114065;
+                SourceExpr="Gen. Sales Invoice Nos." }
+
+    { 11406501;2;Field    ;
+                Description=EU.0114065;
+                SourceExpr="Posted Gen. Sales Invoice Nos." }
+
+    { 11406502;2;Field    ;
+                Description=EU.0114065;
+                SourceExpr="Gen. Sales Cr. Memo Nos." }
+
+    { 11406503;2;Field    ;
+                Description=EU.0114065;
+                SourceExpr="Posted Gen. Sales Cr. Memo" }
+
+    { 11406504;2;Field    ;
+                Description=EU.0114065;
+                SourceExpr="Gen. Sales Shipment Nos." }
+
+    { 11406505;2;Field    ;
+                Description=EU.0114065;
+                SourceExpr="Gen. Sales Re. Receipt Nos." }
+
+    { 2   ;1   ;Group     ;
+                CaptionML=ENU=Background Posting;
+                Description=PA035901;
+                Visible=FALSE;
+                GroupType=Group }
+
+    { 23  ;2   ;Group     ;
+                CaptionML=ENU=Post;
+                Description=PA035901;
+                GroupType=Group }
+
+    { 19  ;3   ;Field     ;
+                Description=PA035901;
+                SourceExpr="Post with Job Queue" }
+
+    { 17  ;3   ;Field     ;
+                Description=PA035901;
+                SourceExpr="Job Queue Priority for Post" }
+
+    { 13  ;2   ;Group     ;
+                CaptionML=ENU=Post & Print;
+                Description=PA035901;
+                GroupType=Group }
+
+    { 15  ;3   ;Field     ;
+                Description=PA035901;
+                SourceExpr="Post & Print with Job Queue" }
+
+    { 11  ;3   ;Field     ;
+                Description=PA035901;
+                SourceExpr="Job Q. Prio. for Post & Print" }
+
+    { 7   ;2   ;Group     ;
+                CaptionML=ENU=General;
+                Description=PA035901;
+                GroupType=Group }
+
+    { 5   ;3   ;Field     ;
+                Description=PA035901;
+                SourceExpr="Job Queue Category Code" }
+
+    { 4   ;3   ;Field     ;
+                Description=PA035901;
+                SourceExpr="Notify On Success" }
+
+    { 1900968701;1;Group  ;
+                CaptionML=ENU=Installment }
+
+    { 79  ;2   ;Field     ;
+                SourceExpr="Installment Bal. Account" }
+
+    { 81  ;2   ;Field     ;
+                SourceExpr="Installments Auto. Numbering" }
+
+    { 83  ;2   ;Field     ;
+                SourceExpr="Installment Nos." }
+
+    { 1902985101;1;Group  ;
+                CaptionML=ENU=Defaults }
+
+    { 51  ;2   ;Field     ;
+                SourceExpr="Def. Cust. No. Parts Inquiry" }
+
+    { 69  ;2   ;Field     ;
+                SourceExpr="Veh. Inquiry Default Cust. No." }
+
+    { 1101207292;2;Field  ;
+                CaptionML=ENU=Parts Sales Docs. Caption for Salesperson 2;
+                Description=PA036728;
+                SourceExpr="Part Sales Capt. Salesperson2";
+                Editable=FALSE;
+                OnDrillDown=VAR
+                              FieldCaptionL@1100812960 : Record 5045614;
+                            BEGIN
+                              // Start PA036728
+                              SalespersonCaptionDrilldown(FieldCaptionL.Type::"Parts Sales & Purchases",FIELDNO("Part Sales Capt. Salesperson2"));
+                              // Stop PA036728
+                            END;
+                             }
+
+    { 1101207294;2;Field  ;
+                CaptionML=ENU=Veh. Sales Docs. Caption for Salesperson 2;
+                Description=PA036728;
+                SourceExpr="Veh. Sales Capt. Salesperson2";
+                Editable=FALSE;
+                OnDrillDown=VAR
+                              FieldCaptionL@1100812960 : Record 5045614;
+                            BEGIN
+                              // Start PA036728
+                              SalespersonCaptionDrilldown(FieldCaptionL.Type::"Vehicle Sales & Purchases",FIELDNO("Veh. Sales Capt. Salesperson2"));
+                              // Stop PA036728
+                            END;
+                             }
+
+    { 1905063901;1;Group  ;
+                CaptionML=ENU=Vehicle Display }
+
+    { 87  ;2   ;Field     ;
+                SourceExpr="Contract Expiry (forward)" }
+
+    { 89  ;2   ;Field     ;
+                SourceExpr="Expiration of Contract (Back)" }
+
+    { 91  ;2   ;Field     ;
+                SourceExpr=Update }
+
+    { 93  ;2   ;Field     ;
+                SourceExpr="Last Update on" }
+
+    { 95  ;2   ;Field     ;
+                SourceExpr="Last Update at" }
+
+    { 1905095301;1;Group  ;
+                CaptionML=ENU=Shipment Proposal }
+
+    { 1109400021;2;Field  ;
+                SourceExpr="ShipmProp Default Process Type" }
+
+    { 1109400024;2;Field  ;
+                SourceExpr="ShipmProp Default Priority" }
+
+    { 1109400023;2;Field  ;
+                SourceExpr="ShipmProp Default Transf. Prio" }
+
+    { 1109400022;2;Field  ;
+                SourceExpr="ShipmProp Transfer via" }
+
+    { 1109400012;2;Field  ;
+                SourceExpr="ShipmProp Transfer Sugg. Tmpl." }
+
+    { 1109400014;2;Field  ;
+                CaptionML=ENU=ShipmProp Transfer Sugg. Tmpl. Batch;
+                SourceExpr="ShipmProp Transfer Sugg. Batch" }
+
+    { 1109400002;2;Field  ;
+                SourceExpr="ShipmProp Default Do Shipment" }
+
+    { 1737400;2;Field     ;
+                Description=EU.0017374;
+                SourceExpr="Shipm. Prop. Def. Auto Templ" }
+
+    { 1737401;2;Field     ;
+                Description=EU.0017374;
+                SourceExpr="Shipm. Prop. Def. Auto Name" }
+
+    { 1900000007;0;Container;
+                ContainerType=FactBoxArea }
+
+    { 1900383207;1;Part   ;
+                Visible=FALSE;
+                PartType=System;
+                SystemPartID=RecordLinks }
+
+    { 1905767507;1;Part   ;
+                Visible=FALSE;
+                PartType=System;
+                SystemPartID=Notes }
+
+  }
+  CODE
+  {
+    VAR
+      PageNoEnable@19038903 : Boolean INDATASET;
+
+    PROCEDURE SalespersonCaptionDrilldown@1101207291(TypeP@1101207290 : Integer;FieldNoP@1100812959 : Integer);
+    VAR
+      FieldCaptionL@1101207291 : Record 5045614;
+    BEGIN
+      // @ Function to open drill down page with specified filters
+      // @ Parameters Type and Field Number
+      // Start PA036728
+      FieldCaptionL.RESET;
+      FieldCaptionL.SETRANGE("Table No.",DATABASE::"Sales & Receivables Setup");
+      FieldCaptionL.SETRANGE("Field No.",FieldNoP);
+      FieldCaptionL.SETRANGE(Type,TypeP);
+      PAGE.RUNMODAL(PAGE::"Field Caption Definitions", FieldCaptionL);
+      // Stop PA036728
+    END;
+
+    BEGIN
+    {
+      PA-Number  Date
+      ------------------------------------------------
+      PA033067   12.04.12 DR DE Captions implemented
+      PA032651   19.04.12 SM 7178403: Captions ML are removed in cases when they are not neede on the page. Caption ML is retreived
+                             page a caption ML in the table on ehich a specific page lies. Changes are done by a specifications in a case.
+      PA033259   09.08.12 AI Deletion of Start/Stop History in Code, update copyright and Version List
+      PA033259   18.09.12 DR Variable names changed according to incadea style guide
+      PA033765   19.12.12 GC EU Tire Data Regulation field added
+      PA034291   31.07.13 SM New fields added :5045972 DefaultPrepmt. GL Account,5045973 Default Prepmt. Receivab. Acc.,
+                             5045974 Default Payment Terms Code, 5045975 Default Payment Method Code,5045976 Default Reason Code,
+                             5045977 Prepmt. Inv. Nos, 5045978 Posted Prepmt. Inv. Nos, 5045978 Posted Prepmt. Inv. Nos,
+                             5045979 Posted Prepmt. Cr. Memo. Nos.
+      PA034527   11.12.13 GG 19632 Field "EU Tire Data Regulation" modified to "EU Tire Label Regulation"
+      PA036118   26.05.14 DR New Location / Branch check: Show new field "Sales Line Location Sync"
+      PA036728   19.09.14 SW Added new controls for fields parts salesperson 2 caption and vehicle sales person 2 caption
+                             New functions created to implement caption functionality for salesperson code 2
+      PA036728   19.11.14 SW 30891 Caption setup fields made non editable
+      PA035901   12.11.14 CH NAV 2013 R2 General Ledger Integration.
+      PA036966   25.11.14 TS NAV 2013 R2 General Ledger Integration - SEPA Credit Transfer, Direct Debit.
+                             New Field "Direct Debit Mandate Nos.".
+      PA035597   10.02.14 GC NAV 2013 R2 Technical Upgrade
+      PA036547   06.11.14 GE Merge N.6.1.4 to N.7.1.0 - PA036118.
+      PA036548   17.12.14 GL Merge of PA036728
+      PA036549   15.01.15 TS 32635 Background Posting fasttab set to Visible - FALSE.
+      PA036549   18.02.15 CH 34230 "Sales Line Location Sync" field removed.
+      PA041687   24.01.17 IM New setups added to General fastTab.
+      --- 7.2.1 ---
+      EU.0090125 21.02.20 UU Downmerge of EU.0017374
+                             - EU.0017374 MS Display new fields "ShipmProp Def. Auto Templ" and "ShipmProp Def. Auto Name" in "Shipment Proposal" FastTab
+      EU.0032453 01.08.18 DR Show new fields "Lost Parts Sales Detection" and "Shopping Cart Expiry Formula".
+      EU.0098776 22.05.20 GI 98820 Downmerge of EU.0032453
+      EU.0060704 17.04.19 GI 61297 Item Query Implementation.
+      EU.0060704 04.06.19 GI 67067 Modified the name of the Show Bins and Default Purch. Order Type fields.
+      EU.0098776 22.05.20 GI 99044 Merge of EU.0060704
+      EU.0114065 25.03.21 DS Fields Added for General Documents:
+                              Gen. Sales Invoice Nos.
+                              Posted Gen. Sales Invoice Nos.
+                              Gen. Sales Cr. Memo Nos.
+                              Posted Gen. Sales Cr. Memo
+                              Gen. Sales Shipment Nos.
+                              Gen. Sales Re. Receipt Nos.
+      AP001662   27.08.23 QQ Added field 50007 "Merchant Bank Fee Account" used in Customer Remittance Management codeunit 50007.
+    }
+    END.
+  }
+}
+

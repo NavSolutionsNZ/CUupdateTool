@@ -1,0 +1,691 @@
+OBJECT Table 120 Purch. Receipt Header
+{
+  OBJECT-PROPERTIES
+  {
+    Date=09/05/23;
+    Time=[ 9:12:17 AM];
+    Modified=Yes;
+    Version List=N.7.2.1,ESKER1.0;
+  }
+  PROPERTIES
+  {
+    DataCaptionFields=No.,Buy-from Vendor Name;
+    OnDelete=BEGIN
+               LOCKTABLE;
+               PostPurchLinesDelete.DeletePurchRcptLines(Rec);
+
+               PurchCommentLine.SETRANGE("Document Type",PurchCommentLine."Document Type"::Receipt);
+               PurchCommentLine.SETRANGE("No.","No.");
+               PurchCommentLine.DELETEALL;
+
+               PostedSalesAssistanceLineG.DeleteDocSalesAssistLine(
+                 PostedSalesAssistanceLineG.Area::Purchase,5,"No.",0);
+             END;
+
+    CaptionML=ENU=Purch. Receipt Header;
+    LookupPageID=Page145;
+  }
+  FIELDS
+  {
+    { 2   ;   ;Buy-from Vendor No. ;Code20        ;TableRelation=Vendor;
+                                                   CaptionML=ENU=Buy-from Vendor No.;
+                                                   NotBlank=Yes }
+    { 3   ;   ;No.                 ;Code20        ;CaptionML=ENU=No. }
+    { 4   ;   ;Pay-to Vendor No.   ;Code20        ;TableRelation=Vendor;
+                                                   CaptionML=ENU=Pay-to Vendor No.;
+                                                   NotBlank=Yes }
+    { 5   ;   ;Pay-to Name         ;Text50        ;CaptionML=ENU=Pay-to Name;
+                                                   Description=PA032438 }
+    { 6   ;   ;Pay-to Name 2       ;Text50        ;CaptionML=ENU=Pay-to Name 2;
+                                                   Description=PA032438 }
+    { 7   ;   ;Pay-to Address      ;Text50        ;CaptionML=ENU=Pay-to Address;
+                                                   Description=PA032438 }
+    { 8   ;   ;Pay-to Address 2    ;Text50        ;CaptionML=ENU=Pay-to Address 2;
+                                                   Description=PA032438 }
+    { 9   ;   ;Pay-to City         ;Text30        ;OnValidate=BEGIN
+                                                                // Start INC
+                                                                // Start PA033005
+                                                                // Start PA035901
+                                                                PostCodeG.ValidateCity("Pay-to City", "Pay-to Post Code", "Pay-to County", "Pay-to Country Code", (CurrFieldNo <> 0) AND GUIALLOWED);
+                                                                // Stop PA035901
+                                                                // Stop PA033005
+                                                                // Stop INC
+                                                              END;
+
+                                                   OnLookup=BEGIN
+                                                              // Start INC
+                                                              // Start PA033005
+                                                              // Start PA035901
+                                                              PostCodeG.LookUpCity("Pay-to City", "Pay-to Post Code", "Pay-to County", "Pay-to Country Code", TRUE);
+                                                              // Stop PA035901
+                                                              // Stop PA033005
+                                                              // Stop INC
+                                                            END;
+
+                                                   CaptionML=ENU=Pay-to City }
+    { 10  ;   ;Pay-to Contact      ;Text50        ;CaptionML=ENU=Pay-to Contact;
+                                                   Description=PA032438 }
+    { 11  ;   ;Your Reference      ;Text35        ;CaptionML=ENU=Your Reference;
+                                                   Description=PA035597 }
+    { 12  ;   ;Ship-to Code        ;Code10        ;TableRelation="Ship-to Address".Code WHERE (Customer No.=FIELD(Sell-to Customer No.));
+                                                   CaptionML=ENU=Ship-to Code }
+    { 13  ;   ;Ship-to Name        ;Text50        ;CaptionML=ENU=Ship-to Name;
+                                                   Description=PA032438 }
+    { 14  ;   ;Ship-to Name 2      ;Text50        ;CaptionML=ENU=Ship-to Name 2;
+                                                   Description=PA032438 }
+    { 15  ;   ;Ship-to Address     ;Text50        ;CaptionML=ENU=Ship-to Address;
+                                                   Description=PA032438 }
+    { 16  ;   ;Ship-to Address 2   ;Text50        ;CaptionML=ENU=Ship-to Address 2;
+                                                   Description=PA032438 }
+    { 17  ;   ;Ship-to City        ;Text30        ;OnValidate=BEGIN
+                                                                // Start INC
+                                                                // Start PA033005
+                                                                // Start PA035901
+                                                                PostCodeG.ValidateCity("Ship-to City", "Ship-to Post Code", "Ship-to County", "Ship-to Country Code", (CurrFieldNo <> 0) AND GUIALLOWED);
+                                                                // Stop PA035901
+                                                                // Stop PA033005
+                                                                // Stop INC
+                                                              END;
+
+                                                   OnLookup=BEGIN
+                                                              // Start INC
+                                                              // Start PA033005
+                                                              // Start PA035901
+                                                              PostCodeG.LookUpCity("Ship-to City", "Ship-to Post Code", "Ship-to County", "Ship-to Country Code", TRUE);
+                                                              // Stop PA035901
+                                                              // Stop PA033005
+                                                              // Stop INC
+                                                            END;
+
+                                                   CaptionML=ENU=Ship-to City }
+    { 18  ;   ;Ship-to Contact     ;Text50        ;CaptionML=ENU=Ship-to Contact;
+                                                   Description=PA032438 }
+    { 19  ;   ;Order Date          ;Date          ;CaptionML=ENU=Order Date }
+    { 20  ;   ;Posting Date        ;Date          ;CaptionML=ENU=Posting Date }
+    { 21  ;   ;Expected Receipt Date;Date         ;CaptionML=ENU=Expected Receipt Date }
+    { 22  ;   ;Posting Description ;Text50        ;CaptionML=ENU=Posting Description }
+    { 23  ;   ;Payment Terms Code  ;Code10        ;TableRelation="Payment Terms";
+                                                   CaptionML=ENU=Payment Terms Code }
+    { 24  ;   ;Due Date            ;Date          ;CaptionML=ENU=Due Date }
+    { 25  ;   ;Payment Discount %  ;Decimal       ;CaptionML=ENU=Payment Discount %;
+                                                   DecimalPlaces=0:5 }
+    { 26  ;   ;Pmt. Discount Date  ;Date          ;CaptionML=ENU=Pmt. Discount Date }
+    { 27  ;   ;Shipment Method Code;Code10        ;TableRelation="Shipment Method";
+                                                   CaptionML=ENU=Shipment Method Code }
+    { 28  ;   ;Location Code       ;Code10        ;TableRelation=Location;
+                                                   CaptionML=ENU=Location Code }
+    { 29  ;   ;Shortcut Dimension 1 Code;Code20   ;TableRelation=Department;
+                                                   CaptionML=ENU=Shortcut Dimension 1 Code;
+                                                   Description=PA035597;
+                                                   CaptionClass='1,2,1' }
+    { 30  ;   ;Shortcut Dimension 2 Code;Code20   ;TableRelation=Make;
+                                                   CaptionML=ENU=Shortcut Dimension 2 Code;
+                                                   Description=PA035597;
+                                                   CaptionClass='1,2,2' }
+    { 31  ;   ;Vendor Posting Group;Code10        ;TableRelation="Vendor Posting Group";
+                                                   CaptionML=ENU=Vendor Posting Group;
+                                                   Editable=No }
+    { 32  ;   ;Currency Code       ;Code10        ;TableRelation=Currency;
+                                                   CaptionML=ENU=Currency Code;
+                                                   Editable=No }
+    { 33  ;   ;Currency Factor     ;Decimal       ;CaptionML=ENU=Currency Factor;
+                                                   DecimalPlaces=0:15;
+                                                   MinValue=0 }
+    { 37  ;   ;Invoice Disc. Code  ;Code20        ;CaptionML=ENU=Invoice Disc. Code }
+    { 41  ;   ;Language Code       ;Code10        ;TableRelation=Language;
+                                                   CaptionML=ENU=Language Code }
+    { 43  ;   ;Purchaser Code      ;Code10        ;TableRelation=Salesperson/Purchaser;
+                                                   CaptionML=ENU=Purchaser Code }
+    { 44  ;   ;Order No.           ;Code20        ;CaptionML=ENU=Order No. }
+    { 46  ;   ;Comment             ;Boolean       ;FieldClass=FlowField;
+                                                   CalcFormula=Exist("Purch. Comment Line" WHERE (Document Type=CONST(Return Order),
+                                                                                                  No.=FIELD(No.),
+                                                                                                  Document Line No.=CONST(0)));
+                                                   CaptionML=ENU=Comment;
+                                                   Editable=No }
+    { 47  ;   ;No. Printed         ;Integer       ;CaptionML=ENU=No. Printed;
+                                                   Editable=No }
+    { 51  ;   ;On Hold             ;Code3         ;CaptionML=ENU=On Hold }
+    { 52  ;   ;Applies-to Doc. Type;Option        ;CaptionML=ENU=Applies-to Doc. Type;
+                                                   OptionCaptionML=ENU=" ,Payment,Invoice,Credit Memo,Finance Charge Memo,Reminder";
+                                                   OptionString=[ ,Payment,Invoice,Credit Memo,Finance Charge Memo,Reminder] }
+    { 53  ;   ;Applies-to Doc. No. ;Code20        ;OnLookup=BEGIN
+                                                              // Start PA036544
+                                                              IF NOT ExitPoint(ExitPointSetupG.Trigger::OnLookup,ExitPointSetupG.Type::Pre,FIELDNAME("Applies-to Doc. No.")) THEN
+                                                                EXIT;
+                                                              // Stop PA036544
+
+                                                              VendLedgEntry.SETCURRENTKEY("Document Type","Document No.","Vendor No.");
+                                                              VendLedgEntry.SETRANGE("Document Type","Applies-to Doc. Type");
+                                                              VendLedgEntry.SETRANGE("Document No.","Applies-to Doc. No.");
+                                                              PAGE.RUN(0,VendLedgEntry);
+
+                                                              // Start PA036544
+                                                              ExitPoint(ExitPointSetupG.Trigger::OnLookup,ExitPointSetupG.Type::Post,FIELDNAME("Applies-to Doc. No."));
+                                                              // Stop PA036544
+                                                            END;
+
+                                                   CaptionML=ENU=Applies-to Doc. No. }
+    { 55  ;   ;Bal. Account No.    ;Code20        ;TableRelation=IF (Bal. Account Type=CONST(G/L Account)) "G/L Account"
+                                                                 ELSE IF (Bal. Account Type=CONST(Bank Account)) "Bank Account";
+                                                   CaptionML=ENU=Bal. Account No. }
+    { 67  ;   ;Vendor Shipment No. ;Code20        ;CaptionML=ENU=Vendor Shipment No. }
+    { 70  ;   ;VAT Registration No.;Text20        ;CaptionML=ENU=VAT Registration No. }
+    { 72  ;   ;Sell-to Customer No.;Code20        ;TableRelation=Customer;
+                                                   CaptionML=ENU=Sell-to Customer No. }
+    { 73  ;   ;Reason Code         ;Code10        ;TableRelation="Reason Code";
+                                                   CaptionML=ENU=Reason Code }
+    { 74  ;   ;Gen. Bus. Posting Group;Code10     ;TableRelation="Gen. Business Posting Group";
+                                                   CaptionML=ENU=Gen. Bus. Posting Group }
+    { 76  ;   ;Transaction Type    ;Code10        ;TableRelation="Transaction Type";
+                                                   CaptionML=ENU=Transaction Type }
+    { 77  ;   ;Transport Method    ;Code10        ;TableRelation="Transport Method";
+                                                   CaptionML=ENU=Transport Method }
+    { 78  ;   ;VAT Country Code    ;Code10        ;TableRelation=Country/Region;
+                                                   CaptionML=ENU=VAT Country Code }
+    { 79  ;   ;Buy-from Vendor Name;Text50        ;CaptionML=ENU=Buy-from Vendor Name;
+                                                   Description=PA032438 }
+    { 80  ;   ;Buy-from Vendor Name 2;Text50      ;CaptionML=ENU=Buy-from Vendor Name 2;
+                                                   Description=PA032438 }
+    { 81  ;   ;Buy-from Address    ;Text50        ;CaptionML=ENU=Buy-from Address;
+                                                   Description=PA032438 }
+    { 82  ;   ;Buy-from Address 2  ;Text50        ;CaptionML=ENU=Buy-from Address 2;
+                                                   Description=PA032438 }
+    { 83  ;   ;Buy-from City       ;Text30        ;OnValidate=BEGIN
+                                                                // Start INC
+                                                                // Start PA033005
+                                                                // Start PA035901
+                                                                PostCodeG.ValidateCity("Buy-from City", "Buy-from Post Code", "Buy-from County", "Buy-from Country Code", (CurrFieldNo <> 0) AND GUIALLOWED);
+                                                                // Stop PA035901
+                                                                // Stop PA033005
+                                                                // Stop INC
+                                                              END;
+
+                                                   OnLookup=BEGIN
+                                                              // Start INC
+                                                              // Start PA033005
+                                                              // Start PA035901
+                                                              PostCodeG.LookUpCity("Buy-from City", "Buy-from Post Code", "Buy-from County", "Buy-from Country Code", TRUE);
+                                                              // Stop PA035901
+                                                              // Stop PA033005
+                                                              // Stop INC
+                                                            END;
+
+                                                   CaptionML=ENU=Buy-from City }
+    { 84  ;   ;Buy-from Contact    ;Text50        ;CaptionML=ENU=Buy-from Contact;
+                                                   Description=PA032438 }
+    { 85  ;   ;Pay-to Post Code    ;Code20        ;TableRelation="Post Code";
+                                                   OnValidate=BEGIN
+                                                                // Start INC
+                                                                // Start PA033005
+                                                                // Start PA035901
+                                                                PostCodeG.ValidatePostCode("Pay-to City", "Pay-to Post Code", "Pay-to County", "Pay-to Country Code", (CurrFieldNo <> 0) AND GUIALLOWED);
+                                                                // Stop PA035901
+                                                                // Stop PA033005
+                                                                // Stop INC
+                                                              END;
+
+                                                   OnLookup=BEGIN
+                                                              // Start INC
+                                                              // Start PA033005
+                                                              // Start PA035901
+                                                              PostCodeG.LookUpPostCode("Pay-to City", "Pay-to Post Code", "Pay-to County", "Pay-to Country Code", TRUE);
+                                                              // Stop PA035901
+                                                              // Stop PA033005
+                                                              // Stop INC
+                                                            END;
+
+                                                   ValidateTableRelation=No;
+                                                   TestTableRelation=No;
+                                                   CaptionML=ENU=Pay-to Post Code }
+    { 86  ;   ;Pay-to County       ;Text30        ;CaptionML=ENU=Pay-to County }
+    { 87  ;   ;Pay-to Country Code ;Code10        ;TableRelation=Country/Region;
+                                                   CaptionML=ENU=Pay-to Country Code }
+    { 88  ;   ;Buy-from Post Code  ;Code20        ;TableRelation="Post Code";
+                                                   OnValidate=BEGIN
+                                                                // Start INC
+                                                                // Start PA033005
+                                                                // Start PA035901
+                                                                PostCodeG.ValidatePostCode("Buy-from City", "Buy-from Post Code", "Buy-from County", "Buy-from Country Code", (CurrFieldNo <> 0) AND GUIALLOWED);
+                                                                // Stop PA035901
+                                                                // Stop PA033005
+                                                                // Stop INC
+                                                              END;
+
+                                                   OnLookup=BEGIN
+                                                              // Start INC
+                                                              // Start PA033005
+                                                              // Start PA035901
+                                                              PostCodeG.LookUpPostCode("Buy-from City", "Buy-from Post Code", "Buy-from County", "Buy-from Country Code", TRUE);
+                                                              // Stop PA035901
+                                                              // Stop PA033005
+                                                              // Stop INC
+                                                            END;
+
+                                                   ValidateTableRelation=No;
+                                                   TestTableRelation=No;
+                                                   CaptionML=ENU=Buy-from Post Code }
+    { 89  ;   ;Buy-from County     ;Text30        ;CaptionML=ENU=Buy-from County }
+    { 90  ;   ;Buy-from Country Code;Code10       ;TableRelation=Country/Region;
+                                                   CaptionML=ENU=Buy-from Country Code }
+    { 91  ;   ;Ship-to Post Code   ;Code20        ;TableRelation="Post Code";
+                                                   OnValidate=BEGIN
+                                                                // Start INC
+                                                                // Start PA033005
+                                                                // Start PA035901
+                                                                PostCodeG.ValidatePostCode("Ship-to City", "Ship-to Post Code", "Ship-to County", "Ship-to Country Code", (CurrFieldNo <> 0) AND GUIALLOWED);
+                                                                // Stop PA035901
+                                                                // Stop PA033005
+                                                                // Stop INC
+                                                              END;
+
+                                                   OnLookup=BEGIN
+                                                              // Start INC
+                                                              // Start PA033005
+                                                              // Start PA035901
+                                                              PostCodeG.LookUpPostCode("Ship-to City", "Ship-to Post Code", "Ship-to County", "Ship-to Country Code", TRUE);
+                                                              // Stop PA035901
+                                                              // Stop PA033005
+                                                              // Stop INC
+                                                            END;
+
+                                                   ValidateTableRelation=No;
+                                                   TestTableRelation=No;
+                                                   CaptionML=ENU=Ship-to Post Code }
+    { 92  ;   ;Ship-to County      ;Text30        ;CaptionML=ENU=Ship-to County }
+    { 93  ;   ;Ship-to Country Code;Code10        ;TableRelation=Country/Region;
+                                                   CaptionML=ENU=Ship-to Country Code }
+    { 94  ;   ;Bal. Account Type   ;Option        ;CaptionML=ENU=Bal. Account Type;
+                                                   OptionCaptionML=ENU=G/L Account,Bank Account;
+                                                   OptionString=G/L Account,Bank Account }
+    { 95  ;   ;Order Address Code  ;Code10        ;TableRelation="Order Address".Code WHERE (Vendor No.=FIELD(Buy-from Vendor No.));
+                                                   CaptionML=ENU=Order Address Code }
+    { 97  ;   ;Entry Point         ;Code10        ;TableRelation="Entry/Exit Point";
+                                                   CaptionML=ENU=Entry Point }
+    { 98  ;   ;Correction          ;Boolean       ;CaptionML=ENU=Correction }
+    { 99  ;   ;Document Date       ;Date          ;CaptionML=ENU=Document Date }
+    { 101 ;   ;Area                ;Code10        ;TableRelation=Area;
+                                                   CaptionML=ENU=Area }
+    { 102 ;   ;Transaction Specification;Code10   ;TableRelation="Transaction Specification";
+                                                   CaptionML=ENU=Transaction Specification }
+    { 104 ;   ;Payment Method Code ;Code10        ;TableRelation="Payment Method";
+                                                   CaptionML=ENU=Payment Method Code }
+    { 109 ;   ;No. Series          ;Code10        ;TableRelation="No. Series";
+                                                   CaptionML=ENU=No. Series;
+                                                   Editable=No }
+    { 110 ;   ;Order No. Series    ;Code10        ;TableRelation="No. Series";
+                                                   CaptionML=ENU=Order No. Series }
+    { 112 ;   ;User ID             ;Code50        ;TableRelation=User."User Name";
+                                                   OnValidate=BEGIN
+                                                                // Start PA035901
+                                                                UserMgtG.ValidateUserID("User ID");
+                                                                // Stop PA035901
+                                                              END;
+
+                                                   OnLookup=BEGIN
+                                                              // Start PA035901
+                                                              UserMgtG.LookupUserID("User ID");
+                                                              // Stop PA035901
+                                                            END;
+
+                                                   TestTableRelation=No;
+                                                   CaptionML=ENU=User ID;
+                                                   Description=PA035597 }
+    { 113 ;   ;Source Code         ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Source Code }
+    { 114 ;   ;Tax Area Code       ;Code20        ;TableRelation="Tax Area";
+                                                   CaptionML=ENU=Tax Area Code }
+    { 115 ;   ;Tax Liable          ;Boolean       ;CaptionML=ENU=Tax Liable }
+    { 116 ;   ;VAT Bus. Posting Group;Code10      ;TableRelation="VAT Business Posting Group";
+                                                   CaptionML=ENU=VAT Bus. Posting Group }
+    { 119 ;   ;VAT Base Discount % ;Decimal       ;CaptionML=ENU=VAT Base Discount %;
+                                                   DecimalPlaces=0:5;
+                                                   MinValue=0;
+                                                   MaxValue=100 }
+    { 480 ;   ;Dimension Set ID    ;Integer       ;TableRelation="Dimension Set Entry";
+                                                   OnLookup=BEGIN
+                                                              ShowDimensions;
+                                                            END;
+
+                                                   CaptionML=ENU=Dimension Set ID;
+                                                   Description=PA035597;
+                                                   Editable=No }
+    { 70000;  ;RUID                ;Text100       ;DataClassification=ToBeClassified;
+                                                   Description=ESKER1.0 }
+    { 5005250;;Pre-Assigned No. Series;Code10     ;TableRelation="No. Series";
+                                                   CaptionML=ENU=Pre-Assigned No. Series;
+                                                   Description=INC }
+    { 5005251;;Pre-Assigned No.    ;Code20        ;CaptionML=ENU=Pre-Assigned No.;
+                                                   Description=INC }
+    { 5005398;;Completely Invoiced ;Boolean       ;CaptionML=ENU=Completely Invoiced;
+                                                   Description=INC }
+    { 5025350;;Purch. Order Type   ;Code10        ;TableRelation="Purch. Order Type";
+                                                   ValidateTableRelation=Yes;
+                                                   CaptionML=ENU=Purch. Order Type;
+                                                   Description=Purch. Order Type,PA031323 }
+    { 5025351;;General Document    ;Boolean       ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=General Document;
+                                                   Description=EU.0114065 }
+    { 5025353;;Order Type          ;Option        ;CaptionML=ENU=Order Type;
+                                                   OptionCaptionML=ENU=Parts Sales & Purchases,Vehicle Sales & Purchases,Service;
+                                                   OptionString=Parts Sales & Purchases,Vehicle Sales & Purchases,Service;
+                                                   Description=INC }
+    { 5025354;;Trade-In for Order No.;Code20      ;CaptionML=ENU=Trade-In for Order No.;
+                                                   Description=INC;
+                                                   Editable=No }
+    { 5025355;;Trade-In for Order Line No.;Integer;CaptionML=ENU=Trade-In for Order Line No.;
+                                                   Description=INC;
+                                                   Editable=No }
+    { 5025356;;Transfer Balance    ;Boolean       ;CaptionML=ENU=Transfer Balance;
+                                                   Description=PA038476 }
+    { 5025357;;Trade-In Customer No.;Code20       ;TableRelation=Customer;
+                                                   CaptionML=ENU=Trade-In Customer No.;
+                                                   Description=PA038476 }
+    { 5025358;;Trade-In Customer Name;Text50      ;CaptionML=ENU=Trade-In Customer Name;
+                                                   Description=PA038476 }
+    { 5025359;;Buy-from Addr. Salutation Code;Code10;
+                                                   TableRelation="Address Salutation".Code;
+                                                   CaptionML=ENU=Buy-from Addr. Salutation Code;
+                                                   Description=INC }
+    { 5025360;;Pay-to Addr. Salutation Code;Code10;TableRelation="Address Salutation".Code;
+                                                   CaptionML=ENU=Pay-to Addr. Salutation Code;
+                                                   Description=INC }
+    { 5025361;;Ship-to Addr. Salutation Code;Code10;
+                                                   TableRelation="Address Salutation".Code;
+                                                   CaptionML=ENU=Ship-to Addr. Salutation Code;
+                                                   Description=INC }
+    { 5025362;;Copy Header Text to Next Doc.;Boolean;
+                                                   CaptionML=ENU=Copy Header Text to Next Doc.;
+                                                   Description=INC }
+    { 5025363;;Copy Footer Text to Next Doc.;Boolean;
+                                                   CaptionML=ENU=Copy Footer Text to Next Doc.;
+                                                   Description=INC }
+    { 5025364;;Cockpit Entry No.   ;Integer       ;CaptionML=ENU=Cockpit Entry No.;
+                                                   Description=Cockpit No. of the original (unposted) document;
+                                                   Editable=No }
+    { 5025365;;Allow Backorder     ;Boolean       ;CaptionML=ENU=Allow Backorder;
+                                                   Description=Flag for allowing backorders }
+    { 5025366;;Our Account No.     ;Text20        ;CaptionML=ENU=Our Account No.;
+                                                   Description=Our Customer No. at vendor (Default from vendor) }
+    { 5025367;;Transfer Method     ;Option        ;InitValue=Cockpit;
+                                                   CaptionML=ENU=Transfer Method;
+                                                   OptionCaptionML=ENU=" ,Cockpit,Cockpit - Transfer Immediately,Cockpit - No Transfer";
+                                                   OptionString=[ ,Cockpit,Cockpit - Transfer Immediately,Cockpit - No Transfer];
+                                                   Description=Flag for the method used to forward purchase documents: Normal (paper), Cockpit, Cockpit and immediate forwarding }
+    { 5025370;;Cockpit Posting Entry No.;Integer  ;CaptionML=ENU=Cockpit Posting Entry No.;
+                                                   Description=Running No. from transfer to Cockpit Control;
+                                                   Editable=No }
+    { 5025375;;Status Code         ;Code20        ;CaptionML=ENU=Document Status Code;
+                                                   Description=PA032877 }
+    { 5025376;No;FIELD ID 5025376 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025376 BLOCKED;
+                                                   Description=reserved for tables 38|120|122|124|6650|5046908|5046911 }
+    { 5025390;;Branch Code         ;Code10        ;TableRelation="Branch Description";
+                                                   CaptionML=ENU=Branch Code;
+                                                   Description=INC }
+    { 5025400;No;FIELD ID 5025400 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025400 BLOCKED;
+                                                   Description=reserved for tables 38|120|122|124|6650|5046908|5046911 }
+    { 5025401;;Vehicle Direct Unit Cost Date;Date ;CaptionML=ENU=Vehicle Direct Unit Cost Date;
+                                                   Description=Date for finding the vehicle and options purchase prices }
+    { 5025402;No;FIELD ID 5025402 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025402 BLOCKED;
+                                                   Description=reserved for tables 38|120|122|124|6650|5046908|5046911 }
+    { 5025403;No;FIELD ID 5025403 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025403 BLOCKED;
+                                                   Description=reserved for tables 38|120|122|124|6650|5046908|5046911 }
+    { 5025800;;Import Cost Post    ;Option        ;CaptionML=ENU=Import Cost Post;
+                                                   OptionCaptionML=ENU=" ,Test Receipt,Receipt";
+                                                   OptionString=[ ,Test Receipt,Receipt];
+                                                   Description=INC;
+                                                   Editable=No }
+    { 5025801;;Import Costing No.  ;Code20        ;CaptionML=ENU=Import Costing No.;
+                                                   Description=INC }
+    { 5025802;;Exclude from Reorder;Boolean       ;CaptionML=ENU=Exclude from Reorder;
+                                                   Description=INC }
+    { 5025841;;Supply VIN          ;Code20        ;TableRelation=Vehicle;
+                                                   ValidateTableRelation=No;
+                                                   CaptionML=ENU=Reference VIN;
+                                                   Description=PA041023;
+                                                   AutoFormatExpr='JMD' }
+    { 5025850;;Reference License No.;Code11       ;CaptionML=ENU=Reference License No.;
+                                                   Description=PA041023 }
+    { 5028650;;Cash Payment        ;Boolean       ;CaptionML=ENU=Cash Payment;
+                                                   Description=INC }
+    { 5028651;;Cash Payment Document Type;Option  ;CaptionML=ENU=Cash Payment Document Type;
+                                                   OptionCaptionML=ENU=" ,Cash Receipt Slip,Full Cash Receipt";
+                                                   OptionString=[ ,Cash Receipt Slip,Full Cash Receipt];
+                                                   Description=INC }
+    { 5028653;No;FIELD ID 5028653 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5028653 BLOCKED;
+                                                   Description=reserved for tables 38|120|122|124|6650|5046908|5046911 }
+    { 5045652;;External Shipment Address Code;Code20;
+                                                   CaptionML=ENU=External Shipment Address Code;
+                                                   Description=INC }
+    { 5045653;;External Branch Code;Code20        ;CaptionML=ENU=External Branch Code;
+                                                   Description=INC }
+    { 5045655;;Vendor Order Nos.   ;Code10        ;TableRelation="No. Series";
+                                                   CaptionML=ENU=Vendor Order Nos.;
+                                                   Description=INC }
+    { 5045656;;Campaign Mandatory  ;Boolean       ;CaptionML=ENU=Campaign Mandatory;
+                                                   Description=INC }
+    { 5045657;;Ship Complete       ;Boolean       ;CaptionML=ENU=Ship Complete;
+                                                   Description=INC }
+    { 5045658;;Indicator Proforma Order;Boolean   ;CaptionML=ENU=Indicator Proforma Order;
+                                                   Description=PA033760 }
+    { 5045659;;Combined Packing    ;Boolean       ;InitValue=Yes;
+                                                   CaptionML=ENU=Combined Packing;
+                                                   Description=PA033760 }
+  }
+  KEYS
+  {
+    {    ;No.                                     ;Clustered=Yes }
+    {    ;Order No.                                }
+    {    ;Pay-to Vendor No.                        }
+    {    ;Completely Invoiced,Pay-to Vendor No.   ;KeyGroups=ENGINE }
+    {    ;Order Type,Buy-from Vendor No.          ;KeyGroups=ENGINE }
+    {    ;Completely Invoiced,Pay-to Vendor No.,Currency Code }
+    {    ;Cockpit Posting Entry No.               ;KeyGroups=IMM }
+  }
+  FIELDGROUPS
+  {
+    { 1   ;DropDown            ;No.,Buy-from Vendor No.,Buy-from Vendor Name,Order Date,Expected Receipt Date,Location Code,Shortcut Dimension 1 Code,Shortcut Dimension 2 Code,Branch Code }
+  }
+  CODE
+  {
+    VAR
+      PurchRcptHeader@1000 : Record 120;
+      PurchCommentLine@1001 : Record 43;
+      VendLedgEntry@1002 : Record 25;
+      PostPurchLinesDelete@1003 : Codeunit 364;
+      DimMgt@1004 : Codeunit 408;
+      _INCADEA_@1109400000 : Boolean;
+      __START_EXIT_POINT___@5025350 : Integer;
+      ExitPointSetupG@5025351 : Record 5207300;
+      ExitPointParamG@5025352 : TEMPORARY Record 5207301;
+      ExitPointUnitG@5025353 : Codeunit 5207300;
+      EPRecRef2G@5025354 : RecordRef;
+      __STOP_EXIT_POINT___@5025355 : Integer;
+      PostedSalesAssistanceLineG@1109400005 : Record 5025487;
+      PostCodeG@1119418000 : Record 225;
+      UserMgtG@1109400001 : Codeunit 418;
+
+    PROCEDURE PrintRecords@1(ShowRequestPage@1000 : Boolean);
+    VAR
+      ReportSelection@1001 : Record 77;
+      RecordrefL@1109400001 : RecordRef;
+      UserSessionUnitL@1109400000 : Codeunit 5028665;
+    BEGIN
+      WITH PurchRcptHeader DO BEGIN
+        COPY(Rec);
+        ReportSelection.SETRANGE(Usage,ReportSelection.Usage::"P.Receipt");
+      // Start PA033336
+        ReportSelection.GetReportSelection(ReportSelection, "Shortcut Dimension 2 Code", "Location Code");
+      // Stop PA033336
+        REPEAT
+      // Start PA039225.51457
+          RecordrefL.GETTABLE(ReportSelection);
+          UserSessionUnitL.SetRecordRef(RecordrefL);
+      // Stop PA039225.51457
+          REPORT.RUNMODAL(ReportSelection."Report ID",ShowRequestPage,FALSE,PurchRcptHeader);
+        UNTIL ReportSelection.NEXT = 0;
+      END;
+    END;
+
+    PROCEDURE Navigate@2();
+    VAR
+      NavigatePage@1000 : Page 344;
+    BEGIN
+      NavigatePage.SetDoc("Posting Date","No.");
+      NavigatePage.RUN;
+    END;
+
+    PROCEDURE ShowDimensions@3();
+    BEGIN
+      // Start PA035597
+      DimMgt.ShowDimensionSet("Dimension Set ID",STRSUBSTNO('%1 %2',TABLECAPTION,"No."));
+      // Stop PA035597
+    END;
+
+    PROCEDURE __INCADEA__@5025350();
+    BEGIN
+    END;
+
+    LOCAL PROCEDURE __START_EXITPOINT__@5025300();
+    BEGIN
+    END;
+
+    LOCAL PROCEDURE ExitPointCall@5025380(MakeCoddeP@1109400003 : Code[20];TriggerP@1109400002 : Integer;TypeP@1109400001 : Integer;ExitPointIDP@1109400000 : Text[50];VAR EPRecRefP@1109400005 : RecordRef) : Boolean;
+    BEGIN
+      EXIT(ExitPointUnitG.RunExitPoint(
+        ExitPointSetupG."Object Type"::Table,
+        DATABASE::"Purch. Receipt Header",
+        MakeCoddeP, TriggerP, TypeP, ExitPointIDP, EPRecRefP, EPRecRef2G, ExitPointParamG));
+    END;
+
+    LOCAL PROCEDURE ExitPoint@5025450(TriggerP@1119452001 : Integer;TypeP@1119432000 : Integer;ExitPointIDP@1119432001 : Text[50]) ReturnR : Boolean;
+    VAR
+      EPRecRefL@1109400004 : RecordRef;
+    BEGIN
+      // @ This local function works as ExitPoint wrapper function. It will control the ExitPointCheck function call.
+      // @ It passes thru all the handshake parameter values.
+      // @ It takes care to provide the processing records as RecordReference to the ExitPointCheck function.
+      // @ When possible a Make Code is also identified and passed to the called ExitPointCheck function.
+
+      // Start PA036544
+      EPRecRefL.GETTABLE(Rec);
+      EPRecRef2G.GETTABLE(xRec);
+      ExitPointParamG."Called CurrFieldNo" := CurrFieldNo;
+      ReturnR := ExitPointCall("Shortcut Dimension 2 Code", TriggerP, TypeP, ExitPointIDP, EPRecRefL);
+      EPRecRefL.SETTABLE(Rec);
+      CLEAR(EPRecRef2G);
+      // Stop PA036544
+    END;
+
+    LOCAL PROCEDURE __STOP_EXITPOINT__@5025451();
+    BEGIN
+    END;
+
+    PROCEDURE PrintVehicleRecords@5025360(ShowRequestPage@1109400000 : Boolean);
+    VAR
+      ReportSelection@1109400001 : Record 5028651;
+      RecordrefL@1109400003 : RecordRef;
+      UserSessionUnitL@1109400002 : Codeunit 5028665;
+    BEGIN
+      WITH PurchRcptHeader DO BEGIN
+        COPY(Rec);
+      // Start PA040080
+        IF NOT FINDFIRST THEN
+          INIT;
+      // Stop PA040080
+        ReportSelection.SETRANGE(Usage,ReportSelection.Usage::"Posted Receipt");
+      // Start PA033336
+        ReportSelection.GetReportSelection(ReportSelection, "Shortcut Dimension 2 Code", "Location Code");
+      // Stop PA033336
+        REPEAT
+      // Start PA039225.51457
+          RecordrefL.GETTABLE(ReportSelection);
+          UserSessionUnitL.SetRecordRef(RecordrefL);
+      // Stop PA039225.51457
+          REPORT.RUNMODAL(ReportSelection."Report ID",ShowRequestPage,FALSE,PurchRcptHeader);
+        UNTIL ReportSelection.NEXT = 0;
+      END;
+    END;
+
+    PROCEDURE PrintServiceRecords@5025361(ShowRequestPage@1109400000 : Boolean);
+    VAR
+      ReportSelection@1109400001 : Record 5045388;
+      RecordrefL@1109400003 : RecordRef;
+      UserSessionUnitL@1109400002 : Codeunit 5028665;
+    BEGIN
+      WITH PurchRcptHeader DO BEGIN
+        COPY(Rec);
+        ReportSelection.SETRANGE(Usage,ReportSelection.Usage::"Posted Receipt");
+      // Start PA033336
+        ReportSelection.GetReportSelection(ReportSelection, "Shortcut Dimension 2 Code", "Location Code");
+      // Stop PA033336
+        REPEAT
+      // Start PA039225.51457
+          RecordrefL.GETTABLE(ReportSelection);
+          UserSessionUnitL.SetRecordRef(RecordrefL);
+      // Stop PA039225.51457
+          REPORT.RUNMODAL(ReportSelection."Report ID",ShowRequestPage,FALSE,PurchRcptHeader);
+        UNTIL ReportSelection.NEXT = 0;
+      END;
+    END;
+
+    BEGIN
+    {
+      // @ Area VehiclePurchase, PartsPurchase, ServicePurchasing
+      // @ TRANSFERFIELDS 38|120|122|124|6650|5046908|5046911
+
+      ** ATTENTION! TRANSFERFIELDS ******************************
+      * Fields are exchanged with following tables:             *
+      *         38  Purchase Header                             *
+      *        122  Purch. Invoice Header                       *
+      *        124  Purch. Credit Memo Header                   *
+      *       6650  Return Shipment Header                      *
+      *    5046908  Archived Purchase Header                    *
+      *    5046911  Unposted Purch. Receipt Header              *
+      ***********************************************************
+
+      PA-Number  Date
+      ------------------------------------------------
+      PA031882   07.06.10    Deactivation of field 'Job No.'
+      PA032178   12.10.10 GL 730455: Changed Tablerelation from User to User Setup in field User ID
+                 27.10.10 DD 1798176 docu trigger and version list corrected.
+      PA032438   22.04.11 GD Modified length of fields : Pay-to Name, Pay-to Name 2, Pay-to Address, Pay-to Address 2,Ship-to Name,
+                             Ship-to Name 2, Ship-to Address, Ship-to Address 2,Buy-from Vendor Name,Buy-from Vendor Name 2,
+                             Buy-from Address,Buy-from Address 2,Pay-To Contact,Buy-From Contact,Ship-to Contact
+      PA032441   01.07.11 GC NAV 2009 SP1 W1 General Ledger Integration
+      PA032821   04.08.11 DR 4609511: Automatic DropDown fields added in "Field Groups
+      PA033005   26.03.12 DR 6855272: Handover "County" field to PostCode and City validation functions
+      PA033067   12.04.12 DR DE Captions implemented
+      PA033019   29.05.12 DR 7275374: DEU and ENU Captions corrected
+      PA033259   08.08.12 AI Deletion of Start/Stop History in Code, update copyright and Version List
+      PA033259   18.09.12 DR Variable names changed according to incadea styleguide
+      PA033336   17.10.12 SS 8746211
+                             - Modified functions PrintRecords(), PrintVehicleRecords(), PrintServiceRecords()
+      PA033733   10.12.12 DR DE Captions added for version: N.6.1.2
+      PA035597   10.02.14 GC NAV 2013 R2 Technical Upgrade
+      PA036008   20.05.14 DR TRANSFERFIELDS incaDoc and dummy fields added for field type error prevention in TRANSFERFIELDS
+      PA035597   16.07.14 DR 25914: - Table Relation of field Dimension Set ID changed to "Dimension Set Entry".
+                             - MaintainSIFTIndex=No removed
+      PA035597   23.07.14 GL 26024 Changed Tablerelation of field User ID to User."User Name"
+      PA035901   10.10.14 SM NAV 2013 R2 General Ledger Integration.
+      PA035901   13.11.14 CH NAV 2013 R2 General Ledger Integration.
+      PA036544   21.10.14 DR New ExitPoint added.
+                             - All ExitPoint functions are defined as LOCAL functions.
+                             - All FIND('-') and FIND('+') changed to FINDSET, FINDFIRST and FINDLAST.
+                             - Use the new Types "Inside x" and "Condition x" when necessary.
+      PA036549   20.01.15 TS 32895 Rename disabled fields used to accommodate TRANSFERFIELDS without braces.
+      PA040080   22.02.16 GW Modified PrintVehicleRecords() in order for GetReportSelection to function correctly.
+      PA040081   22.02.16 GW Merge of PA040080
+      PA039225   15.02.16 KR 51457 Passing Report Selection to reports through User Session Unit.
+      PA039226   01.08.16 JS Merge of PA039225.51457.
+      PA038476   02.01.17 ER Fields Transfer Balance,Trade-in Customer No.,Trade-in Customer Name (5025356..5025358) added.
+      PA041023   27.12.16 SV Created new fields "Supply VIN" and "Reference License No."
+      --- 7.2.1 ---
+      EU.0114065 18.03.21 AD New field "FIELD ID 5025351 BLOCKED" added.
+      EU.0114065 25.07.21 DS New field "General Document" added.
+      ESKER1.0   05.09.23 QQ Added Esker field 70000 RUID.
+    }
+    END.
+  }
+}
+

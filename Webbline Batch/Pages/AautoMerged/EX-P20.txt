@@ -1,0 +1,523 @@
+OBJECT Page 20 General Ledger Entries
+{
+  OBJECT-PROPERTIES
+  {
+    Date=12/12/23;
+    Time=12:41:33 PM;
+    Modified=Yes;
+    Version List=NAVW16.00,N.7.2.1,AP001994;
+  }
+  PROPERTIES
+  {
+    Editable=No;
+    CaptionML=ENU=General Ledger Entries;
+    SourceTable=Table17;
+    DataCaptionFields=G/L Account No.;
+    PageType=List;
+    OnOpenPage=BEGIN
+                 // Start INC
+                 DealerCheckRunPage;
+                 // Stop INC
+
+                 UserSetupG.SETRANGE("User ID",USERID);
+                 IF UserSetupG.FIND('-') THEN
+                   IF UserSetupG."Show G/L Entries" = FALSE THEN
+                     ERROR(C_INC001,UserSetupG.FIELDCAPTION("User ID"),USERID);
+               END;
+
+    OnAfterGetCurrRecord=BEGIN
+                           // Start EU.0000484
+                           IF NOT GLAccountG.GET("G/L Account No.") THEN
+                             GLAccountG.INIT;
+                           AccountForRecG := GLAccountG."G/L Account for Reconciliation";
+                           // Stop EU.0000484
+                         END;
+
+    ActionList=ACTIONS
+    {
+      { 1900000003;0 ;ActionContainer;
+                      ActionContainerType=RelatedInformation }
+      { 148     ;1   ;ActionGroup;
+                      CaptionML=ENU=Ent&ry }
+      { 49      ;2   ;Action    ;
+                      ShortCutKey=Shift+Ctrl+D;
+                      CaptionML=ENU=Dimensions;
+                      Description=PA035597;
+                      Image=Dimensions;
+                      OnAction=BEGIN
+                                 ShowDimensions;
+                                 CurrPage.SAVERECORD;
+                               END;
+                                }
+      { 1000000000;2 ;Action    ;
+                      Name=GLDimensionOverview;
+                      CaptionML=ENU=G/L Dimension Overview;
+                      Description=PA035597;
+                      Image=Dimensions;
+                      OnAction=BEGIN
+                                 PAGE.RUN(PAGE::"G/L Entries Dimension Overview",Rec);
+                               END;
+                                }
+      { 165     ;2   ;Action    ;
+                      CaptionML=ENU=Value Entries;
+                      Description=PA043927;
+                      RunObject=Page 5802;
+                      RunPageView=SORTING(Entry No.);
+                      RunPageLink=Entry No.=FIELD(Value Entry No.);
+                      Promoted=Yes;
+                      Image=ValueLedger;
+                      PromotedCategory=Process;
+                      OnAction=BEGIN
+                                 // Start PA043927
+                                 // Stop PA043927
+                               END;
+                                }
+      { 48404   ;1   ;ActionGroup;
+                      CaptionML=ENU=G/L Entry Reconciliation;
+                      Visible=False }
+      { 48405   ;2   ;Action    ;
+                      CaptionML=ENU=Application Details;
+                      Enabled=AccountForRecG;
+                      Image=EntriesList;
+                      OnAction=BEGIN
+                                 // Start EU.0000484
+                                 OpenReconciliationList();
+                                 // Stop EU.0000484
+                               END;
+                                }
+      { 1900000004;0 ;ActionContainer;
+                      ActionContainerType=ActionItems }
+      { 157     ;1   ;ActionGroup;
+                      CaptionML=ENU=F&unctions }
+      { 163     ;2   ;Action    ;
+                      Ellipsis=Yes;
+                      CaptionML=ENU=Reverse Transaction;
+                      Promoted=Yes;
+                      Image=DeleteQtyToHandle;
+                      PromotedCategory=Process;
+                      OnAction=VAR
+                                 ReversalEntry@1000 : Record 179;
+                                 _INCADEA_@1119432001 : Integer;
+                                 VehicleLedgerEntryL@1119432002 : Record 5025405;
+                                 ARDepreciationSetupL@1109400000 : Record 5204802;
+                               BEGIN
+                                 // Start PA032441.#Defect4524325
+                                 // Start EU.0139128.130007
+                                 IF "Cash Register Posting" THEN
+                                   ERROR(C_INC002);
+                                 // Stop EU.0139128.130007
+
+                                 // Stop PA032441.#Defect4524325
+                                 CLEAR(ReversalEntry);
+                                 IF Reversed THEN
+                                   ReversalEntry.AlreadyReversedEntry(TABLECAPTION,"Entry No.");
+                                 // Start PA032917
+                                 IF "Journal Batch Name" = '' THEN BEGIN
+                                   VehicleLedgerEntryL.RESET;
+                                   VehicleLedgerEntryL.SETRANGE("Document No.","Document No.");
+                                   VehicleLedgerEntryL.SETRANGE("Posting Date","Posting Date");
+                                   VehicleLedgerEntryL.SETFILTER("Journal Batch Name",'<>%1','');
+                                   IF VehicleLedgerEntryL.ISEMPTY THEN BEGIN
+                                     ReversalEntry.TestFieldError;
+                                   END;
+                                 END;
+                                 // Stop PA032917
+                                 // Start PA040256.58377
+                                 ARDepreciationSetupL.GET();
+                                 IF ARDepreciationSetupL."Source Code" = "Source Code" THEN
+                                   ReversalEntry.TestFieldError;
+                                 // Stop PA040256.58377
+                                 TESTFIELD("Transaction No.");
+                                 ReversalEntry.ReverseTransaction("Transaction No.")
+                               END;
+                                }
+      { 48401   ;1   ;ActionGroup;
+                      CaptionML=ENU=G/L Entry Reconciliation;
+                      Description=EU.0000484;
+                      Visible=False }
+      { 48402   ;2   ;Action    ;
+                      CaptionML=ENU=Apply G/L Entry;
+                      Description=EU.0000484;
+                      Enabled=AccountForRecG;
+                      Image=Apply;
+                      OnAction=BEGIN
+                                 // Start EU.0000484
+                                 ApplyReconciliation();
+                                 // Stop EU.0000484
+                               END;
+                                }
+      { 48403   ;2   ;Action    ;
+                      CaptionML=ENU=Unapply G/L Entry;
+                      Description=EU.0000484;
+                      Enabled=AccountForRecG;
+                      Image=UnApply;
+                      OnAction=BEGIN
+                                 // Start EU.0000484
+                                 UnApplyReconciliation();
+                                 // Stop EU.0000484
+                               END;
+                                }
+      { 24      ;1   ;Action    ;
+                      CaptionML=ENU=&Navigate;
+                      Promoted=Yes;
+                      Image=Navigate;
+                      PromotedCategory=Process;
+                      OnAction=BEGIN
+                                 Navigate.SetDoc("Posting Date","Document No.");
+                                 Navigate.RUN;
+                               END;
+                                }
+    }
+  }
+  CONTROLS
+  {
+    { 1900000001;0;Container;
+                ContainerType=ContentArea }
+
+    { 1   ;1   ;Group     ;
+                GroupType=Repeater }
+
+    { 2   ;2   ;Field     ;
+                SourceExpr="Posting Date" }
+
+    { 4   ;2   ;Field     ;
+                SourceExpr="Document Type" }
+
+    { 6   ;2   ;Field     ;
+                SourceExpr="Document No." }
+
+    { 64  ;2   ;Field     ;
+                CaptionML=ENU=External Document No.;
+                SourceExpr="External Document No." }
+
+    { 8   ;2   ;Field     ;
+                SourceExpr="G/L Account No." }
+
+    { 140 ;2   ;Field     ;
+                DrillDown=No;
+                SourceExpr="G/L Account Name";
+                Visible=FALSE }
+
+    { 10  ;2   ;Field     ;
+                SourceExpr=Description }
+
+    { 1101353001;2;Field  ;
+                SourceExpr="Posted Description" }
+
+    { 50  ;2   ;Field     ;
+                SourceExpr="Debit Amount" }
+
+    { 56  ;2   ;Field     ;
+                SourceExpr="Credit Amount" }
+
+    { 28  ;2   ;Field     ;
+                SourceExpr="Global Dimension 1 Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 30  ;2   ;Field     ;
+                SourceExpr="Global Dimension 2 Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 151 ;2   ;Field     ;
+                SourceExpr="IC Partner Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 48  ;2   ;Field     ;
+                SourceExpr="Branch Code";
+                AutoFormatExpr='JMD' }
+
+    { 12  ;2   ;Field     ;
+                SourceExpr="Gen. Posting Type" }
+
+    { 32  ;2   ;Field     ;
+                SourceExpr="Gen. Bus. Posting Group" }
+
+    { 14  ;2   ;Field     ;
+                SourceExpr="Gen. Prod. Posting Group" }
+
+    { 16  ;2   ;Field     ;
+                SourceExpr=Amount }
+
+    { 14720400;2;Field    ;
+                Description=EU.0147204.148230;
+                SourceExpr="Source Type" }
+
+    { 14720401;2;Field    ;
+                Description=EU.0147204.148230;
+                SourceExpr="Source No." }
+
+    { 54  ;2   ;Field     ;
+                SourceExpr="Additional-Currency Amount";
+                Visible=FALSE }
+
+    { 36  ;2   ;Field     ;
+                SourceExpr="VAT Amount";
+                Visible=FALSE }
+
+    { 52  ;2   ;Field     ;
+                SourceExpr="Bal. Account Type" }
+
+    { 18  ;2   ;Field     ;
+                SourceExpr="Bal. Account No." }
+
+    { 46  ;2   ;Field     ;
+                SourceExpr="User ID";
+                Visible=FALSE }
+
+    { 42  ;2   ;Field     ;
+                SourceExpr="Source Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 44  ;2   ;Field     ;
+                SourceExpr="Reason Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 258 ;2   ;Field     ;
+                SourceExpr=Reversed;
+                Visible=FALSE }
+
+    { 260 ;2   ;Field     ;
+                SourceExpr="Reversed by Entry No.";
+                Visible=FALSE }
+
+    { 262 ;2   ;Field     ;
+                SourceExpr="Reversed Entry No.";
+                Visible=FALSE }
+
+    { 34  ;2   ;Field     ;
+                SourceExpr="FA Entry Type";
+                Visible=FALSE }
+
+    { 38  ;2   ;Field     ;
+                SourceExpr="FA Entry No.";
+                Visible=FALSE }
+
+    { 1109400008;2;Field  ;
+                SourceExpr="Value Entry No.";
+                Visible=FALSE }
+
+    { 20  ;2   ;Field     ;
+                SourceExpr="Entry No." }
+
+    { 1109420000;2;Field  ;
+                SourceExpr="Service Ledger Entry No." }
+
+    { 58  ;2   ;Field     ;
+                SourceExpr=VIN;
+                Visible=FALSE }
+
+    { 60  ;2   ;Field     ;
+                SourceExpr="Book No.";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 62  ;2   ;Field     ;
+                SourceExpr="Veh. Source Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 40  ;2   ;Field     ;
+                SourceExpr="Prod. Order No.";
+                Visible=FALSE }
+
+    { 1109400000;2;Field  ;
+                SourceExpr="Register Date" }
+
+    { 1109400002;2;Field  ;
+                SourceExpr="VAT Bus. Posting Group" }
+
+    { 1109400004;2;Field  ;
+                SourceExpr="VAT Prod. Posting Group" }
+
+    { 1109400006;2;Field  ;
+                SourceExpr="System-Created Entry" }
+
+    { 1101353000;2;Field  ;
+                SourceExpr="Factory No." }
+
+    { 1101353002;2;Field  ;
+                SourceExpr="Main Group Code";
+                AutoFormatExpr='JMD' }
+
+    { 1101353004;2;Field  ;
+                SourceExpr="Subgroup Code";
+                AutoFormatExpr='JMD' }
+
+    { 1101353006;2;Field  ;
+                SourceExpr="Line Group Code";
+                AutoFormatExpr='JMD' }
+
+    { 1101353008;2;Field  ;
+                SourceExpr="Import Costing No." }
+
+    { 48400;2  ;Field     ;
+                Description=EU.0000484;
+                SourceExpr="Amount to Reconcile";
+                Visible=false }
+
+    { 1900000007;0;Container;
+                ContainerType=FactBoxArea }
+
+    { 1900383207;1;Part   ;
+                Visible=FALSE;
+                PartType=System;
+                SystemPartID=RecordLinks }
+
+    { 1905767507;1;Part   ;
+                Visible=FALSE;
+                PartType=System;
+                SystemPartID=Notes }
+
+  }
+  CODE
+  {
+    VAR
+      Navigate@1000 : Page 344;
+      _INCADEA_@1109400001 : Boolean;
+      UserSetupG@1109400002 : Record 91;
+      C_INC001@1109400003 : TextConst 'ENU=You have no permission to view data with the %1 %2!';
+      C_INC002@1109400004 : TextConst 'ENU=You cannot reverse a Cash Register Transaction';
+      GLAccountG@48400 : Record 15;
+      AccountForRecG@48401 : Boolean;
+      C_INC_UnApplyErr@572200 : TextConst 'ENU=Nothing to Un-Apply, Entry No.: %1!';
+      C_INC_UnApplyErr2@572201 : TextConst 'ENU=Nothing to Un-Apply!';
+
+    PROCEDURE __INCADEA__@1101353000();
+    BEGIN
+    END;
+
+    PROCEDURE DealerCheckRunPage@1101353001();
+    VAR
+      CompanyInfoL@1101353001 : Record 79;
+      DealerMgt@1101353000 : Codeunit 5086700;
+    BEGIN
+      // Start INC
+      IF CompanyInfoL.IMSCheck THEN
+        IF DealerMgt.GetDealer <> '' THEN
+          ERROR('');
+      // Stop INC
+    END;
+
+    PROCEDURE ApplyReconciliation@48400();
+    VAR
+      GLAccountL@48402 : Record 15;
+      ReconWorksheetL@48400 : Page 5204814;
+    BEGIN
+      // @ Function to open the Reconciliation Worksheet for application
+
+      // Start EU.0000484
+      GLAccountL.GET("G/L Account No.");
+      ReconWorksheetL.SetParameter(GLAccountL."No.",
+         GLAccountL."Recon. Group Field No. 1",
+         GLAccountL."Recon. Group Field No. 2",
+         GLAccountL."Recon. Group Field No. 3",
+         GLAccountL."Recon. Group Field No. 4",
+         GLAccountL."Recon. Group Field No. 5");
+      // Start EU.0005722
+      ReconWorksheetL.RUNMODAL();
+      // Stop EU.0005722
+      // Stop EU.0000484
+    END;
+
+    PROCEDURE UnApplyReconciliation@48401();
+    VAR
+      GLEntriesL@48402 : Record 17;
+      ReconcilationEntriesL@48401 : Record 5204813;
+      ReconcilationEntriesTempL@48400 : TEMPORARY Record 5204813;
+      NoOfRecordsL@572200 : Integer;
+    BEGIN
+      // @ Function to Unapply selected G/L Entries
+
+      // Start EU.0000484
+      CurrPage.SETSELECTIONFILTER(GLEntriesL);
+
+      ReconcilationEntriesL.RESET;
+      ReconcilationEntriesL.SETCURRENTKEY("G/L Entry No.");
+
+      // Start EU.0005722
+      NoOfRecordsL := GLEntriesL.COUNT();
+      // Stop EU.0005722
+
+      GLEntriesL.FINDSET(TRUE,FALSE);
+      REPEAT
+        ReconcilationEntriesL.SETRANGE("G/L Entry No.",GLEntriesL."Entry No.");
+        ReconcilationEntriesL.SETRANGE("Entry Type",ReconcilationEntriesL."Entry Type"::Initial);
+        IF ReconcilationEntriesL.FINDFIRST() THEN BEGIN
+      // Start EU.0005722
+          IF ReconcilationEntriesL.Amount = ReconcilationEntriesL."Amount to Reconcile" THEN
+            IF NoOfRecordsL > 1 THEN
+              ERROR(C_INC_UnApplyErr,GLEntriesL."Entry No.")
+            ELSE
+              ERROR(C_INC_UnApplyErr2);
+      // Stop EU.0005722
+          ReconcilationEntriesTempL := ReconcilationEntriesL;
+          ReconcilationEntriesTempL.INSERT;
+      // Start EU.0005722
+        END ELSE
+          IF NoOfRecordsL > 1 THEN
+            ERROR(C_INC_UnApplyErr,GLEntriesL."Entry No.")
+          ELSE
+            ERROR(C_INC_UnApplyErr2);
+      // Stop EU.0005722
+      UNTIL  GLEntriesL.NEXT=0;
+
+      ReconcilationEntriesL.UnApplyApplication(ReconcilationEntriesTempL);
+      // Stop EU.0000484
+    END;
+
+    PROCEDURE OpenReconciliationList@48403();
+    VAR
+      ReconcilationEntriesL@48400 : Record 5204813;
+    BEGIN
+      // @ Function to open the G/L Entry Reconciliation List
+
+      // Start EU.0000484
+      ReconcilationEntriesL.RESET;
+      ReconcilationEntriesL.SETCURRENTKEY("G/L Entry No.");
+      ReconcilationEntriesL.SETRANGE("G/L Entry No.","Entry No.");
+      PAGE.RUN(PAGE::"G/L Entry Reconciliation List", ReconcilationEntriesL);
+      // Stop EU.0000484
+    END;
+
+    BEGIN
+    {
+      PA-Number  Date
+      ------------------------------------------------
+      PA031882   18.06.10 Removed references to Job Area (Deleted "Job No." control).
+      PA032441   01.07.11 GC NAV 2009 SP1 W1 General Ledger Integration
+      PA032441   17.10.11 #4524325 - Raise an error when user tries to reverse a Cash Register transaction
+      PA032917   15.11.11 GC Vehicle Ledger Entry Reversal
+      PA033067   12.04.12 DR DE Captions implemented
+      PA033259   09.08.12 AI Deletion of Start/Stop History in Code, update copyright and Version List
+      PA033259   18.09.12 DR Variable names changed according to incadea style guide
+      PA035597   10.02.14 GC NAV 2013 R2 Technical Upgrade
+      PA036547   07.11.14 GE Merge N.6.1.4 to N.7.1.0
+      PA043927   20.05.17 JV Added property in Value Entries Action and removed code to show linked Value entries
+      PA043929   30.05.17 JV Merge of PA043927
+      --- 7.1.4 ---
+      PA040256   14.04.16 GV 58377 Prohibit reverse entries that starts from AR Depreciation
+      --- 7.1.5 ---
+      PA041023   27.01.17 SV Enabled Fields "Supply VIN" and "License No."
+      PA041023   02.02.17 KB 87188 Removed Fields "Supply VIN" and "License No."
+      --- 7.1.6 ---
+      EU.0002138 30.06.17 PT Merge of PA043927
+      --- 7.2.0 ---
+      EU.0000484 18.07.17 DT New field "Amount to Reconcile", New Action Items "Apply G/L Entry", "Unapply G/L Entry", "Application Details"
+      EU.0005722 02.10.17 DT UnApply function enhanced with error message
+                             Apply function: open reconciliation page with "RUNMODAL" to force a page refresh of closing reconciliation page
+      EU.0000039 18.10.17 UX 6348 Docu trigger correction.
+      EU.0001175 18.10.17 UX 8305 Missing docu trigger for EU.0000039.6348
+      --- 7.2.1 ---
+      EU.0139128 27.05.22 AD 130007 Modified OnAction() of "Reverse Transaction" in order to update "Cash Register Posting" field condition.
+      EU.0147204 07.11.22 MH 148230 added the field "Source Type" and "Source No" in Gender Ledger Entry Page.
+      AP001994   12.12.23 RL Added field "Posted Description" to populate from "Description" field on posting purchases.
+    }
+    END.
+  }
+}
+

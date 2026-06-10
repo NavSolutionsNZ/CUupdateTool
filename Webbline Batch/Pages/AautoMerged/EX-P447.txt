@@ -1,0 +1,187 @@
+OBJECT Page 447 Finance Charge Memo Lines
+{
+  OBJECT-PROPERTIES
+  {
+    Date=11/27/23;
+    Time=12:42:39 PM;
+    Modified=Yes;
+    Version List=NAVW16.00,N.7.2.0_SLA,AP002103;
+  }
+  PROPERTIES
+  {
+    CaptionML=ENU=Lines;
+    LinksAllowed=No;
+    SourceTable=Table303;
+    PageType=ListPart;
+    AutoSplitKey=Yes;
+    ActionList=ACTIONS
+    {
+      { 1900000004;0 ;ActionContainer;
+                      ActionContainerType=ActionItems }
+      { 1906587504;1 ;ActionGroup;
+                      CaptionML=ENU=F&unctions }
+      { 1900206104;2 ;Action    ;
+                      CaptionML=ENU=Insert &Ext. Texts;
+                      Image=Note;
+                      OnAction=BEGIN
+                                 InsertExtendedText(TRUE);
+                               END;
+                                }
+    }
+  }
+  CONTROLS
+  {
+    { 1900000001;0;Container;
+                ContainerType=ContentArea }
+
+    { 1   ;1   ;Group     ;
+                GroupType=Repeater }
+
+    { 6   ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Document Type";
+                OnValidate=BEGIN
+                             DocumentTypeOnAfterValidate;
+                           END;
+
+                QuickEntry=FALSE }
+
+    { 8   ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Document No.";
+                OnValidate=BEGIN
+                             DocumentNoOnAfterValidate;
+                           END;
+
+                QuickEntry=FALSE }
+
+    { 22  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Due Date";
+                QuickEntry=FALSE }
+
+    { 10  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr=Description;
+                QuickEntry=FALSE }
+
+    { 16  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Remaining Amount";
+                QuickEntry=FALSE }
+
+    { 18  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr=Amount;
+                QuickEntry=FALSE }
+
+    { 28  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr=Type;
+                Visible=FALSE;
+                OnValidate=BEGIN
+                             TypeOnAfterValidate;
+                           END;
+                            }
+
+    { 30  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="No.";
+                Visible=FALSE;
+                OnValidate=BEGIN
+                             NoOnAfterValidate;
+                           END;
+                            }
+
+    { 1109400000;2;Field  ;
+                Description=PA032795;
+                SourceExpr="Line No.";
+                Visible=FALSE }
+
+    { 2   ;2   ;Field     ;
+                SourceExpr="Posting Date";
+                Visible=FALSE }
+
+    { 4   ;2   ;Field     ;
+                SourceExpr="Document Date";
+                Visible=FALSE }
+
+    { 14  ;2   ;Field     ;
+                SourceExpr="Original Amount";
+                Visible=FALSE }
+
+    { 1101353000;2;Field  ;
+                SourceExpr="VAT Prod. Posting Group" }
+
+  }
+  CODE
+  {
+    VAR
+      TransferExtendedText@1000 : Codeunit 378;
+
+    PROCEDURE InsertExtendedText@5(Unconditionally@1000 : Boolean);
+    BEGIN
+      IF TransferExtendedText.FinChrgMemoCheckIfAnyExtText(Rec,Unconditionally) THEN BEGIN
+        CurrPage.SAVERECORD;
+        TransferExtendedText.InsertFinChrgMemoExtText(Rec);
+      END;
+      IF TransferExtendedText.MakeUpdate THEN
+        CurrPage.UPDATE;
+    END;
+
+    PROCEDURE FormUpdateAttachedLines@3();
+    BEGIN
+      IF CheckAttachedLines THEN BEGIN
+        CurrPage.SAVERECORD;
+        UpdateAttachedLines;
+        CurrPage.UPDATE(FALSE);
+      END;
+    END;
+
+    PROCEDURE UpdatePage@1101100000(SetSaveRecord@1000 : Boolean);
+    BEGIN
+      // Start PA045176
+      CurrPage.UPDATE(SetSaveRecord);
+      // Stop PA045176
+    END;
+
+    LOCAL PROCEDURE TypeOnAfterValidate@19069045();
+    BEGIN
+      InsertExtendedText(FALSE);
+      FormUpdateAttachedLines;
+    END;
+
+    LOCAL PROCEDURE NoOnAfterValidate@19066594();
+    BEGIN
+      InsertExtendedText(FALSE);
+    END;
+
+    LOCAL PROCEDURE DocumentTypeOnAfterValidate@19030163();
+    BEGIN
+      FormUpdateAttachedLines;
+    END;
+
+    LOCAL PROCEDURE DocumentNoOnAfterValidate@19031352();
+    BEGIN
+      FormUpdateAttachedLines;
+    END;
+
+    BEGIN
+    {
+      // @ Area GeneralLedger
+      PA-Number  Date
+      ------------------------------------------------
+      PA032441   01.07.11 GC NAV 2009 SP1 W1 General Ledger Integration
+      PA032795   26.10.11 PR Added 'Line No.' control with Visible = FALSE by default.
+      PA033067   12.04.12 DR DE Captions implemented
+      PA033259   18.09.12 DR Variable names changed according to incadea styleguide
+      PA037533   23.10.15 GU Field sequence rearranged for UI.
+      PA045176   28.08.17 NG Align to standard NAV.
+      --- 7.2.0 ---
+      EU.0012747 11.01.18 EG Merge of PA045176
+      AP002013   27.11.23 RL Add field "VAT Prod. Posting Group".
+    }
+    END.
+  }
+}
+

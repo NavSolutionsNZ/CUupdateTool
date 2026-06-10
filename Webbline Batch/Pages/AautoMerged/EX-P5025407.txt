@@ -1,0 +1,1149 @@
+OBJECT Page 5025407 Veh. Model Card
+{
+  OBJECT-PROPERTIES
+  {
+    Date=08/04/23;
+    Time=[ 9:45:16 AM];
+    Modified=Yes;
+    Version List=N.7.2.0_SLA,WBL;
+  }
+  PROPERTIES
+  {
+    CaptionML=ENU=Veh. Model Card;
+    SourceTable=Table27;
+    SourceTableView=SORTING(Item Type,Make Code,No.)
+                    WHERE(Item Type=CONST(Vehicle));
+    PageType=Card;
+    RefreshOnActivate=Yes;
+    OnInit=BEGIN
+             // Start PA037938.50963
+             // Stop PA037938.50963
+             "Unit VolumeEnable" := TRUE;
+             "Last Landed Unit CostEnable" := TRUE;
+             "Freight AmountEnable" := TRUE;
+             "Freight %Enable" := TRUE;
+             "Duty Due AmountEnable" := TRUE;
+             "Duty Due %Enable" := TRUE;
+             "Line Group CodeEnable" := TRUE;
+             "Subgroup CodeEnable" := TRUE;
+             "Main Group CodeEnable" := TRUE;
+             ListPriceinclVATLCYEditable := TRUE;
+             "List Price (LCY)Editable" := TRUE;
+             "Unit Price incl. VATEditable" := TRUE;
+             "Unit PriceEditable" := TRUE;
+           END;
+
+    OnOpenPage=BEGIN
+                 //EnableImporterTab;   //WBL-Renee Mark
+                 // Start PA032440
+                 // Start PA032820
+                 UserSetupG.GET(USERID);
+                 HideVehicleCostG := UserSetupG."Hide Vehicle Cost";
+                 // Stop PA032440
+                 CheckPricingControl();
+                 // Stop PA032820
+
+                 // Start PA042440
+                 RecRefG.GETTABLE(Rec);
+                 UserSessionG.SetMake("Make Code", RecRefG);
+                 // Stop PA042440
+               END;
+
+    OnClosePage=BEGIN
+                  IF "Make Code" = '' THEN
+                    IF PAGE.RUNMODAL(PAGE::"Check Make Code",Rec) = ACTION::LookupOK THEN;
+                END;
+
+    OnNewRecord=BEGIN
+                  "Item Type" := "Item Type"::Vehicle;
+                  "Allow Invoice Disc." := FALSE;
+                END;
+
+    ActionList=ACTIONS
+    {
+      { 1900000003;0 ;ActionContainer;
+                      ActionContainerType=RelatedInformation }
+      { 103     ;1   ;ActionGroup;
+                      CaptionML=ENU=&Model }
+      { 109     ;2   ;Action    ;
+                      CaptionML=ENU=&Picture;
+                      Description=PA037533;
+                      RunObject=Page 346;
+                      RunPageLink=No.=FIELD(No.),
+                                  Date Filter=FIELD(Date Filter),
+                                  Global Dimension 1 Filter=FIELD(Global Dimension 1 Filter),
+                                  Global Dimension 2 Filter=FIELD(Global Dimension 2 Filter),
+                                  Location Filter=FIELD(Location Filter),
+                                  Drop Shipment Filter=FIELD(Drop Shipment Filter),
+                                  Variant Filter=FIELD(Variant Filter),
+                                  Bin Filter=FIELD(Bin Filter);
+                      PromotedIsBig=Yes;
+                      Image=Segment }
+      { 117     ;2   ;Action    ;
+                      CaptionML=ENU=E&xtended Texts;
+                      Description=PA037533;
+                      RunObject=Page 386;
+                      RunPageView=SORTING(Table Name,No.,Language Code,All Language Codes,Starting Date,Ending Date);
+                      RunPageLink=Table Name=CONST(Item),
+                                  No.=FIELD(No.);
+                      PromotedIsBig=Yes;
+                      Image=Note }
+      { 7       ;2   ;Action    ;
+                      CaptionML=ENU=&Manufacturer Options;
+                      Description=PA032912,PA037533;
+                      PromotedIsBig=Yes;
+                      Image=ProdBOMMatrixPerVersion;
+                      OnAction=VAR
+                                 ManufacturerOptionRecL@1109400001 : Record 5025419;
+                                 ManufacturerOptionFormL@1109400002 : Page 5025428;
+                               BEGIN
+                                 ManufacturerOptionRecL.RESET;
+                                 ManufacturerOptionRecL.SETRANGE("Make Code","Make Code");
+                                 ManufacturerOptionRecL.SETRANGE("Model No.","No.");
+                                 // Start PA032912
+                                 // Stop PA032912
+                                 CLEAR(ManufacturerOptionFormL);
+                                 // Start PA032912
+                                 ManufacturerOptionFormL.SetFilters(ManufacturerOptionRecL.FINDFIRST,"No.","Make Code");
+                                 // Stop PA032912
+                                 ManufacturerOptionFormL.SETTABLEVIEW(ManufacturerOptionRecL);
+                                 ManufacturerOptionFormL.RUNMODAL;
+                               END;
+                                }
+      { 104     ;2   ;Action    ;
+                      ShortCutKey=Shift+Ctrl+L;
+                      CaptionML=ENU=&List;
+                      Visible=FALSE;
+                      Image=ListPage;
+                      OnAction=VAR
+                                 VehicleL@1109400001 : Record 27;
+                               BEGIN
+                                 VehicleL := Rec;
+                                 IF VehicleL.VehModelLookupWithMaster() THEN
+                                   GET(VehicleL."No.");
+                               END;
+                                }
+      { 101     ;2   ;ActionGroup;
+                      CaptionML=ENU=Ledger E&ntries;
+                      Description=PA037533;
+                      Visible=FALSE }
+      { 75      ;3   ;Action    ;
+                      CaptionML=ENU=&Reservation Entries;
+                      RunObject=Page 497;
+                      RunPageView=SORTING(Reservation Status,Item No.,Variant Code,Location Code,Bin Code,Expected Receipt Date)
+                                  WHERE(Item Type=CONST(Vehicle));
+                      RunPageLink=Item No.=FIELD(No.),
+                                  Reservation Status=CONST(Open);
+                      Image=ReservationLedger }
+      { 112     ;3   ;Action    ;
+                      CaptionML=ENU=Phys. In&ventory Ledger Entries;
+                      RunObject=Page 390;
+                      RunPageView=SORTING(Item No.,Variant Code,Posting Date)
+                                  WHERE(Item Type=CONST(Vehicle));
+                      RunPageLink=Item No.=FIELD(No.);
+                      Image=PhysicalInventoryLedger }
+      { 102     ;2   ;ActionGroup;
+                      CaptionML=ENU=&Statistics;
+                      Description=PA037533;
+                      Visible=FALSE }
+      { 107     ;3   ;Action    ;
+                      ShortCutKey=F7;
+                      CaptionML=ENU=&Statistics;
+                      Description=PA037533;
+                      RunObject=Page 5025498;
+                      RunPageLink=No.=FIELD(No.),
+                                  Date Filter=FIELD(Date Filter),
+                                  Global Dimension 1 Filter=FIELD(Global Dimension 1 Filter),
+                                  Global Dimension 2 Filter=FIELD(Global Dimension 2 Filter),
+                                  Location Filter=FIELD(Location Filter),
+                                  Drop Shipment Filter=FIELD(Drop Shipment Filter),
+                                  Variant Filter=FIELD(Variant Filter),
+                                  Bin Filter=FIELD(Bin Filter);
+                      Promoted=No;
+                      Image=Statistics;
+                      PromotedCategory=Process }
+      { 108     ;3   ;Action    ;
+                      CaptionML=ENU=&Entry Statistics;
+                      RunObject=Page 304;
+                      RunPageLink=No.=FIELD(No.),
+                                  Date Filter=FIELD(Date Filter),
+                                  Global Dimension 1 Filter=FIELD(Global Dimension 1 Filter),
+                                  Global Dimension 2 Filter=FIELD(Global Dimension 2 Filter),
+                                  Location Filter=FIELD(Location Filter),
+                                  Drop Shipment Filter=FIELD(Drop Shipment Filter),
+                                  Variant Filter=FIELD(Variant Filter),
+                                  Bin Filter=FIELD(Bin Filter);
+                      Image=Statistics }
+      { 111     ;3   ;Action    ;
+                      CaptionML=ENU=T&urnover;
+                      RunObject=Page 5025500;
+                      RunPageLink=No.=FIELD(No.),
+                                  Global Dimension 1 Filter=FIELD(Global Dimension 1 Filter),
+                                  Global Dimension 2 Filter=FIELD(Global Dimension 2 Filter),
+                                  Location Filter=FIELD(Location Filter),
+                                  Drop Shipment Filter=FIELD(Drop Shipment Filter),
+                                  Variant Filter=FIELD(Variant Filter),
+                                  Bin Filter=FIELD(Bin Filter);
+                      Image=Statistics }
+      { 91      ;2   ;ActionGroup;
+                      CaptionML=ENU=Ve&h. Models by;
+                      Description=PA037533;
+                      Visible=FALSE }
+      { 68      ;3   ;Action    ;
+                      CaptionML=ENU=&Location;
+                      Image=NewBranch;
+                      OnAction=VAR
+                                 ModelByLocationL@1109400001 : Page 5025478;
+                               BEGIN
+                                 ModelByLocationL.SETRECORD(Rec);
+                                 ModelByLocationL.RUN;
+                               END;
+                                }
+      { 92      ;3   ;Action    ;
+                      CaptionML=ENU=&Bin;
+                      Image=Bins;
+                      OnAction=VAR
+                                 ModelByBinL@1109400001 : Page 5025479;
+                               BEGIN
+                                 ModelByBinL.SETRECORD(Rec);
+                                 ModelByBinL.RUN;
+                               END;
+                                }
+      { 131     ;3   ;Action    ;
+                      CaptionML=ENU=&Market Segment;
+                      Image=Segment;
+                      OnAction=VAR
+                                 ModelByMarketSegL@1109400001 : Page 5025530;
+                               BEGIN
+                                 ModelByMarketSegL.SetForm("No.");
+                                 ModelByMarketSegL.RUN;
+                               END;
+                                }
+      { 132     ;3   ;Action    ;
+                      CaptionML=ENU=Vehicle &Category;
+                      Image=SplitChecks;
+                      OnAction=VAR
+                                 ModelByCategoryL@1109400001 : Page 5025531;
+                               BEGIN
+                                 ModelByCategoryL.SetForm("No.");
+                                 ModelByCategoryL.RUN;
+                               END;
+                                }
+      { 133     ;3   ;Action    ;
+                      CaptionML=ENU=Vehicle &Type;
+                      Image=SplitChecks;
+                      OnAction=VAR
+                                 ModelByTypeL@1109400001 : Page 5025532;
+                               BEGIN
+                                 ModelByTypeL.SetForm("No.");
+                                 ModelByTypeL.RUN;
+                               END;
+                                }
+      { 134     ;3   ;Action    ;
+                      CaptionML=ENU=&Vehicle Category/Vehicle Type;
+                      Image=Splitlines;
+                      OnAction=VAR
+                                 ModelByCategoryTypeL@1109400001 : Page 5025533;
+                               BEGIN
+                                 ModelByCategoryTypeL.SetForm("No.");
+                                 ModelByCategoryTypeL.RUN;
+                               END;
+                                }
+      { 76      ;2   ;ActionGroup;
+                      CaptionML=ENU=Model &Availability by;
+                      Description=PA037533;
+                      Visible=FALSE }
+      { 110     ;3   ;Action    ;
+                      CaptionML=ENU=&Period;
+                      RunObject=Page 5025483;
+                      RunPageLink=No.=FIELD(No.),
+                                  Global Dimension 1 Filter=FIELD(Global Dimension 1 Filter),
+                                  Global Dimension 2 Filter=FIELD(Global Dimension 2 Filter),
+                                  Location Filter=FIELD(Location Filter),
+                                  Drop Shipment Filter=FIELD(Drop Shipment Filter),
+                                  Variant Filter=FIELD(Variant Filter),
+                                  Bin Filter=FIELD(Bin Filter);
+                      Image=CloseYear }
+      { 69      ;3   ;Action    ;
+                      CaptionML=ENU=&Location;
+                      RunObject=Page 5025481;
+                      RunPageLink=No.=FIELD(No.),
+                                  Global Dimension 1 Filter=FIELD(Global Dimension 1 Filter),
+                                  Global Dimension 2 Filter=FIELD(Global Dimension 2 Filter),
+                                  Location Filter=FIELD(Location Filter),
+                                  Drop Shipment Filter=FIELD(Drop Shipment Filter),
+                                  Variant Filter=FIELD(Variant Filter),
+                                  Bin Filter=FIELD(Bin Filter);
+                      Image=NewBranch }
+      { 78      ;3   ;Action    ;
+                      CaptionML=ENU=&Bin;
+                      RunObject=Page 5025482;
+                      RunPageLink=No.=FIELD(No.),
+                                  Global Dimension 1 Filter=FIELD(Global Dimension 1 Filter),
+                                  Global Dimension 2 Filter=FIELD(Global Dimension 2 Filter),
+                                  Location Filter=FIELD(Location Filter),
+                                  Drop Shipment Filter=FIELD(Drop Shipment Filter),
+                                  Variant Filter=FIELD(Variant Filter),
+                                  Bin Filter=FIELD(Bin Filter);
+                      Image=Bins }
+      { 106     ;2   ;Action    ;
+                      CaptionML=ENU=Co&mments;
+                      Description=PA037533;
+                      RunObject=Page 124;
+                      RunPageLink=Table Name=CONST(Item),
+                                  No.=FIELD(No.);
+                      Visible=FALSE;
+                      Image=ViewComments }
+      { 1109400000;2 ;Action    ;
+                      CaptionML=ENU=V&ehicle Sets/Accessories;
+                      Description=PA037533;
+                      RunObject=Page 5045525;
+                      RunPageLink=Main Vehicle Model No.=FIELD(No.);
+                      Visible=FALSE;
+                      Image=Links }
+      { 1101194985;2 ;Action    ;
+                      CaptionML=ENU=Default Transfer Fees;
+                      Description=PA033984,PA037533;
+                      RunObject=Page 5205895;
+                      RunPageLink=Model No.=FIELD(No.);
+                      Visible=FALSE }
+      { 113     ;2   ;Separator  }
+      { 114     ;2   ;Action    ;
+                      CaptionML=ENU=&Units of Measure;
+                      Description=PA037533;
+                      RunObject=Page 5404;
+                      RunPageLink=Item No.=FIELD(No.);
+                      Visible=FALSE;
+                      Image=EntriesList }
+      { 115     ;2   ;Separator  }
+      { 116     ;2   ;Action    ;
+                      CaptionML=ENU=&Translations;
+                      Description=PA037533;
+                      RunObject=Page 35;
+                      RunPageLink=Item No.=FIELD(No.),
+                                  Variant Code=CONST();
+                      Visible=FALSE;
+                      Image=Travel }
+      { 6       ;2   ;Separator  }
+      { 144     ;2   ;Action    ;
+                      CaptionML=ENU=&Consumption Data;
+                      Description=PA037533;
+                      RunObject=Page 5029056;
+                      RunPageLink=Make Code=FIELD(Make Code),
+                                  Model No.=FIELD(No.);
+                      Visible=FALSE;
+                      Image=EditFilter }
+      { 1101353006;2 ;Separator  }
+      { 1101353007;2 ;ActionGroup;
+                      CaptionML=ENU=I&mporter Management;
+                      Visible=FALSE }
+      { 1101353008;3 ;Action    ;
+                      CaptionML=ENU=Cop&y Manufacturer Options;
+                      Image=Copy;
+                      OnAction=VAR
+                                 ModelCopyManufacturerOptionL@1101353000 : Report 5086960;
+                               BEGIN
+                                 CLEAR(ModelCopyManufacturerOptionL);
+                                 ModelCopyManufacturerOptionL.SetToModel("No.");
+                                 ModelCopyManufacturerOptionL.RUNMODAL;
+                               END;
+                                }
+      { 1109400004;2 ;Action    ;
+                      ShortCutKey=Shift+Ctrl+D;
+                      CaptionML=ENU=Dimensions;
+                      Description=PA037815,PA037815.38412;
+                      RunObject=Page 540;
+                      RunPageLink=Table ID=CONST(27),
+                                  No.=FIELD(No.);
+                      Visible=FALSE;
+                      Image=Dimensions }
+      { 79      ;1   ;ActionGroup;
+                      CaptionML=ENU=S&ales }
+      { 135     ;2   ;Action    ;
+                      CaptionML=ENU=&Model Prices by Category;
+                      Description=PA037533;
+                      RunObject=Page 5025516;
+                      RunPageLink=Model No.=FIELD(No.);
+                      PromotedIsBig=Yes;
+                      Image=SalesPrices }
+      { 80      ;2   ;Action    ;
+                      CaptionML=ENU=Model/Customer Discounts;
+                      Visible=FALSE;
+                      OnAction=VAR
+                                 ItemDiscGrL@1109400001 : Record 341;
+                                 ItemCustDiscsL@1109400002 : Page 522;
+                               BEGIN
+                                 IF ItemDiscGrL.GET("Cust./Item Disc. Gr.") THEN
+                                   ;
+                                 ItemCustDiscsL.SETRECORD(ItemDiscGrL);
+                                 ItemCustDiscsL.RUN;
+                               END;
+                                }
+      { 81      ;2   ;Action    ;
+                      CaptionML=ENU=Quantity Discounts;
+                      RunObject=Page 5205301;
+                      RunPageLink=Code=FIELD(Sales Qty. Disc. Code);
+                      Visible=FALSE;
+                      Image=ActivateDiscounts }
+      { 83      ;2   ;Action    ;
+                      CaptionML=ENU=&Documents;
+                      Description=PA037533;
+                      Visible=FALSE;
+                      PromotedIsBig=No;
+                      Image=Document;
+                      OnAction=BEGIN
+                                 NavigateDocsG.SetFindVehicleModel(Rec);
+                                 NavigateDocsG.RUNMODAL;
+                                 CLEAR(NavigateDocsG);
+                               END;
+                                }
+      { 84      ;1   ;ActionGroup;
+                      CaptionML=ENU=&Purchases }
+      { 85      ;2   ;Action    ;
+                      CaptionML=ENU=&Vendors;
+                      Description=PA037533;
+                      RunObject=Page 5025831;
+                      RunPageView=SORTING(Item No.);
+                      RunPageLink=Item No.=FIELD(No.);
+                      PromotedIsBig=Yes;
+                      Image=TeamSales }
+      { 86      ;2   ;Action    ;
+                      CaptionML=ENU=&Quantity Discounts;
+                      Description=PA037533;
+                      RunObject=Page 5205302;
+                      RunPageLink=Item No.=FIELD(No.),
+                                  Vendor No.=FIELD(Vendor No.);
+                      Visible=TRUE;
+                      PromotedIsBig=Yes;
+                      Image=ActivateDiscounts }
+      { 87      ;2   ;Action    ;
+                      CaptionML=ENU=&Documents;
+                      Description=PA037533;
+                      Visible=FALSE;
+                      Image=Document;
+                      OnAction=BEGIN
+                                 NavigateDocsG.SetFindVehicleModel(Rec);
+                                 NavigateDocsG.RUNMODAL;
+                                 CLEAR(NavigateDocsG);
+                               END;
+                                }
+      { 1055600 ;1   ;ActionGroup;
+                      CaptionML=ENU=Entries;
+                      Description=PA037533 }
+      { 143     ;2   ;Action    ;
+                      CaptionML=ENU=&Vehicles;
+                      Description=PA037533;
+                      RunObject=Page 5025404;
+                      RunPageLink=Model No.=FIELD(No.),
+                                  Vehicle Status=FILTER(New Vehicle|Demo Vehicle|Used Vehicle),
+                                  Location Code=FIELD(Location Filter),
+                                  Department Code=FIELD(Global Dimension 1 Filter);
+                      Promoted=No;
+                      PromotedIsBig=Yes;
+                      Image=LinkWithExisting;
+                      PromotedCategory=Process }
+      { 105     ;2   ;Action    ;
+                      ShortCutKey=Ctrl+F7;
+                      CaptionML=ENU=Ledger E&ntries;
+                      Description=PA037533;
+                      RunObject=Page 5025511;
+                      RunPageView=SORTING(Item No.)
+                                  WHERE(Item Type=CONST(Vehicle));
+                      RunPageLink=Item No.=FIELD(No.);
+                      Promoted=No;
+                      PromotedIsBig=Yes;
+                      Image=MaintenanceLedgerEntries;
+                      PromotedCategory=Process }
+      { 70      ;2   ;Action    ;
+                      CaptionML=ENU=&Value Ledger Entries;
+                      Description=PA037533;
+                      RunObject=Page 5802;
+                      RunPageView=SORTING(Item Type,Item No.);
+                      RunPageLink=Item Type=CONST(Vehicle),
+                                  Item No.=FIELD(No.);
+                      PromotedIsBig=Yes;
+                      Image=ValueLedger }
+      { 1109400013;1 ;ActionGroup;
+                      CaptionML=ENU=F&unctions }
+      { 1109400014;2 ;Action    ;
+                      CaptionML=ENU=Technical Data;
+                      Description=EU.0020651;
+                      Image=ViewWorksheet;
+                      OnAction=VAR
+                                 TechDataValueL@1109400000 : Record 5205856;
+                               BEGIN
+                                 // Start EU.0020651
+                                 TechDataValueL.OpenTechDataPage(Rec);
+                                 // Stop EU.0020651
+                               END;
+                                }
+      { 1109400012;2 ;Action    ;
+                      CaptionML=ENU=Special &Functions;
+                      Description=PA042440;
+                      PromotedIsBig=Yes;
+                      Image=ImportExport;
+                      PromotedCategory=Process;
+                      OnAction=VAR
+                                 RecordReferenceL@1101221267 : RecordRef;
+                                 PageSpecialFunctionsL@1101221268 : Page 5206814;
+                               BEGIN
+                                 // Start PA042440
+                                 CLEAR(RecordReferenceL);
+                                 RecordReferenceL.GETTABLE(Rec);
+                                 CLEAR(PageSpecialFunctionsL);
+                                 PageSpecialFunctionsL.SetParameters(PAGE::"Veh. Model Card",RecordReferenceL,
+                                   "Make Code",'');
+                                 PageSpecialFunctionsL.RUNMODAL;
+                                 // Stop PA042440
+                               END;
+                                }
+    }
+  }
+  CONTROLS
+  {
+    { 1900000001;0;Container;
+                ContainerType=ContentArea }
+
+    { 1   ;1   ;Group     ;
+                CaptionML=ENU=General }
+
+    { 2   ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="No.";
+                Importance=Promoted;
+                OnAssistEdit=BEGIN
+                               IF AssistEdit(xRec) THEN
+                                 CurrPage.UPDATE;
+                             END;
+                              }
+
+    { 118 ;2   ;Field     ;
+                Description=PA035597,PA037533;
+                SourceExpr="Make Code";
+                AutoFormatExpr='JMD';
+                Importance=Promoted;
+                OnValidate=BEGIN
+                             // Start PA039430
+                             CurrPage.UPDATE(FALSE);
+                             // Stop PA039430
+                           END;
+                            }
+
+    { 4   ;2   ;Field     ;
+                CaptionML=ENU=Model;
+                Description=PA035597,PA037533;
+                SourceExpr=Description;
+                Importance=Promoted }
+
+    { 141 ;2   ;Field     ;
+                SourceExpr="Model Code";
+                AutoFormatExpr='JMD' }
+
+    { 125 ;2   ;Field     ;
+                CaptionML=ENU=Type;
+                SourceExpr="Description 2" }
+
+    { 26  ;2   ;Field     ;
+                SourceExpr="Labor Type";
+                AutoFormatExpr='JMD' }
+
+    { 173 ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Vehicle Category Code";
+                AutoFormatExpr='JMD';
+                Importance=Promoted }
+
+    { 24  ;2   ;Field     ;
+                SourceExpr="Market Segment Code";
+                AutoFormatExpr='JMD' }
+
+    { 171 ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Vehicle Type Code";
+                AutoFormatExpr='JMD';
+                Importance=Promoted }
+
+    { 1117700000;2;Field  ;
+                SourceExpr="Model Year" }
+
+    { 12  ;2   ;Field     ;
+                Description=PA035597,PA037533;
+                SourceExpr="Search Description";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 14  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr=Inventory;
+                Importance=Additional;
+                DrillDownPageID=Vehicle Item Ledger Entries;
+                OnAssistEdit=VAR
+                               VehicleL@1109400001 : Record 5025400;
+                             BEGIN
+                               VehicleL.SETCURRENTKEY("Model No.");
+                               VehicleL.SETFILTER("Vehicle Status",'%1|%2|%3',
+                                 VehicleL."Vehicle Status"::"New Vehicle",
+                                 VehicleL."Vehicle Status"::"Used Vehicle",
+                                 VehicleL."Vehicle Status"::"Demo Vehicle");
+                               //
+                               VehicleL.SETRANGE("Model No.","No.");
+                               FilterTextG := GETFILTER("Location Filter");
+                               IF FilterTextG <> '' THEN
+                                 VehicleL.SETFILTER("Location Code",'%1',FilterTextG);
+                               FilterTextG := GETFILTER("Global Dimension 1 Filter");
+                               IF FilterTextG <> '' THEN
+                                 VehicleL.SETFILTER("Department Code",'%1',FilterTextG);
+
+                               PAGE.RUNMODAL(PAGE::"Vehicle List",VehicleL);
+                             END;
+
+                QuickEntry=FALSE }
+
+    { 16  ;2   ;Field     ;
+                Description=PA036549.33628,PA037533;
+                SourceExpr="Qty. on Purch. Order";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 122 ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Qty. on Quotes";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 18  ;2   ;Field     ;
+                Description=INC,PA037533;
+                SourceExpr="Qty. on Order/Invoice";
+                Importance=Additional;
+                DrillDownPageID=Vehicle Sales Lines;
+                QuickEntry=FALSE }
+
+    { 40  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Automatic Ext. Texts";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 20  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr=Blocked;
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 28  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Update Description";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 1109400001;2;Field  ;
+                Description=INC,PA037533;
+                SourceExpr="Vehicle Sets/Accessories";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 1904801701;1;Group  ;
+                CaptionML=ENU=Tech. Info }
+
+    { 8   ;2   ;Field     ;
+                SourceExpr="Engine Type Code";
+                AutoFormatExpr='JMD';
+                Importance=Promoted }
+
+    { 10  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Transmission Type Code";
+                AutoFormatExpr='JMD';
+                Importance=Promoted }
+
+    { 1101422634;2;Field  ;
+                Description=PA035258,PA037533;
+                SourceExpr=Drive;
+                Importance=Promoted }
+
+    { 44  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="No. of Doors";
+                Importance=Promoted }
+
+    { 1119432000;2;Field  ;
+                CaptionML=ENU=Emission Standard Code;
+                Description=PA033043;
+                SourceExpr="Emission Standard Code";
+                AutoFormatExpr='JMD' }
+
+    { 175 ;2   ;Field     ;
+                Description=PA033043;
+                SourceExpr="Emissions Test Category Code";
+                AutoFormatExpr='JMD' }
+
+    { 1119432001;2;Field  ;
+                CaptionML=ENU=Diesel Particulate Filter;
+                Description=PA033043,PA037533;
+                SourceExpr="Diesel Particulate Filter" }
+
+    { 97  ;2   ;Field     ;
+                SourceExpr="No. of Cylinders" }
+
+    { 62  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Cylinder Capacity (ccm)" }
+
+    { 127 ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Power (kW)";
+                Importance=Standard }
+
+    { 129 ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Power (hp)";
+                Importance=Standard }
+
+    { 1117700004;2;Field  ;
+                SourceExpr=Acceleration }
+
+    { 1117700002;2;Field  ;
+                Description=PA037533;
+                SourceExpr="Top Speed" }
+
+    { 151 ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Rear Axle Load (kg)";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 149 ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Front Axle Load (kg)";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 153 ;2   ;Field     ;
+                SourceExpr=Tires }
+
+    { 155 ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Empty Weight (kg)";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 157 ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Total Weight (kg)";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 159 ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Roof Load (kg)";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 161 ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Trailer Load (kg)";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 163 ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Trailer Tongue Load (kg)";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 167 ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="No. of Axles";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 165 ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="4WD";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 169 ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Wheelbase (mm)";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 1109400009;2;Field  ;
+                Description=PA038140,PA037533;
+                SourceExpr="Engine Speed Rate Output";
+                Importance=Additional;
+                Visible=FALSE }
+
+    { 1109400008;2;Field  ;
+                Description=PA038140,PA037533;
+                SourceExpr="Maximum Torque";
+                Importance=Additional;
+                Visible=FALSE }
+
+    { 1109400007;2;Field  ;
+                Description=PA038140,PA037533;
+                SourceExpr="Axle -3 Load (kg)";
+                Importance=Additional;
+                Visible=FALSE }
+
+    { 1109400006;2;Field  ;
+                Description=PA038140,PA037533;
+                SourceExpr="Axle -4 Load (kg)";
+                Importance=Additional;
+                Visible=FALSE }
+
+    { 1109400005;2;Field  ;
+                Description=PA038140,PA037533;
+                SourceExpr="Length (mm)";
+                Importance=Additional;
+                Visible=FALSE }
+
+    { 1109400003;2;Field  ;
+                Description=PA038140,PA037533;
+                SourceExpr="Width (mm)";
+                Importance=Additional;
+                Visible=FALSE }
+
+    { 1109400002;2;Field  ;
+                Description=PA038140,PA037533;
+                SourceExpr="Height (mm)";
+                Importance=Additional;
+                Visible=FALSE }
+
+    { 1119427014;2;Field  ;
+                Description=PA037938.50963;
+                SourceExpr="No. of Seats" }
+
+    { 1900124701;1;Group  ;
+                CaptionML=ENU=Ordering;
+                Description=PA037533;
+                Visible=FALSE;
+                Enabled=TRUE;
+                Editable=TRUE }
+
+    { 50  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Vendor No.";
+                Editable=TRUE }
+
+    { 52  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Vendor Item No.";
+                Editable=TRUE }
+
+    { 54  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Lead Time Calculation";
+                Editable=TRUE }
+
+    { 199 ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr=Reserve;
+                Editable=TRUE }
+
+    { 56  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Maximum Inventory";
+                Editable=TRUE }
+
+    { 58  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Reorder Point";
+                Editable=TRUE }
+
+    { 60  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Reorder Quantity";
+                Editable=TRUE }
+
+    { 1109400010;2;Field  ;
+                SourceExpr="Not Available for New Sales" }
+
+    { 1905885101;1;Group  ;
+                CaptionML=ENU=Invoicing }
+
+    { 30  ;2   ;Field     ;
+                SourceExpr="Unit Cost";
+                Enabled=NOT HideVehicleCostG;
+                HideValue=HideVehicleCostG }
+
+    { 32  ;2   ;Field     ;
+                SourceExpr="Last Direct Cost";
+                Enabled=NOT HideVehicleCostG;
+                HideValue=HideVehicleCostG }
+
+    { 34  ;2   ;Field     ;
+                SourceExpr="Price/Profit Calculation" }
+
+    { 36  ;2   ;Field     ;
+                SourceExpr="Profit %";
+                Enabled=NOT HideVehicleCostG;
+                HideValue=HideVehicleCostG }
+
+    { 38  ;2   ;Field     ;
+                SourceExpr="Unit Price";
+                Importance=Promoted;
+                Editable="Unit PriceEditable" }
+
+    { 120 ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Unit Price incl. VAT";
+                Importance=Additional;
+                Editable="Unit Price incl. VATEditable";
+                QuickEntry=FALSE }
+
+    { 48  ;2   ;Field     ;
+                SourceExpr="List Price (LCY)";
+                Editable="List Price (LCY)Editable" }
+
+    { 73  ;2   ;Field     ;
+                Description=List Price incl. Tax,PA037533;
+                SourceExpr="List Price incl. VAT (LCY)";
+                Importance=Additional;
+                Editable=ListPriceinclVATLCYEditable;
+                QuickEntry=FALSE }
+
+    { 95  ;2   ;Field     ;
+                SourceExpr="Gen. Prod. Posting Group";
+                Importance=Promoted }
+
+    { 66  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="VAT Prod. Posting Group";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 100 ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="VAT Bus. Posting Gr. (Price)";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 77  ;2   ;Field     ;
+                SourceExpr="Inventory Posting Group";
+                Importance=Promoted }
+
+    { 137 ;2   ;Field     ;
+                SourceExpr="Labor Charging Code";
+                AutoFormatExpr='JMD' }
+
+    { 42  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Net Invoiced Qty.";
+                Importance=Additional;
+                DrillDownPageID=Vehicle Item Ledger Entries;
+                QuickEntry=FALSE }
+
+    { 139 ;2   ;Field     ;
+                Description=Manual (Price) Calculation Yes/No,PA037533;
+                SourceExpr="Manual Price Calculation";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 46  ;2   ;Field     ;
+                Description=Flag whether discounts are allowed in the sales lines Yes/No,PA037533;
+                SourceExpr="Allow Discount";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 1907468901;1;Group  ;
+                CaptionML=ENU=Foreign Trade;
+                Visible=FALSE }
+
+    { 1119427000;2;Field  ;
+                SourceExpr="Tariff No." }
+
+    { 1119427002;2;Field  ;
+                SourceExpr="Country of Origin Code";
+                AutoFormatExpr='JMD' }
+
+    { 1119427004;2;Field  ;
+                SourceExpr="National Tariff No." }
+
+    { 1901004601;1;Group  ;
+                CaptionML=ENU=Importer }
+
+    { 1117900002;2;Field  ;
+                SourceExpr="Main Group Code";
+                AutoFormatExpr='JMD';
+                Enabled="Main Group CodeEnable" }
+
+    { 1117900004;2;Field  ;
+                SourceExpr="Subgroup Code";
+                AutoFormatExpr='JMD';
+                Enabled="Subgroup CodeEnable" }
+
+    { 1117900006;2;Field  ;
+                SourceExpr="Line Group Code";
+                AutoFormatExpr='JMD';
+                Enabled="Line Group CodeEnable" }
+
+    { 1117900008;2;Field  ;
+                SourceExpr="Duty Due %";
+                Enabled="Duty Due %Enable" }
+
+    { 1117900010;2;Field  ;
+                SourceExpr="Duty Due Amount";
+                Enabled="Duty Due AmountEnable" }
+
+    { 1101353000;2;Field  ;
+                SourceExpr="Freight %";
+                Enabled="Freight %Enable" }
+
+    { 1101353002;2;Field  ;
+                SourceExpr="Freight Amount";
+                Enabled="Freight AmountEnable" }
+
+    { 1117900012;2;Field  ;
+                SourceExpr="Last Landed Unit Cost";
+                Enabled="Last Landed Unit CostEnable" }
+
+    { 1101353004;2;Field  ;
+                SourceExpr="Unit Volume";
+                Enabled="Unit VolumeEnable" }
+
+    { 1900000007;0;Container;
+                ContainerType=FactBoxArea }
+
+    { 1109400011;1;Part   ;
+                Name=SpecialFunctionFactBox;
+                CaptionML=ENU=Special &Functions;
+                Description=PA042440;
+                SubPageLink=Source Table ID=CONST(27),
+                            Source Page=CONST(5025407),
+                            Code 1=FIELD(No.);
+                PagePartID=Page5206800;
+                PartType=Page }
+
+    { 1905767507;1;Part   ;
+                Description=PA037533;
+                Visible=FALSE;
+                PartType=System;
+                SystemPartID=Notes }
+
+    { 1900383207;1;Part   ;
+                Visible=FALSE;
+                PartType=System;
+                SystemPartID=RecordLinks }
+
+  }
+  CODE
+  {
+    VAR
+      FilterTextG@1109400000 : Text[50];
+      NavigateDocsG@1109400001 : Page 5028679;
+      HideVehicleCostG@1119432000 : Boolean INDATASET;
+      UserSetupG@1109400002 : Record 91;
+      "Unit PriceEditable"@19072822 : Boolean INDATASET;
+      "Unit Price incl. VATEditable"@19047452 : Boolean INDATASET;
+      "List Price (LCY)Editable"@19061505 : Boolean INDATASET;
+      ListPriceinclVATLCYEditable@19021766 : Boolean INDATASET;
+      "Main Group CodeEnable"@19029048 : Boolean INDATASET;
+      "Subgroup CodeEnable"@19009506 : Boolean INDATASET;
+      "Line Group CodeEnable"@19046687 : Boolean INDATASET;
+      "Duty Due %Enable"@19061827 : Boolean INDATASET;
+      "Duty Due AmountEnable"@19005749 : Boolean INDATASET;
+      "Freight %Enable"@19033960 : Boolean INDATASET;
+      "Freight AmountEnable"@19056510 : Boolean INDATASET;
+      "Last Landed Unit CostEnable"@19075686 : Boolean INDATASET;
+      "Unit VolumeEnable"@19018381 : Boolean INDATASET;
+      UserSessionG@1109400004 : Codeunit 5028665;
+      RecRefG@1109400003 : RecordRef;
+
+    PROCEDURE CheckPricingControl@1109400006();
+    VAR
+      UserSetupL@1109400000 : Record 91;
+    BEGIN
+      // @ Checks the fields in the 'Pricing Control' tab in the User Setup. If the user has insufficient rights some fields are set to
+      // @ 'EDITABLE' = FALSE;
+      // Start PA032820
+
+      "Unit PriceEditable" := TRUE;
+      "Unit Price incl. VATEditable" := TRUE;
+      "List Price (LCY)Editable" := TRUE;
+      ListPriceinclVATLCYEditable := TRUE;
+
+      IF (NOT UserSetupG."Change Item Unit Price") THEN BEGIN
+        "Unit PriceEditable" := FALSE;
+        "Unit Price incl. VATEditable" := FALSE;
+        "List Price (LCY)Editable" := FALSE;
+        ListPriceinclVATLCYEditable := FALSE;
+      END;
+      // Stop PA032820
+    END;
+
+    LOCAL PROCEDURE __IMS__@1101353000();
+    BEGIN
+    END;
+
+    LOCAL PROCEDURE EnableImporterTab@1101353001();
+    VAR
+      CompanyInfoL@1101353000 : Record 79;
+    BEGIN
+      IF NOT CompanyInfoL.IMSCheck THEN BEGIN
+        "Main Group CodeEnable" := FALSE;
+        "Subgroup CodeEnable" := FALSE;
+        "Line Group CodeEnable" := FALSE;
+        "Duty Due %Enable" := FALSE;
+        "Duty Due AmountEnable" := FALSE;
+        "Freight %Enable" := FALSE;
+        "Freight AmountEnable" := FALSE;
+        "Last Landed Unit CostEnable" := FALSE;
+        "Unit VolumeEnable" := FALSE;
+      // Start PA037938.50963
+      // Stop PA037938.50963
+      END;
+    END;
+
+    BEGIN
+    {
+      // @ Area Vehicle
+      +----------------------------------------------+
+      | Copyright (c) incadea                        |
+      +----------------------------------------------+
+      PA-Number  Date
+      ------------------------------------------------
+      PA031549   22.12.09 Page 33 replaced with Page 5205300
+                          Page 34 replaced with Page 5205301
+                          Page 115 replaced with Page 5205302
+      PA032111   12.08.10 (BRL): Object renumbering changes due to Microsoft Agreement.
+      PA032144   31.08.10 MA Merge of 3.2.3.0
+      PA032440   27.04.11 AA OnOpenPage trigger modified to read Hide Vehicle Cost permission for the user
+      PA033043   20.04.11 PR Added 2 new controls 'Emission Standard Code', 'Diesel Particulate Filter' in 'Tech. info' tab.
+      PA032912   18.07.11 PR Added code in 'Manufacturer Options' menuitem to open the page 'Model List' right filters.
+      PA032820   05.10.11 GM New Function 'Check Pricing Control' added to set price fields to not editable when the permissions are not sufficient
+      PA033067   12.04.12 DR DE Captions implemented
+      PA032651   19.04.12 SM 7178403: Captions ML are removed in cases when they are not neede on the page. Caption ML is retreived page a caption ML in the table on ehich a specific page lies. Changes are done by a specifications in a case.
+      PA033259   09.08.12 AI Deletion of Start/Stop History in Code, update copyright and Version List
+      PA033259   18.09.12 DR Variable names changed according to incadea style guide
+      PA033984   07.05.13 DT New Menu Model->Default Transfer Fees
+      PA033985   09.09.13 DD Removal of Menu Items in button Sales: "Manufacturer Sales Incentives", "Own Sales Incentives"
+      PA035258   10.06.14 WZ Added new field Drive.
+      PA035597   10.02.14 GC NAV 2013 R2 Technical Upgrade
+      PA036547   06.11.14 GE Merge N.6.1.4 to N.7.1.0 - PA035258.
+      PA036549   13.02.15 DR 33628 Special DrillDownPageID in field "Qty. on Purch. Order" removed. The system should use the default lookup page from the Purchase Line table.
+      PA037815   21.05.15 LR Display Dimensions in Action Pane.
+      PA037815   21.05.15 LR 38412 Delete the Menu of Dismensions and leave only one Action
+      PA038140   27.07.15 UX New fields addded in Tech. Info (5204550..5204556).
+      PA037533   19.10.15 GU Actions modified and field sequence rearranged for UI.
+      PA039233   27.11.15 KR Removed Action 'Prices' under ActionGroup 'sales'.
+      PA039484   30.11.15 KR Merge of PA039233.
+      PA037938   10.12.15 LR 50963 Move "No. of Seats" to Techn Info Fast Tab + "No. of Seats" should always be editable.
+      PA039430   20.11.15 GI Update the page on the validation or on look-up of the make code.
+      PA039431   11.02.16 GI Merge of PA039430.
+      PA041198   02.08.16 AK New field "Not Available for New Sales"
+      PA041187   01.09.16 GQ 69191 Modified Make Code - OnLookup(), added code to display the makes list on lookup
+      PA041555   31.08.16 VJ Removed fields "NOVA Tax%", "NOVA Calculation Type" and "MVEG Consumption" due to Country specific fields in the CORE.
+      PA041557   06.09.16 VJ Merge of PA041555.
+      PA041187   20.09.16 GQ 69191 Modified Make Code - OnLookup(),removed code completely from the trigger,along with comments, so that default look up
+                             functionality works correctly
+      PA042440   30.11.16 GD Added Special Functions
+      PA042211   21.12.16 GD Merge of PA042440
+      --- 7.2.0 ---
+      EU.0020651 16.04.18 GI Implementation of WLTP framework.
+    }
+    END.
+  }
+}
+

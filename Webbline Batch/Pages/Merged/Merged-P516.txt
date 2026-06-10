@@ -1,0 +1,292 @@
+OBJECT Page 516 Sales Lines
+{
+  OBJECT-PROPERTIES
+  {
+    Date=06/10/26;
+    Time=12:18:58 PM;
+    Modified=Yes;
+    Version List=NAVW1.x,N.7.2.1,AP001651,CU26Q1;
+  }
+  PROPERTIES
+  {
+    Editable=No;
+    CaptionML=ENU=Sales Lines;
+    SourceTable=Table37;
+    PageType=List;
+    OnOpenPage=BEGIN
+                 // Start INC
+                 DealerCheckRunForm;
+                 // Stop INC
+               END;
+
+    OnAfterGetRecord=BEGIN
+                       // Start PA035597
+                       ShowShortcutDimCode(ShortcutDimCode);
+                       // Stop PA035597
+                     END;
+
+    OnNewRecord=BEGIN
+                  // Start PA035597
+                  CLEAR(ShortcutDimCode);
+                  // Stop PA035597
+                END;
+
+    ActionList=ACTIONS
+    {
+      { 1900000003;0 ;ActionContainer;
+                      ActionContainerType=RelatedInformation }
+      { 30      ;1   ;ActionGroup;
+                      CaptionML=ENU=Line }
+      { 23      ;2   ;Action    ;
+                      CaptionML=ENU=Show Document;
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=View;
+                      PromotedCategory=Process;
+                      OnAction=BEGIN
+                                 // Start EU.0056707
+                                 SalesHeader.ShowDocument("Document Type", "Document No.");
+                                 // Stop EU.0056707
+                               END;
+                                }
+      { 32      ;2   ;Action    ;
+                      CaptionML=ENU=Reservation Entries;
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=ReservationLedger;
+                      PromotedCategory=Process;
+                      OnAction=BEGIN
+                                 ShowReservationEntries(TRUE);
+                               END;
+                                }
+    }
+  }
+  CONTROLS
+  {
+    { 1900000001;0;Container;
+                ContainerType=ContentArea }
+
+    { 1   ;1   ;Group     ;
+                GroupType=Repeater }
+
+    { 2   ;2   ;Field     ;
+                SourceExpr="Document Type" }
+
+    { 4   ;2   ;Field     ;
+                SourceExpr="Document No." }
+
+    { 8   ;2   ;Field     ;
+                SourceExpr="Sell-to Customer No." }
+
+    { 6   ;2   ;Field     ;
+                SourceExpr="Line No.";
+                Visible=FALSE }
+
+    { 10  ;2   ;Field     ;
+                SourceExpr=Type }
+
+    { 12  ;2   ;Field     ;
+                SourceExpr="No.";
+                OnValidate=BEGIN
+                             // Start PA034531.I001184
+                             IF "No." = OnLookupItemG."No." THEN
+                               "Shortcut Dimension 2 Code" := OnLookupItemG."Make Code";
+                             CLEAR(OnLookupItemG);
+                             // Stop PA034531.I001184
+                           END;
+
+                OnLookup=BEGIN
+                           // Start PA034531.I001184
+                           EXIT(NoOnLookup(Text, OnLookupItemG));
+                           // Stop PA034531.I001184
+                         END;
+                          }
+
+    { 40  ;2   ;Field     ;
+                SourceExpr="Variant Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 14  ;2   ;Field     ;
+                SourceExpr=Description }
+
+    { 34  ;2   ;Field     ;
+                SourceExpr="Shortcut Dimension 1 Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 36  ;2   ;Field     ;
+                SourceExpr="Shortcut Dimension 2 Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 300 ;2   ;Field     ;
+                Description=PA035597;
+                SourceExpr=ShortcutDimCode[3];
+                CaptionClass='1,2,3';
+                Visible=FALSE;
+                OnLookup=BEGIN
+                           LookupShortcutDimCode(3,ShortcutDimCode[3]);
+                         END;
+                          }
+
+    { 302 ;2   ;Field     ;
+                Description=PA035597;
+                SourceExpr=ShortcutDimCode[4];
+                CaptionClass='1,2,4';
+                Visible=FALSE;
+                OnLookup=BEGIN
+                           LookupShortcutDimCode(4,ShortcutDimCode[4]);
+                         END;
+                          }
+
+    { 304 ;2   ;Field     ;
+                Description=PA035597;
+                SourceExpr=ShortcutDimCode[5];
+                CaptionClass='1,2,5';
+                Visible=FALSE;
+                OnLookup=BEGIN
+                           LookupShortcutDimCode(5,ShortcutDimCode[5]);
+                         END;
+                          }
+
+    { 306 ;2   ;Field     ;
+                Description=PA035597;
+                SourceExpr=ShortcutDimCode[6];
+                CaptionClass='1,2,6';
+                Visible=FALSE;
+                OnLookup=BEGIN
+                           LookupShortcutDimCode(6,ShortcutDimCode[6]);
+                         END;
+                          }
+
+    { 308 ;2   ;Field     ;
+                Description=PA035597;
+                SourceExpr=ShortcutDimCode[7];
+                CaptionClass='1,2,7';
+                Visible=FALSE;
+                OnLookup=BEGIN
+                           LookupShortcutDimCode(7,ShortcutDimCode[7]);
+                         END;
+                          }
+
+    { 310 ;2   ;Field     ;
+                Description=PA035597;
+                SourceExpr=ShortcutDimCode[8];
+                CaptionClass='1,2,8';
+                Visible=FALSE;
+                OnLookup=BEGIN
+                           LookupShortcutDimCode(8,ShortcutDimCode[8]);
+                         END;
+                          }
+
+    { 31  ;2   ;Field     ;
+                SourceExpr="Location Code";
+                AutoFormatExpr='JMD';
+                Visible=TRUE }
+
+    { 38  ;2   ;Field     ;
+                SourceExpr="Bin Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 24  ;2   ;Field     ;
+                SourceExpr=Reserve }
+
+    { 52  ;2   ;Field     ;
+                SourceExpr=Quantity }
+
+    { 18  ;2   ;Field     ;
+                SourceExpr="Reserved Qty. (Base)";
+                OnDrillDown=BEGIN
+                              ShowReservationEntries(TRUE);
+                              CurrPage.UPDATE;
+                            END;
+                             }
+
+    { 28  ;2   ;Field     ;
+                SourceExpr="Unit of Measure Code";
+                AutoFormatExpr='JMD' }
+
+    { 42  ;2   ;Field     ;
+                SourceExpr=Amount }
+
+    { 44  ;2   ;Field     ;
+                SourceExpr="Amount Including VAT";
+                Visible=FALSE }
+
+    { 1101353001;2;Field  ;
+                SourceExpr="Orig. Contract Amount" }
+
+    { 1101353003;2;Field  ;
+                SourceExpr="Orig. Contract Amt. Incl. VAT" }
+
+    { 46  ;2   ;Field     ;
+                SourceExpr="Serial No.";
+                Visible=FALSE }
+
+    { 48  ;2   ;Field     ;
+                SourceExpr="Book No.";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 26  ;2   ;Field     ;
+                SourceExpr="Shipment Date" }
+
+    { 16  ;2   ;Field     ;
+                SourceExpr="Outstanding Quantity" }
+
+    { 1101353000;2;Field  ;
+                SourceExpr="Picking in Progress" }
+
+    { 1101353002;2;Field  ;
+                SourceExpr="Pick Release Date" }
+
+  }
+  CODE
+  {
+    VAR
+      SalesHeader@1000 : Record 36;
+      OnLookupItemG@1101286982 : Record 27;
+      ShortcutDimCode@1001 : ARRAY [8] OF Code[20];
+
+    PROCEDURE __INCADEA__@1101353000();
+    BEGIN
+    END;
+
+    PROCEDURE DealerCheckRunForm@1101353001();
+    VAR
+      CompanyInfoL@1101353001 : Record 79;
+      DealerMgt@1101353000 : Codeunit 5086700;
+    BEGIN
+      // Start INC
+      IF CompanyInfoL.IMSCheck THEN
+        IF DealerMgt.GetDealer <> '' THEN
+          ERROR('');
+      // Stop INC
+    END;
+
+    BEGIN
+    {
+      // @ Area PartsSales, VehicleSales, Service
+      PA-Number  Date
+      ------------------------------------------------
+      PA031882   03.05.10 removed field "Job No."
+      PA032651   31.08.11 PR #4889933: Modified code (due to the form caption re-naming of Form-5025685[Service Credit Memo]).
+      PA033067   12.04.12 DR DE Captions implemented
+      PA033259   09.08.12 AI Deletion of Start/Stop History in Code, update copyright and Version List
+      PA033259   18.09.12 DR Variable names changed according to incadea styleguide
+      PA034531   04.09.13 GD I001184 Modified "No."-OnLookup(), "No."-OnValidate() to use correct LookUp Trigger Logic.
+      PA035597   10.02.14 GC NAV 2013 R2 Technical Upgrade
+      --- 7.2.1 ---
+      EU.0090125 24.02.20 UU Downmerge of EU.0056707 & EU.0025423
+                             - EU.0056707 GE 56709 Temp fix of EU.0025423
+                             - EU.0025423 DR use new functions from the Sales- and Purchase Header to open the correct Document Card Page IDs.
+                                             All "&" removed in the Page Action Captions
+      AP001651   01.08.23 QQ Added Consignment fields 50096, 50097.
+      CU26Q1     10.06.26 RL CU upgrade.
+    }
+    END.
+  }
+}
+

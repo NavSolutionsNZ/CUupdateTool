@@ -1,0 +1,1067 @@
+OBJECT Table 14 Location
+{
+  OBJECT-PROPERTIES
+  {
+    Date=10/06/26;
+    Time=[ 2:55:15 PM];
+    Modified=Yes;
+    Version List=NAVW1.x,N.7.2.1,AP001651,WBL,CU26Q1;
+  }
+  PROPERTIES
+  {
+    OnInsert=BEGIN
+               // Start PA036544
+               IF ExitPoint(ExitPointSetupG.Trigger::OnInsert,ExitPointSetupG.Type::Pre,'') THEN
+                 EXIT;
+               // Stop PA036544
+
+               // Start PA035804
+               // Start PA036748
+               GeneralLedgerSetupG.GET;
+
+               // Start PA041277
+               IF NOT DimensionValueG.GET(GeneralLedgerSetupG."Location Mapping",Code) AND GeneralLedgerSetupG."incadea Dimension Concept" THEN BEGIN
+               // Stop PA041277
+                 DimensionValueG.INIT;
+                 DimensionValueG."Dimension Code" := GeneralLedgerSetupG."Location Mapping";
+               // Stop PA036748
+                 DimensionValueG.Code := Code;
+                 DimensionValueG.Name := Name;
+               // Start PA035804.26149
+                 DimensionValueG.SkipCheckDefaultDim(TRUE);
+                 DimensionValueG.INSERT(TRUE);
+                 DimensionValueG.SkipCheckDefaultDim(FALSE);
+               // Stop PA035804.26149
+               END;
+               // Stop PA035804
+
+               // Start PA045176
+               VALIDATE("Auto Req. Wksh. Name");
+               // Stop PA045176
+
+               // Start PA036544
+               ExitPoint(ExitPointSetupG.Trigger::OnInsert,ExitPointSetupG.Type::Post,'');
+               // Stop PA036544
+             END;
+
+    OnModify=BEGIN
+               // Start PA036544
+               IF ExitPoint(ExitPointSetupG.Trigger::OnModify,ExitPointSetupG.Type::Pre,'') THEN
+                 EXIT;
+               // Stop PA036544
+
+               // Start PA035804
+               // Start PA036748
+               GeneralLedgerSetupG.GET;
+
+               // Start PA041277
+               // Start PA041277.67091
+               IF GeneralLedgerSetupG."incadea Dimension Concept" THEN BEGIN
+               // Stop PA041277.67091
+                 IF NOT DimensionValueG.GET(GeneralLedgerSetupG."Location Mapping",Code) THEN BEGIN
+               // Stop PA041277
+                   DimensionValueG.INIT;
+                   DimensionValueG."Dimension Code" := GeneralLedgerSetupG."Location Mapping";
+               // Stop PA036748
+                   DimensionValueG.Code := Code;
+                   DimensionValueG.Name := Name ;
+               // Start PA035804.26149
+                   DimensionValueG.SkipCheckDefaultDim(TRUE);
+                   DimensionValueG.INSERT(TRUE);
+                   DimensionValueG.SkipCheckDefaultDim(FALSE);
+               // Stop PA035804.26149
+                 END ELSE BEGIN
+                   DimensionValueG.Name := Name ;
+               // Start PA035804.26149
+                   DimensionValueG.SkipCheckDefaultDim(TRUE);
+                   DimensionValueG.MODIFY(TRUE);
+                   DimensionValueG.SkipCheckDefaultDim(FALSE);
+               // Stop PA035804.26149
+                 END;
+               // Start PA041277.67091
+               END;
+               // Stop PA041277.67091
+               // Stop PA035804
+
+               // Start PA045176
+               VALIDATE("Auto Req. Wksh. Name");
+               // Stop PA045176
+
+               // Start PA036544
+               ExitPoint(ExitPointSetupG.Trigger::OnModify,ExitPointSetupG.Type::Post,'');
+               // Stop PA036544
+             END;
+
+    OnDelete=BEGIN
+               // Start INC
+               // Start PA036544
+               IF ExitPoint(ExitPointSetupG.Trigger::OnDelete,ExitPointSetupG.Type::Pre,'') THEN
+                 EXIT;
+               // Stop PA036544
+               // Start PA035804
+               // Start PA036748
+               GeneralLedgerSetupG.GET;
+
+               IF DimensionValueG.GET(GeneralLedgerSetupG."Location Mapping",Code) THEN BEGIN
+               // Stop PA036748
+               // Start PA035804.26149
+                 DimensionValueG.SkipCheckDefaultDim(TRUE);
+                 DimensionValueG.DELETE(TRUE);
+                 DimensionValueG.SkipCheckDefaultDim(FALSE);
+               END;
+               // Stop PA035804.26149
+               // Srop PA035804
+
+               // Start INC
+               ItemLedgEntryG.RESET;
+               ItemLedgEntryG.SETRANGE("Location Code",Code);
+               ItemLedgEntryG.SETRANGE(Open,TRUE);
+               IF ItemLedgEntryG.FINDFIRST THEN
+                 ERROR(C_INC002,TABLECAPTION,Name);
+               // Stop INC
+
+               Bin.SETRANGE("Location Code",Code);
+               Bin.DELETEALL;
+
+               // Start INC
+               // Start PA036118
+               ItemLocationsG.RESET;
+               // Stop PA036118
+               ItemLocationsG.SETRANGE("Location Code",Code);
+               ItemLocationsG.DELETEALL;
+               // Start PA036118
+               PartsDeptG.RESET;
+               // Stop PA036118
+               PartsDeptG.SETRANGE("Location Code",Code);
+               PartsDeptG.DELETEALL;
+               VehicleDeptG.SETRANGE("Location Code",Code);
+               VehicleDeptG.DELETEALL;
+               // Start PA036118
+               ServDeptG.RESET;
+               // Stop PA036118
+               ServDeptG.SETRANGE("Location Code",Code);
+               ServDeptG.DELETEALL;
+               // Stop INC
+
+               // Start PA032589
+               // Start PA032500
+               CustLibG.UpdateInternalCustomer(DATABASE::Location, "Internal Customer",'');
+               // Stop PA032500
+               // Stop PA032589
+
+               // Start PA033896
+               UserLocationG.RESET;
+               UserLocationG.SETRANGE("Location Code",Code);
+               IF NOT UserLocationG.ISEMPTY THEN
+                 UserLocationG.DELETEALL;
+
+               ViewUserLocationG.RESET;
+               ViewUserLocationG.SETRANGE("Location Code",Code);
+               IF NOT ViewUserLocationG.ISEMPTY THEN
+                 ViewUserLocationG.DELETEALL;
+               // Stop PA033896
+               // Start PA036544
+               ExitPoint(ExitPointSetupG.Trigger::OnDelete,ExitPointSetupG.Type::Post,'');
+               // Stop PA036544
+             END;
+
+    OnRename=BEGIN
+               // Start INC
+               ItemLedgEntryG.RESET;
+               ItemLedgEntryG.SETRANGE("Location Code",Code);
+               ItemLedgEntryG.SETRANGE(Open,TRUE);
+               IF ItemLedgEntryG.FINDFIRST THEN
+                 ERROR(C_INC003,TABLECAPTION,Name);
+               // Stop INC
+
+               // Start PA035804
+               // Start PA036748
+               GeneralLedgerSetupG.GET;
+
+               IF DimensionValueG.GET(GeneralLedgerSetupG."Location Mapping",xRec.Code) THEN BEGIN
+               // Start PA035804.26149
+                 DimensionValueG.SkipCheckDefaultDim(TRUE);
+                 DimensionValueG.RENAME(GeneralLedgerSetupG."Location Mapping",Code);
+               // Stop PA036748
+                 DimensionValueG.SkipCheckDefaultDim(FALSE);
+               END;
+               // Stop PA035804.26149
+               // Stop PA035804
+             END;
+
+    CaptionML=ENU=Location;
+    LookupPageID=Page15;
+  }
+  FIELDS
+  {
+    { 1   ;   ;Code                ;Code10        ;CaptionML=ENU=Code;
+                                                   NotBlank=Yes }
+    { 2   ;   ;Name                ;Text50        ;CaptionML=ENU=Name }
+    { 5724;   ;Use As In-Transit   ;Boolean       ;OnValidate=BEGIN
+                                                                // Start PA033897
+                                                                IF "Use As In-Transit" THEN BEGIN
+                                                                  Location.RESET;
+                                                                  Location.SETRANGE("Use As In-Transit", FALSE);
+                                                                  IF Location.COUNT <= 1 THEN
+                                                                    ERROR(C_INC_YouNeed2NormalLocations);
+                                                                END;
+                                                                // Stop PA033897
+                                                              END;
+
+                                                   CaptionML=ENU=Use As In-Transit;
+                                                   Description=PA035597, PA033897 }
+    { 50000;  ;Webbline Location   ;Option        ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Webbline Location;
+                                                   OptionCaptionML=ENU=" ,HAM,FEI,GOR,ASH";
+                                                   OptionString=[ ,HAM,FEI,GOR,ASH];
+                                                   Description=WBL }
+    { 5025350;;Book Nos.           ;Code10        ;TableRelation="No. Series";
+                                                   CaptionML=ENU=Book Nos.;
+                                                   Description=INC }
+    { 5025351;;Department Code     ;Code20        ;TableRelation=Department.Code;
+                                                   CaptionML=ENU=Department Code;
+                                                   Description=INC }
+    { 5025352;;Ship-to Address Code;Code10        ;TableRelation="Ship-to Address".Code WHERE (Customer No.=FIELD(Internal Customer));
+                                                   CaptionML=ENU=Ship-to Address Code;
+                                                   Description=INC }
+    { 5025353;;Internal Customer   ;Code20        ;TableRelation=Customer;
+                                                   OnValidate=BEGIN
+                                                                // Start PA032589
+                                                                // Start PA032500
+                                                                CustLibG.UpdateInternalCustomer(DATABASE::Location, xRec."Internal Customer","Internal Customer");
+                                                                // Stop PA032500
+                                                                // Stop PPA032589
+                                                              END;
+
+                                                   CaptionML=ENU=Internal Customer;
+                                                   Description=INC,PA036118,PA035395.31008 }
+    { 5025354;;Bank Code           ;Code10        ;TableRelation="Customer Bank Account".Code WHERE (Customer No.=FIELD(Internal Customer));
+                                                   CaptionML=ENU=Bank Code;
+                                                   Description=INC }
+    { 5025355;;Requisition Method Code;Code10     ;TableRelation="Requisition Method".Code;
+                                                   CaptionML=ENU=Requisition Method Code;
+                                                   Description=INC }
+    { 5025356;;Branch Code         ;Code10        ;TableRelation="Branch Description";
+                                                   OnValidate=BEGIN
+                                                                // Start PA036544
+                                                                IF ExitPoint(ExitPointSetupG.Trigger::OnValidate,ExitPointSetupG.Type::Pre,FIELDNAME("Branch Code")) THEN
+                                                                  EXIT;
+                                                                // Stop PA036544
+
+                                                                // Start PA036544
+                                                                ExitPoint(ExitPointSetupG.Trigger::OnValidate,ExitPointSetupG.Type::Post,FIELDNAME("Branch Code"));
+                                                                // Stop PA036544
+                                                              END;
+
+                                                   CaptionML=ENU=Branch Code;
+                                                   Description=INC }
+    { 5025357;;Associated Location Filter;Code250 ;CaptionML=ENU=Associated Location Filter;
+                                                   Description=INC }
+    { 5025358;;Shelf/Bin Default   ;Option        ;CaptionML=ENU=Shelf/Bin Default;
+                                                   OptionCaptionML=ENU=Shelf No.(Item),Shelf No.(Item Location),Bin;
+                                                   OptionString=Shelf No.(Item),Shelf No.(Item Location),Bin;
+                                                   Description=INC }
+    { 5025359;;Disable Alternat. Parts Search;Boolean;
+                                                   InitValue=Yes;
+                                                   DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Disable Alternative Parts Search;
+                                                   Description=EU.0025423 }
+    { 5025360;;Resource No. Filter ;Code20        ;FieldClass=FlowFilter;
+                                                   CaptionML=ENU=Resource No. Filter;
+                                                   Description=PA035723,PA036118 }
+    { 5025361;;Date Filter         ;Date          ;FieldClass=FlowFilter;
+                                                   CaptionML=ENU=Date Filter;
+                                                   Description=PA035752 }
+    { 5025362;;Resource Capacity Entry Exists;Boolean;
+                                                   FieldClass=FlowField;
+                                                   CalcFormula=Exist("Resource Capacity Entry" WHERE (Date=FIELD(Date Filter),
+                                                                                                      Resource No.=FIELD(Resource No. Filter),
+                                                                                                      Location Code=FIELD(Code)));
+                                                   CaptionML=ENU=Resource Capacity Entry Exists;
+                                                   Description=PA035723,PA036118 }
+    { 5025363;;Auto Req. Wksh. Name;Code10        ;TableRelation="Requisition Worksheet Name".Name;
+                                                   OnValidate=BEGIN
+                                                                // Start EU.0094259
+                                                                IF "Auto Req. Wksh. Name" <> '' THEN
+                                                                // Stop EU.0094259
+                                                                // Start EU.0017374
+                                                                  TESTFIELD("Use As In-Transit", FALSE);
+                                                                // Stop EU.0017374
+                                                              END;
+
+                                                   ValidateTableRelation=No;
+                                                   TestTableRelation=No;
+                                                   CaptionML=ENU=Auto Req. Wksh. Name;
+                                                   Description=PA045176 }
+    { 5025364;;Shipment Proposal Name;Code20      ;TableRelation="Shipm. Proposal Worksheet Name".Name;
+                                                   OnValidate=BEGIN
+                                                                // Start EU.0094259
+                                                                IF "Shipment Proposal Name" <> '' THEN
+                                                                // Stop EU.0094259
+                                                                // Start EU.0017374
+                                                                  TESTFIELD("Use As In-Transit", FALSE);
+                                                                // Stop EU.0017374
+                                                              END;
+
+                                                   CaptionML=ENU=Shipment Proposal Name;
+                                                   Description=EU.0017374 }
+  }
+  KEYS
+  {
+    {    ;Code                                    ;MaintainSIFTIndex=No;
+                                                   Clustered=Yes }
+    {    ;Branch Code                             ;MaintainSIFTIndex=No }
+  }
+  FIELDGROUPS
+  {
+    { 1   ;DropDown            ;Code,Name                                }
+  }
+  CODE
+  {
+    VAR
+      Bin@1000 : Record 5400;
+      Location@1004 : Record 14;
+      _INCADEA_@1109400001 : Boolean;
+      __START_EXIT_POINT___@1007 : Integer;
+      ExitPointSetupG@1006 : Record 5207300;
+      ExitPointParamG@1005 : TEMPORARY Record 5207301;
+      ExitPointUnitG@1003 : Codeunit 5207300;
+      EPRecRef2G@1002 : RecordRef;
+      __STOP_EXIT_POINT___@1001 : Integer;
+      GeneralLedgerSetupG@1109450000 : Record 98;
+      ReservationSetupG@1055601 : Record 336;
+      ServiceSetupG@1101224021 : Record 5025600;
+      InventorySetupG@1109400011 : Record 313;
+      VehicleSetupG@1109400012 : Record 5025401;
+      TransferRouteG@1101342647 : Record 5742;
+      CustLibG@1101342644 : Record 18;
+      VehicleG@1101224029 : Record 5025400;
+      ItemLedgEntryG@1109400002 : Record 32;
+      ItemLocationsG@1109400003 : Record 5028700;
+      PartsDeptG@1109400004 : Record 5028666;
+      VehicleDeptG@1109400005 : Record 5028667;
+      ServDeptG@1109400006 : Record 5028668;
+      C_INC001@1109400007 : TextConst 'ENU=Ship-to address for internal customer is not available';
+      C_INC002@1109400008 : TextConst 'ENU=You''re not allowed to delete %1 %2, because there are open item ledger entries on this %1 !';
+      C_INC003@1109400009 : TextConst 'ENU=You''re not allowed to rename %1 %2, because there are open item ledger entries on this %1 !';
+      C_INC004@1109400010 : TextConst 'ENU=You can not select %1 %2, as it does not belong to branch %3.';
+      UserLocationG@1101291258 : Record 5028664;
+      ViewUserLocationG@1101291257 : Record 5060981;
+      DimensionValueG@1109400000 : Record 349;
+      UserSessionUnitG@1101342643 : Codeunit 5028665;
+      C_INC_YouNeed2NormalLocations@1101342645 : TextConst 'ENU=You want to define this Location to be a Transfare Location. Before you can transfer something between Loactions you must have at least 2 normal Locations.';
+      C_INC_LineHdrLocationMustMatch@1101224022 : TextConst 'ENU=The %1 in the Line must not deviate from the %1 in the Header!';
+      C_INC_UseVehicleBranchOrder@1101224023 : TextConst 'ENU=The selected vehicle is located in a different branch. Use a branch order to transfer the vehicle.';
+      C_INC_VehLocationDifferentMsg@1101224028 : TextConst 'ENU=Please note that the vehicle %1 is located in another location.';
+      C_INC_LocationDifferentMsg@1101224024 : TextConst 'ENU=Please note that the %1 %2 is located in another location.';
+      C_INC_LocationInOtherBranch@1101224025 : TextConst 'ENU=The location you have entered belongs to a different branch!';
+      C_INC_LocationDifferentConfirm@1101224026 : TextConst 'ENU=The location entered in the line differs from the location in the header! Do you want to continue?';
+      Text012@1109400017 : TextConst 'ENU=Before you can use Online Map, you must fill in the Online Map Setup window.\See Setting Up Online Map in Help.';
+      C_INC_VinLocDIfferentConfirm@1101368291 : TextConst 'ENU=Please note that the vehicle %1 is located in another location. Do you want to continue?';
+      ShowConfirmationG@1101368292 : Boolean;
+      C_INC_LocationDifferentError@1101368293 : TextConst 'ENU=The selected vehicle is located in a different Location. Use a branch order to transfer the vehicle.';
+      C_INC_BranchDifferentMsg@1101368294 : TextConst 'ENU=Please note that the vehicle %1 is located to another branch.';
+
+    PROCEDURE __INCADEA__@5025350();
+    BEGIN
+    END;
+
+    LOCAL PROCEDURE __START_EXITPOINT__@5025300();
+    BEGIN
+    END;
+
+    LOCAL PROCEDURE ExitPointCall@5025380(MakeCoddeP@1109400003 : Code[20];TriggerP@1109400002 : Integer;TypeP@1109400001 : Integer;ExitPointIDP@1109400000 : Text[50];VAR EPRecRefP@1109400005 : RecordRef) : Boolean;
+    BEGIN
+      EXIT(ExitPointUnitG.RunExitPoint(
+        ExitPointSetupG."Object Type"::Table,
+        DATABASE::Location,
+        MakeCoddeP, TriggerP, TypeP, ExitPointIDP, EPRecRefP, EPRecRef2G, ExitPointParamG));
+    END;
+
+    LOCAL PROCEDURE ExitPoint@1101992673(TriggerP@1119452001 : Integer;TypeP@1119432000 : Integer;ExitPointIDP@1119432001 : Text[50]) ReturnR : Boolean;
+    VAR
+      EPRecRefL@1109400004 : RecordRef;
+    BEGIN
+      // @ This local function works as ExitPoint wrapper function. It will control the ExitPointCheck function call.
+      // @ It passes thru all the handshake parameter values.
+      // @ It takes care to provide the processing records as RecordReference to the ExitPointCheck function.
+      // @ When possible a Make Code is also identified and passed to the called ExitPointCheck function.
+
+      // Start PA036544
+      EPRecRefL.GETTABLE(Rec);
+      EPRecRef2G.GETTABLE(xRec);
+      ExitPointParamG."Called CurrFieldNo" := CurrFieldNo;
+      ReturnR := ExitPointCall('', TriggerP, TypeP, ExitPointIDP, EPRecRefL);
+      EPRecRefL.SETTABLE(Rec);
+      CLEAR(EPRecRef2G);
+      // Stop PA036544
+    END;
+
+    LOCAL PROCEDURE __STOP_EXITPOINT__@5025452();
+    BEGIN
+    END;
+
+    PROCEDURE PurchaseCrossLocationCheck@1101224021(LineTypeP@1101224021 : Text[30];HdrLocationP@1101224020 : Code[10];LineLocationP@1101224019 : Code[10];OrderTypeP@1109400000 : Integer);
+    VAR
+      PurchHeaderL@1109400002 : Record 38;
+      PurchLineLocationSyncL@1109400001 : Boolean;
+      PurchLineL@1109400003 : Record 39;
+    BEGIN
+      // @ Ths function will check, if the entered location in a purchase order line matched the
+      // @ location comming from the purchase order header. In case it isn't then an error is shown depending
+      // @ on the PurchasesPayablesSetupG."Purchase Line Location Sync" parameter
+      // Start PA036118
+      IF LineTypeP = ' ' THEN // --> Test if Line Type = Text
+        EXIT;
+      IF HdrLocationP = LineLocationP THEN
+        EXIT;
+      // Start PA036549.34230
+      CASE OrderTypeP OF
+        PurchHeaderL."Order Type"::"Parts Sales & Purchases" :
+          BEGIN
+            InventorySetupG.GET;
+            PurchLineLocationSyncL := InventorySetupG."Purch. Line Location Sync.";
+          END;
+        PurchHeaderL."Order Type"::"Vehicle Sales & Purchases" :
+          BEGIN
+            VehicleSetupG.GET;
+            PurchLineLocationSyncL := VehicleSetupG."Purch. Line Location Sync.";
+          END;
+      END;
+      // Start PA042464.82666
+      // Start PA041187.83979
+      IF NOT PurchLineLocationSyncL THEN
+        EXIT;
+      IF OrderTypeP = PurchHeaderL."Order Type"::"Parts Sales & Purchases" THEN
+      // Start PA041187.83976
+        IF LineTypeP = FORMAT(PurchLineL.Type::"Account (G/L)") THEN
+          EXIT;
+      // Stop PA041187.83976
+      // Stop PA042464.82666
+      // Stop PA036549.34230
+      ERROR(C_INC_LineHdrLocationMustMatch, ServDeptG.FIELDCAPTION("Location Code"));
+      // Stop PA041187.83979
+      // Stop PA036118
+    END;
+
+    PROCEDURE SalesCrossLocationCheck@1101224019(LineTypeP@1101224021 : Text[30];HdrLocationP@1101224020 : Code[10];LineLocationP@1101224019 : Code[10];OrderTypeP@1109400000 : Integer;DocumentTypeP@1055600 : Integer);
+    VAR
+      SalesHeaderL@1109400001 : Record 36;
+      SalesLineL@1109400003 : Record 37;
+      SalesLineLocationSyncL@1109400002 : Boolean;
+    BEGIN
+      // @ Ths function will check, if the entered location in a sales order line matched the
+      // @ location comming from the sales order header. In case it isn't then an error is shown depending
+      // @ on the SalesReceivablesSetupG."Sales Line Location Sync" parameter
+      // Start PA036118
+      IF LineTypeP = ' ' THEN // --> Test if Line Type = Text
+        EXIT;
+      IF HdrLocationP = LineLocationP THEN
+        EXIT;
+      // Start PA036549.34230
+      CASE OrderTypeP OF
+        SalesHeaderL."Order Type"::"Parts Sales & Purchases" :
+          BEGIN
+            InventorySetupG.GET;
+            SalesLineLocationSyncL := InventorySetupG."Sales Line Location Sync.";
+          END;
+        SalesHeaderL."Order Type"::"Vehicle Sales & Purchases" :
+          BEGIN
+            VehicleSetupG.GET;
+            SalesLineLocationSyncL := VehicleSetupG."Sales Line Location Sync.";
+          END;
+        SalesHeaderL."Order Type"::Service :
+          BEGIN
+            ServiceSetupG.GET();
+            SalesLineLocationSyncL := ServiceSetupG."Service Line Location Sync";
+          END;
+      END;
+      // Start PA041187.87194
+      IF NOT SalesLineLocationSyncL THEN
+        EXIT;
+      // Start PA042464.83967
+      IF OrderTypeP = SalesHeaderL."Order Type"::"Parts Sales & Purchases" THEN
+        IF DocumentTypeP IN [SalesHeaderL."Document Type"::Invoice, SalesHeaderL."Document Type"::"Credit Memo"] THEN
+          IF LineTypeP = FORMAT(SalesLineL.Type::"Account (G/L)") THEN
+            EXIT;
+      IF ShowConfirmationG AND (DocumentTypeP = SalesHeaderL."Document Type"::Order) THEN
+        ERROR(C_INC_LocationDifferentError);
+
+      IF OrderTypeP = SalesHeaderL."Order Type"::"Vehicle Sales & Purchases" THEN
+        IF DocumentTypeP IN [SalesHeaderL."Document Type"::Quote, SalesHeaderL."Document Type"::Order] THEN
+          EXIT;
+
+      // Stop PA042464.83967
+      // Stop PA036549.34230
+      ERROR(C_INC_LineHdrLocationMustMatch, ServDeptG.FIELDCAPTION("Location Code"));
+      // Stop PA041187.87194
+      // Stop PA036118
+    END;
+
+    PROCEDURE ServiceCrossLocationCheck@1101224024(LineTypeP@1101224021 : Text[30];HdrLocationP@1101224020 : Code[10];LineLocationP@1101224019 : Code[10]);
+    BEGIN
+      // @ Ths function will check, if the entered location in a service order line matched the
+      // @ location comming from the service order header. In case it isn't then an error is shown depending
+      // @ on the ServiceSetupG."Service Line Location Sync" parameter
+      // Start PA036118
+      IF LineTypeP = ' ' THEN // --> Test if Line Type = Text
+        EXIT;
+      IF HdrLocationP = LineLocationP THEN
+        EXIT;
+      ServiceSetupG.GET();
+      IF ServiceSetupG."Service Line Location Sync" THEN
+        ERROR(C_INC_LineHdrLocationMustMatch, ServDeptG.FIELDCAPTION("Location Code"));
+      // Stop PA036118
+    END;
+
+    PROCEDURE SalesCrossBranchCheck@1101224025(SalesHdrP@1101224022 : Record 36;SalesLineP@1101224021 : Record 37);
+    VAR
+      CrossBranchL@1101368291 : Boolean;
+      UserLocationExistsL@1101368292 : Boolean;
+      SalesLineL@1109400000 : Record 37;
+    BEGIN
+      // @ This function will check, if the location in the entered sales line blongs to the same branch as the location of the header or
+      // @ not.
+      // Start PA036118
+      IF SalesLineP.Type = SalesLineP.Type::" " THEN
+        EXIT;
+      IF SalesLineP."Location Code" = '' THEN
+        EXIT;
+      IF SalesLineP."Location Code" = SalesHdrP."Location Code" THEN
+        EXIT;
+      IF SalesHdrP."Order Type" = SalesHdrP."Order Type"::"Vehicle Sales & Purchases" THEN BEGIN
+      // Start PA036512.30330
+        CrossBranchL := DoCrossBranchCheck(SalesHdrP."Location Code", SalesLineP."Location Code",
+          TRUE,SalesHdrP."Document Type" = SalesHdrP."Document Type"::Quote);
+        IF ShowConfirmationG AND
+      // Start PA041187.87194
+           (UserLocationExist(SalesHdrP."Location Code", SalesLineP."Location Code"))
+        THEN BEGIN
+          IF (NOT CrossBranchL) OR (CrossBranchL AND ( SalesHdrP."Document Type" = SalesHdrP."Document Type"::Quote)) THEN BEGIN
+      // Start EU.0058995
+            IF GUIALLOWED THEN
+              IF NOT CONFIRM(STRSUBSTNO(C_INC_VinLocDIfferentConfirm,SalesLineP.VIN),FALSE) THEN
+                ERROR('');
+      // Stop EU.0058995
+          END ELSE
+            ERROR(C_INC_LocationDifferentError);
+        END ELSE
+          IF ( SalesHdrP."Document Type" = SalesHdrP."Document Type"::Quote) OR (SalesHdrP."Document Type" = SalesHdrP."Document Type"::Order) THEN BEGIN
+            UserLocationExistsL := UserLocationExist(SalesHdrP."Location Code", SalesLineP."Location Code");
+            CASE TRUE OF
+              UserLocationExistsL AND CrossBranchL:
+                BEGIN
+                  UserSessionUnitG.ShowMessageBox(STRSUBSTNO(C_INC_BranchDifferentMsg, SalesLineP.VIN));
+                  EXIT;
+                END;
+              (NOT UserLocationExistsL) AND CrossBranchL:
+                BEGIN
+                  UserSessionUnitG.ShowMessageBox(STRSUBSTNO(C_INC_BranchDifferentMsg, SalesLineP.VIN));
+                  EXIT;
+                END;
+            END;
+          END ELSE BEGIN
+            IF CrossBranchL THEN
+              ERROR(C_INC_LocationDifferentError);
+            IF NOT ShowConfirmationG THEN
+              UserSessionUnitG.ShowMessageBox(STRSUBSTNO(C_INC_VehLocationDifferentMsg, SalesLineP.VIN));
+          END;
+      // Start PA036512.30531
+      // Stop PA036512.30531
+      END ELSE BEGIN
+        IF SalesHdrP."Order Type" = SalesLineP."Order Type"::"Parts Sales & Purchases" THEN BEGIN
+          IF NOT((SalesLineP.Type = SalesLineP.Type::"Account (G/L)") AND
+             (SalesLineP."Document Type" IN [SalesLineP."Document Type"::Invoice,SalesLineP."Document Type"::"Credit Memo"]))
+          THEN
+            DoCrossBranchCheck(SalesHdrP."Location Code", SalesLineP."Location Code", FALSE,FALSE);
+        END ELSE
+      // Start PA042464.83967
+          DoCrossBranchCheck(SalesHdrP."Location Code", SalesLineP."Location Code", FALSE,FALSE);
+      // Stop PA042464.83967
+      // Stop PA041187.87194
+      // Stop PA036512.30330
+
+      // Start AP001651
+        IF SalesHdrP."Consignment Order" AND
+          (SalesLineP."Location Code" = SalesHdrP."Consignment Location Code")
+        THEN
+          EXIT;
+      // Stop AP001651
+
+        IF SalesLineP.Type = SalesLineP.Type::Item THEN
+          UserSessionUnitG.ShowMessageBox(STRSUBSTNO(C_INC_LocationDifferentMsg, SalesLineP."Item Type", SalesLineP."No."))
+        ELSE
+          UserSessionUnitG.ShowMessageBox(STRSUBSTNO(C_INC_LocationDifferentMsg, SalesLineP.Type, SalesLineP."No."));
+      END;
+      // Stop PA036118
+    END;
+
+    PROCEDURE ServiceCrossBranchCheck@1101224020(LinetypeP@1101224021 : Text[30];NoP@1101224022 : Code[20];LineLocationCodeP@1101224020 : Code[10];HdrLocationCodeP@1101224019 : Code[10]);
+    BEGIN
+      // @ This function will check, if the location in the entered Serv line blongs to the same branch as the location of the header or
+      // @ not.
+      // Start PA036118
+      IF LineLocationCodeP = '' THEN
+        EXIT;
+      IF LineLocationCodeP = HdrLocationCodeP THEN
+        EXIT;
+      // Start PA036512.30331
+      DoCrossBranchCheck(HdrLocationCodeP, LineLocationCodeP, FALSE,FALSE);
+      // Stop PA036512.30331
+      UserSessionUnitG.ShowMessageBox(STRSUBSTNO(C_INC_LocationDifferentMsg, LinetypeP, NoP));
+      // Stop PA036118
+    END;
+
+    PROCEDURE SalesInquiryCrossBranchCheck@1101224035(SalesInqHdrP@1101224022 : Record 5028930;SalesInqLineP@1101224021 : Record 5028931);
+    BEGIN
+      // @ This function will check, if the location in the entered sales inquiry line blongs to the same branch as the location of the
+      // @ header or not.
+      // Start PA036118
+      IF SalesInqLineP.Type = SalesInqLineP.Type::" " THEN
+        EXIT;
+      IF SalesInqLineP."Location Code" = '' THEN
+        EXIT;
+      IF SalesInqLineP."Location Code" = SalesInqHdrP."Location Code" THEN
+        EXIT;
+      IF SalesInqHdrP."Order Type" = SalesInqHdrP."Order Type"::"Vehicle Sales & Purchases" THEN BEGIN
+      // Start PA036512.30331
+        DoCrossBranchCheck(SalesInqHdrP."Location Code", SalesInqLineP."Location Code", TRUE,FALSE);
+      // Stop PA036512.30331
+        UserSessionUnitG.ShowMessageBox(STRSUBSTNO(C_INC_VehLocationDifferentMsg, SalesInqLineP.VIN));
+      END ELSE BEGIN
+      // Start PA036512.30331
+        DoCrossBranchCheck(SalesInqHdrP."Location Code", SalesInqLineP."Location Code", FALSE,FALSE);
+      // Stop PA036512.30331
+        IF SalesInqLineP.Type = SalesInqLineP.Type::Item THEN
+          UserSessionUnitG.ShowMessageBox(STRSUBSTNO(C_INC_LocationDifferentMsg, SalesInqLineP."Item Type", SalesInqLineP."No."))
+        ELSE
+          UserSessionUnitG.ShowMessageBox(STRSUBSTNO(C_INC_LocationDifferentMsg, SalesInqLineP.Type, SalesInqLineP."No."))
+      END;
+      // Stop PA036118
+    END;
+
+    PROCEDURE DisplayMap@7();
+    VAR
+      MapPoint@1001 : Record 800;
+      MapMgt@1000 : Codeunit 802;
+    BEGIN
+      // Start PA035901
+      IF MapPoint.FINDFIRST THEN
+        MapMgt.MakeSelection(DATABASE::Location,GETPOSITION)
+      ELSE
+        MESSAGE(Text012);
+      // Stop PA035901
+    END;
+
+    PROCEDURE PurchaseCrossBranchCheck@1101224030(PurchHdrP@1101224022 : Record 38;PurchLineP@1101224021 : Record 39);
+    BEGIN
+      // @ This function will check, if the location in the entered purchase line blongs to the same branch as the location of the header
+      // @ or not.
+      // Start PA036118
+      IF PurchLineP.Type = PurchLineP.Type::" " THEN
+        EXIT;
+      IF PurchLineP."Location Code" = '' THEN
+        EXIT;
+      IF PurchLineP."Location Code" = PurchHdrP."Location Code" THEN
+        EXIT;
+      // Start PA041187.83482
+      // Start PA041187.83979
+      IF PurchHdrP."Order Type" = PurchHdrP."Order Type"::"Parts Sales & Purchases" THEN BEGIN
+        InventorySetupG.GET;
+        IF InventorySetupG."Purch. Line Location Sync." THEN
+          IF PurchLineP.Type = PurchLineP.Type::"Account (G/L)" THEN
+            IF NOT (PurchLineP."Document Type" IN [PurchLineP."Document Type"::Invoice,PurchLineP."Document Type"::"Credit Memo"]) THEN
+              ERROR(C_INC_LineHdrLocationMustMatch, ServDeptG.FIELDCAPTION("Location Code"));
+      // Start PA036512.30331
+      // Stop PA036512.30331
+        IF NOT((PurchLineP.Type = PurchLineP.Type::"Account (G/L)") AND
+           (PurchLineP."Document Type" IN [PurchLineP."Document Type"::Invoice,PurchLineP."Document Type"::"Credit Memo"]))
+        THEN
+           DoCrossBranchCheck(PurchHdrP."Location Code", PurchLineP."Location Code", FALSE, FALSE);
+      END ELSE
+        DoCrossBranchCheck(PurchHdrP."Location Code", PurchLineP."Location Code", FALSE, FALSE);
+      // Stop PA041187.83979
+      // Stop PA041187.83482
+      IF NOT CONFIRM(C_INC_LocationDifferentConfirm, FALSE) THEN
+        ERROR('');
+      // Stop PA036118
+    END;
+
+    PROCEDURE UnpostPurchRecCrossBranchCheck@1101224036(UnpPurchReceiptHdrP@1101224022 : Record 5046911;UnpPurchReceiptLineP@1101224021 : Record 5046912);
+    BEGIN
+      // Start PA036118
+      // @ This function will check, if the location in the entered unposted receipt line blongs to the same branch as the location of the
+      // @ header or not.
+      IF UnpPurchReceiptLineP.Type = UnpPurchReceiptLineP.Type::" " THEN
+        EXIT;
+      IF UnpPurchReceiptLineP."Location Code" = '' THEN
+        EXIT;
+      IF UnpPurchReceiptLineP."Location Code" = UnpPurchReceiptHdrP."Location Code" THEN
+        EXIT;
+      // Start PA041187.83979
+      //  IF UnpPurchReceiptLineP."Item Type" = UnpPurchReceiptLineP."Item Type"::Vehicle THEN
+      //    IF VehicleG.GET(UnpPurchReceiptLineP.VIN) THEN
+      //      UnpPurchReceiptLineP."Location Code" := VehicleG."Location Code";
+      DoCrossBranchCheck(UnpPurchReceiptHdrP."Location Code", UnpPurchReceiptLineP."Location Code",
+      // Start PA036512.30331
+        FALSE,FALSE);
+      // Stop PA041187.83979
+      // Stop PA036512.30331
+      IF NOT CONFIRM(C_INC_LocationDifferentConfirm, FALSE) THEN
+        ERROR('');
+      // Stop PA036118
+    END;
+
+    LOCAL PROCEDURE DoCrossBranchCheck@1101224028(HdrLocationP@1101224020 : Code[10];LineLocationP@1101224019 : Code[10];TriggeredByVehicleOrderP@1101224023 : Boolean;VehicleQuoteP@1101287075 : Boolean) : Boolean;
+    BEGIN
+      // @ This function will test two locations  for possible branch missmatches.
+      // Start PA036118
+      Location.RESET;
+      Location.GET(HdrLocationP);
+      Location.SETRANGE(Code, LineLocationP);
+      Location.SETRANGE("Branch Code", Location."Branch Code");
+      IF Location.ISEMPTY THEN
+        IF TriggeredByVehicleOrderP THEN
+      // Start PA036512.30330
+          EXIT(TRUE)
+      // Stop PA036512.30330
+        ELSE
+          ERROR(C_INC_LocationInOtherBranch);
+      // Stop PA036118
+      // Start PA041187.83482
+      EXIT(FALSE);
+      // Start PA041187.83482
+    END;
+
+    PROCEDURE GetItemShelfNo@1055600(LocationCodeP@1055602 : Code[10];ItemNoP@1055600 : Code[20]) : Code[10];
+    VAR
+      ItemL@1055603 : Record 27;
+      ItemLocationL@1055601 : Record 5028700;
+    BEGIN
+      // @ New function to detect the correct Item Shelf No.
+      // Start PA045273
+      Location.RESET;
+      IF Location.GET(LocationCodeP) THEN
+        CASE Location."Shelf/Bin Default" OF
+          Location."Shelf/Bin Default"::"Shelf No.(Item)",
+          Location."Shelf/Bin Default"::Bin:
+            IF ItemL.GET(ItemNoP) THEN
+              EXIT(ItemL."Shelf No.");
+          Location."Shelf/Bin Default"::"Shelf No.(Item Location)":
+            IF ItemLocationL.GET(ItemNoP, LocationCodeP) THEN
+              EXIT(ItemLocationL."Shelf No.");
+        END;
+      EXIT('');
+      // Stop PA045273
+    END;
+
+    PROCEDURE GetFieldVal@5025351(Field@1109400000 : Integer) : Text[250];
+    BEGIN
+      // Start INC
+      IF (Code = '') OR (Field = 0) THEN
+        EXIT('');
+      CASE Field OF
+        FIELDNO(Code):
+          EXIT(Code);
+        FIELDNO(Name):
+          EXIT(Name);
+        FIELDNO("Book Nos."):
+          EXIT("Book Nos.");
+        FIELDNO("Department Code"):
+          EXIT("Department Code");
+        FIELDNO("Ship-to Address Code"):
+          EXIT("Ship-to Address Code");
+        FIELDNO("Internal Customer"):
+          EXIT("Internal Customer");
+        FIELDNO("Bank Code"):
+          EXIT("Bank Code");
+      END;
+      // Stop INC
+    END;
+
+    PROCEDURE GetBranchCode@1109400000(ActCustomerInternalP@1109400000 : Code[20]) ActBranchCodeR : Code[20];
+    BEGIN
+      // Start INC
+      // Start PA036118
+      IF NOT LookupBranchCode(ActCustomerInternalP, ActBranchCodeR) THEN
+        ActBranchCodeR := '';
+      // Stop PA036118
+      // Stop INC
+    END;
+
+    PROCEDURE LookupBranchCode@1109400001(ActCustomerInternalP@1109400001 : Code[20];VAR ActBranchCodeP@1109400000 : Code[10]) : Boolean;
+    VAR
+      LocationL@1109400002 : Record 14;
+      UserSessionL@1109400004 : Record 5028686;
+    BEGIN
+      // Start INC
+      ActBranchCodeP := '';
+      IF ActCustomerInternalP = '' THEN
+        EXIT(FALSE);
+
+      LocationL.RESET;
+      LocationL.SETRANGE("Internal Customer",ActCustomerInternalP);
+      IF LocationL.FINDFIRST THEN BEGIN
+      // Start EU.0020605
+        IF (LocationL.COUNT = 1) OR (NOT GUIALLOWED) THEN BEGIN
+      // Stop EU.0020605
+          ActBranchCodeP := LocationL."Branch Code";
+        END ELSE BEGIN
+          COMMIT;
+          IF PAGE.RUNMODAL(0,LocationL) = ACTION::LookupOK THEN BEGIN
+            ActBranchCodeP := LocationL."Branch Code";
+          END;
+        END;
+      END ELSE BEGIN
+        UserSessionUnitG.GetUserSession(UserSessionL);
+        IF LocationL.GET(UserSessionL."Location Code") THEN BEGIN
+          ActBranchCodeP := LocationL."Branch Code";
+        END;
+      END;
+      EXIT(TRUE);
+      // Stop INC
+    END;
+
+    PROCEDURE GetBranchLocationCodeFilter@1109400003(VAR BranchCodeP@1117700001 : Code[10]) : Text[250];
+    VAR
+      LocationL@1109400000 : Record 14;
+      ReturnFilterL@1109400002 : Text[250];
+    BEGIN
+      // Start INC
+      ReturnFilterL := '';
+      LocationL.SETRANGE("Branch Code", BranchCodeP);
+      IF LocationL.FINDSET THEN BEGIN
+        REPEAT
+          ReturnFilterL := ReturnFilterL + '|' + LocationL.Code;
+        UNTIL LocationL.NEXT = 0;
+        ReturnFilterL := COPYSTR(ReturnFilterL, 2);
+      END;
+      EXIT(ReturnFilterL);
+      // Stop INC
+    END;
+
+    PROCEDURE GetLocationFilterOfBranch@1109400002(LocationCodeP@1109400000 : Code[10]) LocationFilterR : Code[1024];
+    VAR
+      LocationL@1109400001 : Record 14;
+    BEGIN
+      // Start INC
+      LocationL.RESET;
+      IF LocationL.GET(LocationCodeP) THEN BEGIN
+        LocationL.SETRANGE("Branch Code",LocationL."Branch Code");
+        IF LocationL.FINDSET THEN BEGIN
+          REPEAT
+      // Start PA037271.32407
+            // Start WBL
+            IF COPYSTR(LocationL.Code,1,2) <> 'Z1' THEN //Exclude Consignment locations
+            // Stop WBL
+            LocationFilterR := LocationFilterR + '|' + LocationL.Code;
+          UNTIL LocationL.NEXT = 0;
+          LocationFilterR := COPYSTR(LocationFilterR,2);
+      // Stop PA037271.32407
+        END;
+      END;
+      // Stop INC
+    END;
+
+    PROCEDURE LocationMatchesBranchCheck@5025352(LocationcodeP@1109400000 : Code[10];BranchcodeP@1109400001 : Code[10]) : Boolean;
+    BEGIN
+      // @ Return, if the entered Location is part of the entered branch or not
+      // Start INC
+      GET(LocationcodeP);
+      // Start PA036118
+      EXIT("Branch Code" = BranchcodeP);
+      // Stop PA036118
+      // Stop INC
+    END;
+
+    PROCEDURE CreateLocationString@1119427000(LocationCodeP@1119427001 : Code[10]) LocationStringR : Text[60];
+    VAR
+      LocationL@1119427000 : Record 14;
+    BEGIN
+      // @ New Function to return a string containing the location code and name
+      // Start PA031550
+      IF LocationL.GET(LocationCodeP) THEN
+        LocationStringR := ' [' + LocationL.Code + ' - ' + LocationL.Name + ']'
+      // Stop PA031550
+    END;
+
+    PROCEDURE GetTranistLocation@1101342643(FromLocationCodeP@1101342643 : Code[10];ToLocationCodeP@1101342644 : Code[10];VAR TransitLocationCodeP@1101342645 : Code[10];VAR ShippingAgentCodeP@1101342646 : Code[10]) LocationRefreshedR : Boolean;
+    BEGIN
+      // Start PA033897
+      // @ Function to detect the correct Transit Location for a From- To- Location Code combination.
+      // @ The Transit Location Code must be set up in the User Location
+      IF TransferRouteG.GET(FromLocationCodeP, ToLocationCodeP) THEN
+      // Start PA036547
+        IF Location.GET(TransferRouteG."In-Transit Code") THEN
+          IF Location."Use As In-Transit" THEN
+      // Stop PA036547
+            IF UserLocationG.GET(USERID, TransferRouteG."In-Transit Code") THEN
+              IF TransitLocationCodeP <> TransferRouteG."In-Transit Code" THEN BEGIN
+                TransitLocationCodeP := TransferRouteG."In-Transit Code";
+                IF TransferRouteG."Shipping Agent Code" > '' THEN
+                  ShippingAgentCodeP := TransferRouteG."Shipping Agent Code";
+                EXIT(TRUE);
+              END;
+      EXIT(FALSE);
+      // Stop PA033897
+    END;
+
+    PROCEDURE UserLocationExist@1101368293(HeaderLocationP@1101368291 : Code[10];LineLocationP@1101368292 : Code[10]) : Boolean;
+    VAR
+      UserLocationL@1101368293 : Record 5028664;
+    BEGIN
+      // @ Checks if the location exists for the current user
+      // @ param HeaderLocationP of type code10
+      // @ param LineLocationP of type code10
+      // @ retval of type boolean
+
+      // Start PA036512.30330
+      UserLocationL.SETRANGE("User ID",USERID);
+      UserLocationL.SETFILTER(UserLocationL."Location Code",'%1',HeaderLocationP);
+      IF UserLocationL.ISEMPTY THEN
+        EXIT(FALSE);
+      UserLocationL.SETFILTER(UserLocationL."Location Code",'%1',LineLocationP);
+      IF UserLocationL.ISEMPTY THEN
+        EXIT(FALSE);
+      EXIT(TRUE);
+      // Stop PA036512.30330
+    END;
+
+    PROCEDURE SetShowConfirmation@1101368291(ShowConfirmationP@1101368291 : Boolean);
+    BEGIN
+      // @ Sets the global variable ShowConfirmationG
+      // @ param ShowConfirmationP of type boolean
+      // Start PA036512
+      ShowConfirmationG := ShowConfirmationP;
+      // stop PA036512
+    END;
+
+    PROCEDURE AutoReqWkshNameOnLookup@1055602(VAR TextP@1055601 : Text) : Boolean;
+    VAR
+      RequisitionWorksheetNameL@1055600 : Record 245;
+    BEGIN
+      // Start PA045176
+      ReservationSetupG.GET;
+      ReservationSetupG.TESTFIELD("Auto Req. Wksh. Template");
+      RequisitionWorksheetNameL.FILTERGROUP(2);
+      RequisitionWorksheetNameL.SETRANGE("Worksheet Template Name", ReservationSetupG."Auto Req. Wksh. Template");
+      RequisitionWorksheetNameL.FILTERGROUP(0);
+      IF NOT RequisitionWorksheetNameL.GET(ReservationSetupG."Auto Req. Wksh. Template", TextP) THEN
+        RequisitionWorksheetNameL.INIT;
+      IF PAGE.RUNMODAL(0 , RequisitionWorksheetNameL) <> ACTION::LookupOK THEN
+        EXIT(FALSE);
+      TextP := RequisitionWorksheetNameL.Name;
+      EXIT(TRUE);
+      // Stop PA045176
+    END;
+
+    BEGIN
+    {
+      // @ Area General
+      PA-Number  Date
+      ------------------------------------------------
+      PA031550   25.01.10 new function CreateLocationString
+      PA032589   15.02.11 YI Call of UpdateInternalCustomer on change of Internal Customer field
+      PA032500   15.07.11 DR Give current Database to the function which does the internal Customer check
+      PA032821   04.08.11 DR 4609511: Automatic DropDown fields added in "Field Groups
+      PA033067   12.04.12 DR DE Captions implemented
+      PA033259   08.08.12 AI Deletion of Start/Stop History in Code, update copyright and Version List
+      PA033259   18.09.12 DR Variable names changed according to incadea styleguide
+      PA033896   13.02.13 SS Changed OnDelete trigger
+      PA033897   04.03.13 DR Changes for Branch Item In-Transit Location posting
+                             - New field added "Use As In-Transit"
+                             - New function GetTranistLocation.
+                             Additional changes:
+                             - Variable names changed according incadea styleguide
+      PA035597   10.02.14 GC NAV 2013 R2 Technical Upgrade
+                             Field 5025359 "Use As In-Transit" renumbered to 5724
+      PA035804   20.06.14 GB Adjust Dimension Functionality to include default Shortcut Dimensions
+      PA035804   22.07.14 GB 26149 Use function SkipCheckDefaultDim to set check to False
+      PA035752   04.03.14 WZ New fields Resource No. Filter,  Date Filter, Resource Capacity Entry Exists
+                             added to fix in the Performance problem of Service Scheduler.
+      PA036118   26.05.14 DR New Location / Branch check
+                             - New functions added: PurchaseCrossLocationCheck, SalesCrossLocationCheck,
+                               ServiceCrossLocationCheck, SalesCrossBranchCheck, SalesInquiryCrossBranchCheck,
+                               SalesInquiryCrossBranchCheck, PurchaseCrossBranchCheck,
+                               UnpostPurchRecCrossBranchCheck, DoCrossBranchCheck
+                             - Table relation in field "Internal Customer" added by a check of the
+                               customer.type=internal
+                             - Table relation to the Resource table added in the Resource No. Filter field
+                             - unused function ShippingAddressCodeLookup deleted
+                             - The function GetBranchCode will no longer perfrom an own lookup section. It will
+                               use the LookupBranchCode function.
+                             - In LocationMatchesBranchCheck function the MessageTypeP::Message and MessageTypeP::Error
+                               option have never been used
+      PA035901   14.11.14 CH NAV 2013 R2 General Ledger Integration.
+      PA035395   26.11.14 LR 31008 Remove filter customer.type=internal from Internal Customer field
+      PA036748   11.12.14 GB Inherit "Dimension Code" from General Ledger Setup.
+      PA036512   23.10.14 GE Avoid error when cross branch case existsfor Vehicle Quote/Orders
+      PA036512   29.10.14 GE 30331 Extend DoCrossBranchCheck() with one more paramter
+                             Avoid error for Quote
+      PA036512   03.11.14 GE 30330 Rollback changes from 30331
+                             Logic Redefined
+      PA036512   05.11.14 GE 30531 Raise an error when the user tries to enter directly a vehicle in an order from
+                             a different branch
+      PA036547   06.10.14 GF Merge N.6.1.4 to N.7.1.0 - PA035752, PA036118, PA035395.
+                             Bugfixes Field Use As In-Transit and function GetTranistLocation.
+      PA036548   16.12.14 GF Merge N.6.1.4 to N.7.1.0 - PA036512.
+      PA036544   21.10.14 DR New ExitPoint added.
+                             - All ExitPoint functions are defined as LOCAL functions.
+                             - all FIND('-') and FIND('+') changed to FINDSET, FINDFIRST and FINDLAST.
+                             - Use the new Types "Inside x" and "Condition x" when necessary.
+      PA036549   18.02.15 CH 34230 Conditional check now uses fields from "Inventory Setup" or "Vehicles Setup" instead of Sales and Purchase Setup.
+                             New parameter OrderTypeP added to the functions PurchaseCrossLocationCheck() and SalesCrossLocationCheck().
+      PA037271   09.01.15 VI 32407 LocationFilter Logic has been refrained. DELCHR Logic was replaced with COPYSTR Logic in "GetLocationFilterofBranch()".
+      PA037997   25.05.15 VI Merge of PA037271.
+      PA045176   13.10.17 NG New Field(s): "Auto Req. Wksh. Name"
+      PA041510   06.10.16 MS New field "Requisition Wksh. Name"
+      --- 7.1.4 ---
+      EU.0058995 16.04.19 PM Code modified to make compatible with external interface
+      --- 7.1.5 ---
+      PA041277   21.07.16 GU No syncronization of Dimension Values when "incadea Dimension Concept" is off
+      PA041278   21.07.16 GU Merge of PA041277
+      PA041277   22.07.16 GU 67091 OnModify - avoid syncronization with Dimension Values when "incadea Dimension Concept" is off
+      PA041278   22.07.16 GU 67078 Merge of PA041277.67091
+      PA042464   13.12.16 SP 82666 Added code to Synchronize for type Account(G/L) when PurchLineLocationSyncL is true in setup.
+      PA042464   19.12.16 SP 83967 Added code to Synchronization for type Account(G/L) when SalesLineLocationSyncL is true in setup.
+      PA041187   24.12.16 KR 83482 Changes done to function PurchaseCrossBranchCheck Purchase side
+                                   -Vehicle Purchase 'Purch. Line Location Sync' is False Restrict updating of location code when both locations are in diff. branch.
+                                   -Part Purchase docs 'Purch. Line Location Sync is False Restrict updating location code when both locations are in diff. branch
+                                   -Parts Purch. Docs 'Purch. Line Location Sync' is True Restrict updating location code in G/L lines.
+                                   -Vehicle Purchase Docs 'Purch. Line Location Sync' is True Restrict updating the location code for G/L lines
+      PA041187   02.02.17 KR 87194 Changes done in functions SalesCrossLocationCheck and SalesCrossBranchCheck.
+                                   -Vehicle sale 'Sales Line Location Sync' is False allow updating of location code when both locations are in diff. branch
+                                    in both Vehicle sales quote and vehicle sales order and restict posting of order.
+                                   -Vehicle sales Docs 'Sales. Line Location Sync' is True allow updating of location code when both locations are in diff. branch or of same branch
+                                    in both Vehicle sales quote and vehicle sales order and restict posting of order.
+                                   -Part sales docs 'Sales Line Location Sync is False Restrict updating location code when both locations are in diff. branch
+                                    except for G/L lines in invoice and credit memos.
+                                   -Parts sales Docs 'Sales Line Location Sync' is True Restrict updating location code except for G/L lines in invoice and credit memos.
+      PA041187   02.02.17 KR 83979 Vehicle purchase Docs 'Purch. Line Location Sync' is True then Restrict updating location code for G/L lines.
+      PA041187   02.02.17 KR 83976 Parts purchase Docs 'Purch. Line Location Sync' is True then Restrict updating location code except for G/L lines.
+      PA041187   02.02.17 KR 83979 Restricting of changing of location of different branch in vehicle purchase receipt.
+      PA045273   21.12.17 DR New function GetItemShelfNo created.
+                             Move OnLookup code introduced with PA045176 from the field "Auto Req. Wksh. Name" to an own function.
+      EU.0020605 22.03.18 DG If GUI is not available then choose the first record.
+      --- 7.2.0 ---
+      EU.0012747 11.01.18 EG Merge of PA045176
+      EU.0012838 29.01.18 DR Merge of PA045273
+      EU.0020609 22.03.18 DG Merge of EU.0020605.
+      EU.0058941 30.04.19 RE Merge of EU.0058995
+      --- 7.2.1 ---
+      EU.0090125 20.02.20 JV Downmerge of EU.005636,EU.0017374,EU.0025423
+                             - Merged EU.0025423 as EU.0047294 is dependent on the feature
+                             - EU.0005636 MS Downmerge of PA041510
+                                               - EU.0017374 MS New field "Shipment Proposal Name"
+                                               - EU.0025423 DR New field "Disable Alternat. Parts Search"
+                             - No need to define a local variable for the ReservationSetup
+      EU.0094259 05.06.20 GD 99656 Modification in "Auto Req. Wksh. Name", "Shipment Proposal Name" - OnValidate trigger to perform the check on "Use As In-Transit" field
+                             only when the fields are not empty.
+      AP001651   03.08.23 QQ Bypass location warning on consignment orders to consignment location.
+      WBL        01.09.23 RL Exclude Consignment locations for Branch orders. Add "Webbline Location" field for Jet reports look up.
+      CU26Q1     10.06.26 RL CU upgrade.
+    }
+    END.
+  }
+}
+

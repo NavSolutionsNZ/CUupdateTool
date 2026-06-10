@@ -1,0 +1,99 @@
+OBJECT Page 50023 Import Cost D
+{
+  OBJECT-PROPERTIES
+  {
+    Date=06/19/25;
+    Time=[ 3:51:48 PM];
+    Modified=Yes;
+    Version List=;
+  }
+  PROPERTIES
+  {
+    SourceTable=Table5087002;
+    PageType=List;
+  }
+  CONTROLS
+  {
+    { 1000000000;0;Container;
+                ContainerType=ContentArea }
+
+    { 1000000001;1;Group  ;
+                Name=Group;
+                GroupType=Repeater }
+
+    { 1000000002;2;Field  ;
+                SourceExpr="Costing No." }
+
+    { 1000000003;2;Field  ;
+                SourceExpr="Cost Code" }
+
+    { 1000000004;2;Field  ;
+                SourceExpr=Type }
+
+    { 1000000005;2;Field  ;
+                SourceExpr=Name }
+
+    { 1000000006;2;Field  ;
+                SourceExpr="Item Charge Code" }
+
+    { 1000000007;2;Field  ;
+                SourceExpr="Cost Apportionment" }
+
+    { 1000000008;2;Field  ;
+                SourceExpr="Department Code" }
+
+    { 1000000009;2;Field  ;
+                SourceExpr=Amount }
+
+    { 1000000010;2;Field  ;
+                SourceExpr="Amount (LCY)" }
+
+    { 1000000011;2;Field  ;
+                SourceExpr=Percentage }
+
+    { 1000000012;2;Field  ;
+                SourceExpr="Account No." }
+
+    { 1000000013;2;Field  ;
+                SourceExpr="Currency Code" }
+
+    { 1000000014;2;Field  ;
+                SourceExpr="Currency Factor" }
+
+    { 1000000015;2;Field  ;
+                SourceExpr=Posted }
+
+    { 1000000016;2;Field  ;
+                SourceExpr="Document No.";
+                Editable=True }
+
+    { 1000000017;2;Field  ;
+                SourceExpr="Vendor Inv./Cr. Memo No." }
+
+    { 1000000018;2;Field  ;
+                SourceExpr="Account Name" }
+
+    { 1000000019;2;Field  ;
+                SourceExpr="Posting Date" }
+
+    { 1000000020;2;Field  ;
+                SourceExpr="Batch Post" }
+
+    { 1000000021;2;Field  ;
+                SourceExpr="Document Type" }
+
+    { 1000000022;2;Field  ;
+                SourceExpr="Order Type" }
+
+    { 1000000023;2;Field  ;
+                SourceExpr="Dimension Set ID" }
+
+  }
+  CODE
+  {
+
+    BEGIN
+    END.
+  }
+}
+

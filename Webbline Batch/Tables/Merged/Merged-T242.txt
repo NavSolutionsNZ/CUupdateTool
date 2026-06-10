@@ -1,0 +1,342 @@
+OBJECT Table 242 Source Code Setup
+{
+  OBJECT-PROPERTIES
+  {
+    Date=10/06/26;
+    Time=[ 2:37:37 PM];
+    Modified=Yes;
+    Version List=NAVW16.00,N.7.2.1,DC,CU26Q1;
+  }
+  PROPERTIES
+  {
+    CaptionML=ENU=Source Code Setup;
+  }
+  FIELDS
+  {
+    { 1   ;   ;Primary Key         ;Code10        ;CaptionML=ENU=Primary Key }
+    { 2   ;   ;Sales               ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Sales }
+    { 3   ;   ;Purchases           ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Purchases }
+    { 4   ;   ;Inventory Post Cost ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Inventory Post Cost }
+    { 5   ;   ;Exchange Rate Adjmt.;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Exchange Rate Adjmt. }
+    { 6   ;   ;Post Recognition    ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Post Recognition }
+    { 7   ;   ;Post Value          ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Post Value }
+    { 8   ;   ;Close Income Statement;Code10      ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Close Income Statement }
+    { 9   ;   ;Consolidation       ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Consolidation }
+    { 10  ;   ;General Journal     ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=General Journal }
+    { 11  ;   ;Sales Journal       ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Sales Journal }
+    { 12  ;   ;Purchase Journal    ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Purchase Journal }
+    { 13  ;   ;Cash Receipt Journal;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Cash Receipt Journal }
+    { 14  ;   ;Payment Journal     ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Payment Journal }
+    { 16  ;   ;Item Journal        ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Item Journal }
+    { 17  ;   ;BOM Journal         ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=BOM Journal }
+    { 19  ;   ;Resource Journal    ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Resource Journal }
+    { 20  ;   ;Job Journal         ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Job Journal }
+    { 21  ;   ;Sales Entry Application;Code10     ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Sales Entry Application }
+    { 22  ;   ;Purchase Entry Application;Code10  ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Purchase Entry Application }
+    { 23  ;   ;VAT Settlement      ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=VAT Settlement }
+    { 24  ;   ;Compress G/L        ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Compress G/L }
+    { 25  ;   ;Compress VAT Entries;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Compress VAT Entries }
+    { 26  ;   ;Compress Cust. Ledger;Code10       ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Compress Cust. Ledger }
+    { 27  ;   ;Compress Vend. Ledger;Code10       ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Compress Vend. Ledger }
+    { 28  ;   ;Compress Item Ledger;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Compress Item Ledger }
+    { 29  ;   ;Compress BOM Ledger ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Compress BOM Ledger }
+    { 31  ;   ;Compress Res. Ledger;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Compress Res. Ledger }
+    { 32  ;   ;Compress Job Ledger ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Compress Job Ledger }
+    { 33  ;   ;Item Reclass. Journal;Code10       ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Item Reclass. Journal }
+    { 34  ;   ;Phys. Inventory Journal;Code10     ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Phys. Inventory Journal }
+    { 35  ;   ;Compress Bank Acc. Ledger;Code10   ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Compress Bank Acc. Ledger }
+    { 36  ;   ;Compress Check Ledger;Code10       ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Compress Check Ledger }
+    { 37  ;   ;Financially Voided Check;Code10    ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Financially Voided Check }
+    { 38  ;   ;Finance Charge Memo ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Finance Charge Memo }
+    { 39  ;   ;Reminder            ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Reminder }
+    { 40  ;   ;Deleted Document    ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Deleted Document }
+    { 41  ;   ;Adjust Add. Reporting Currency;Code10;
+                                                   TableRelation="Source Code";
+                                                   CaptionML=ENU=Adjust Add. Reporting Currency }
+    { 42  ;   ;Trans. Bank Rec. to Gen. Jnl.;Code10;
+                                                   TableRelation="Source Code";
+                                                   CaptionML=ENU=Trans. Bank Rec. to Gen. Jnl. }
+    { 43  ;   ;IC General Journal  ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=IC General Journal }
+    { 45  ;   ;Unapplied Sales Entry Appln.;Code10;TableRelation="Source Code";
+                                                   CaptionML=ENU=Unapplied Sales Entry Appln. }
+    { 46  ;   ;Unapplied Purch. Entry Appln.;Code10;
+                                                   TableRelation="Source Code";
+                                                   CaptionML=ENU=Unapplied Purch. Entry Appln. }
+    { 47  ;   ;Reversal            ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Reversal }
+    { 840 ;   ;Cash Flow Worksheet ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Cash Flow Worksheet;
+                                                   Description=PA035962 }
+    { 1000;   ;Job G/L Journal     ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Job G/L Journal }
+    { 1001;   ;Job G/L WIP         ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Job G/L WIP }
+    { 5400;   ;Consumption Journal ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Consumption Journal }
+    { 5402;   ;Output Journal      ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Output Journal }
+    { 5403;   ;Flushing            ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Flushing }
+    { 5404;   ;Capacity Journal    ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Capacity Journal }
+    { 5500;   ;Production Journal  ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Production Journal }
+    { 5600;   ;Fixed Asset Journal ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Fixed Asset Journal }
+    { 5601;   ;Fixed Asset G/L Journal;Code10     ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Fixed Asset G/L Journal }
+    { 5602;   ;Insurance Journal   ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Insurance Journal }
+    { 5603;   ;Compress FA Ledger  ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Compress FA Ledger }
+    { 5604;   ;Compress Maintenance Ledger;Code10 ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Compress Maintenance Ledger }
+    { 5605;   ;Compress Insurance Ledger;Code10   ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Compress Insurance Ledger }
+    { 5700;   ;Transfer            ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Transfer }
+    { 5800;   ;Revaluation Journal ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Revaluation Journal }
+    { 5801;   ;Adjust Cost         ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Adjust Cost }
+    { 5900;   ;Service Management  ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Service Management }
+    { 7300;   ;Whse. Item Journal  ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Whse. Item Journal }
+    { 7302;   ;Whse. Phys. Invt. Journal;Code10   ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Whse. Phys. Invt. Journal }
+    { 7303;   ;Whse. Reclassification Journal;Code10;
+                                                   TableRelation="Source Code";
+                                                   CaptionML=ENU=Whse. Reclassification Journal }
+    { 7304;   ;Whse. Put-away      ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Whse. Put-away }
+    { 7305;   ;Whse. Pick          ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Whse. Pick }
+    { 7306;   ;Whse. Movement      ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Whse. Movement }
+    { 7307;   ;Compress Whse. Entries;Code10      ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Compress Whse. Entries }
+    { 81100;  ;Direct Credit Journal;Code10       ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Direct Credit Journal;
+                                                   Description=DC5.00 }
+    { 5000000;;Dept. Cost Journal  ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Dept. Cost Journal }
+    { 5000001;;Dept. Contrib. Journal;Code10      ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Dept. Contrib. Journal }
+    { 5000002;;Dept. Charge To Proj.;Code10       ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Dept. Charge To Proj. }
+    { 5000003;;Dept. Assessment Journal;Code10    ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Dept. Assessment Journal }
+    { 5000004;;Copy Dept. G/L Entries;Code10      ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Copy Dept. G/L Entries }
+    { 5000005;;Compress Dept. Ledger;Code10       ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Compress Dept. Ledger }
+    { 5000200;;Make Cost Journal   ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Make Cost Journal }
+    { 5000201;;Compress Make Ledger;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Compress Make Ledger }
+    { 5000203;;Surcharge Charging  ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Surcharge Charging }
+    { 5000204;;Internal Charging   ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Internal Charging }
+    { 5000205;;Make Purch. Chrg. Journal;Code10   ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Make Purch. Chrg. Journal }
+    { 5000206;;Make Surcharges Journal;Code10     ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Make Surcharges Journal }
+    { 5005270;;Delivery Reminder   ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Delivery Reminder }
+    { 5025350;;Vehicle Journal     ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Vehicle Journal }
+    { 5025351;;Vehicle Transfer Journal;Code10    ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Vehicle Transfer Journal }
+    { 5025352;;Vehicle Phys. Invt. Jrnl.;Code10   ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Vehicle Phys. Invt. Jrnl. }
+    { 5025353;;Post Sales Installments;Code10     ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Post Sales Installments }
+    { 5025354;;Post Purch. Installments;Code10    ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Post Purch. Installments }
+    { 5025355;;Branch Order Item   ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Branch Order Item }
+    { 5025356;;Branch Charging     ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Branch Charging }
+    { 5025357;;Service Journal     ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Service Journal }
+    { 5025358;;Service             ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Service }
+    { 5025359;;Service WIP Posting ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Service WIP Posting }
+    { 5025360;;Service Recognition ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Service Recognition }
+    { 5025361;;Service/Internal Invoices;Code10   ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Service/Internal Invoices }
+    { 5025362;;Compress Labor Ledger;Code10       ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Compress Labor Ledger }
+    { 5025363;;Compress Package Ledger;Code10     ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Compress Package Ledger }
+    { 5025364;;Compress Ext. Service Ledger;Code10;TableRelation="Source Code";
+                                                   CaptionML=ENU=Compress Ext. Service Ledger }
+    { 5025365;;Compress Service Ledger;Code10     ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Compress Service Ledger }
+    { 5025366;;Branch Order Vehicle;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Branch Order Vehicle }
+    { 5025367;;Changing Vehicle Status;Code10     ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Changing Vehicle Status }
+    { 5025790;;Warranty Order      ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Warranty Order;
+                                                   Description=Warranty Management }
+    { 5025791;;Warranty Journal    ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Warranty Journal;
+                                                   Description=G/L Journal for Posting of Warranty Credit Memo }
+    { 5028760;;Post Cash Register  ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Post Cash Register }
+    { 5045300;;Resource Capacity Journal;Code10   ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Resource Capacity Journal;
+                                                   Description=Resource Capacity }
+    { 5045301;;Company Calendar    ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Company Calendar;
+                                                   Description=Resource Capacity }
+    { 5045302;;Scheduling          ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Scheduling;
+                                                   Description=Resource Capacity }
+    { 5045303;;Compress Res. Capacity Ledger;Code10;
+                                                   TableRelation="Source Code";
+                                                   CaptionML=ENU=Compress Res. Capacity Ledger;
+                                                   Description=Resource Capacity }
+    { 5045304;;Resource Qualification;Code10      ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Resource Qualification;
+                                                   Description=Resource Capacity }
+    { 5045305;;Vehicle Revaluation Journal;Code10 ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Vehicle Revaluation Journal }
+    { 5045307;;Administration Time Clock;Code10   ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Administration Time Clock;
+                                                   Description=PA033898 }
+    { 5045308;;Touchscreen Time Clock;Code10      ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Web Time Clock;
+                                                   Description=PA033898,EU.0075234 }
+    { 5045309;;Time Control Correction;Code10     ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Time Control Correction;
+                                                   Description=PA033898 }
+    { 5045320;;To-Dos              ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=To-Dos;
+                                                   Description=PA034989 }
+    { 5045321;;Resource Booking List;Code10       ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Resource Booking List;
+                                                   Description=PA034989 }
+    { 5206400;;Service Inquiry     ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Service Inquiry;
+                                                   Description=PA035290 }
+    { 5206401;;Service Quote       ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Service Quote;
+                                                   Description=PA035290 }
+    { 5206402;;Service Scheduling Order;Code10    ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Service Scheduling Order;
+                                                   Description=PA035290 }
+    { 5206403;;Service Order       ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Service Order;
+                                                   Description=PA035290 }
+    { 5206404;;Warranty Claim      ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Warranty Claim;
+                                                   Description=PA035290 }
+    { 5206405;;Service Contract Claim;Code10      ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Service Contract Claim;
+                                                   Description=PA035290 }
+    { 5206407;;Service Appointments;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Service Appointments;
+                                                   Description=PA035290 }
+    { 5206408;;Service Campaign    ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Service Campaign;
+                                                   Description=PA035290 }
+    { 5206409;;Request             ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Request;
+                                                   Description=PA035290 }
+    { 5206410;;G/L Entry Recon. APPLY;Code10      ;TableRelation="Source Code";
+                                                   CaptionML=ENU=G/L Entry Reconcilation APPLY;
+                                                   Description=EU.0000484 }
+    { 5206411;;G/L Entry Recon. UNAPPLY;Code10    ;TableRelation="Source Code";
+                                                   CaptionML=ENU=G/L Entry Reconcilation UNAPPLY;
+                                                   Description=EU.0000484 }
+  }
+  KEYS
+  {
+    {    ;Primary Key                             ;MaintainSIFTIndex=No;
+                                                   Clustered=Yes }
+  }
+  FIELDGROUPS
+  {
+  }
+  CODE
+  {
+
+    BEGIN
+    {
+      PA-Number  Date
+      ------------------------------------------------
+      PA032441   01.07.11 GC NAV 2009 SP1 W1 General Ledger Integration
+      PA033067   12.04.12 DR DE Captions implemented
+      PA032651   25.04.12 DR 6012646: DEU and ENU Captions corrected
+      PA033259   08.08.12 AI Deletion of Start/Stop History in Code, update copyright and Version List
+      PA033259   18.09.12 DR Variable names changed according to incadea styleguide
+      PA033733   10.12.12 DR DE Captions added for version: N.6.1.2
+      PA033898   28.05.13 WZ Added new fields "Administration Time Clock", "Touchscreen Time Clock"
+                             and "Time Control Correction"
+      PA035597   10.02.14 GC NAV 2013 R2 Technical Upgrade
+      PA035290   23.01.14 ZZ Added new fields 5206400..5206409.
+      PA034989   11.02.14 GL New fields To-Dos and Resource Booking List
+      PA035401   23.04.14 LR 22056 Delete field 5045306 - Time Planning
+      PA035962   17.11.14 TS NAV 2013 R2 General Ledger Integration - New Field 840 - Cash Flow Worksheet.
+      PA035966   09.12.14 TS Delete unused field 5001903 Foreign Payment Journal.
+      PA036547   20.10.14 GF Merge N.6.1.4 to N.7.1.0 - PA035290, PA034989, PA035401.
+      --- 7.2.0 ---
+      EU.0000484 17.07.17 DT New fields 5206410 "G/L Recon. APPLY" and 5206411 "G/L Recon. UNAPPLY"
+      EU.0000039 17.10.17 UX 6348 Docu trigger correction.
+      EU.0001175 17.10.17 UX 8305 Missing docu trigger for EU.0000039.6348
+      --- 7.3.0 --- Downmerge
+      EU.0075234 04.11.19 ER Changed caption of 'Touchscreen Time Clock' field
+      --- 7.2.1 ---
+      EU.0090163 11.02.20 ER Downmerge of feature 75234
+      EU.0131510 28.02.22 AD Removed following fields in order to remove MVC functionality.
+                             - 5206406 Service Check List
+      DC14.0     27.07.23 QQ Direct Credits NZ
+      CU26Q1     10.06.26 RL CU upgrade.
+    }
+    END.
+  }
+}
+

@@ -1,0 +1,355 @@
+OBJECT Page 50091 Get Branch Shipment Lines
+{
+  OBJECT-PROPERTIES
+  {
+    Date=09/25/24;
+    Time=[ 5:37:29 PM];
+    Modified=Yes;
+    Version List=AP001651;
+  }
+  PROPERTIES
+  {
+    Editable=No;
+    SourceTable=Table5025374;
+    PageType=List;
+    OnOpenPage=BEGIN
+                 SETRANGE("Consigned Quantity", 0);
+                 SETRANGE("New Location Code", ToSalesHeaderG."Consignment Location Code");
+               END;
+
+    ActionList=ACTIONS
+    {
+      { 1101353004;0 ;ActionContainer;
+                      ActionContainerType=RelatedInformation }
+      { 1101353003;1 ;ActionGroup;
+                      CaptionML=ENU=&Shipment }
+      { 1101353002;2 ;Action    ;
+                      ShortCutKey=Shift+F7;
+                      CaptionML=ENU=Card;
+                      RunObject=Page 5025373;
+                      RunPageLink=No.=FIELD(Document No.);
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=View;
+                      PromotedCategory=Process }
+    }
+  }
+  CONTROLS
+  {
+    { 1900000001;0;Container;
+                ContainerType=ContentArea }
+
+    { 1   ;1   ;Group     ;
+                GroupType=Repeater }
+
+    { 2   ;2   ;Field     ;
+                SourceExpr="Document No." }
+
+    { 1101353001;2;Field  ;
+                SourceExpr="Your Reference" }
+
+    { 40  ;2   ;Field     ;
+                SourceExpr="Posting Date" }
+
+    { 4   ;2   ;Field     ;
+                SourceExpr="Sell-to Customer No.";
+                Visible=FALSE }
+
+    { 6   ;2   ;Field     ;
+                SourceExpr=Type }
+
+    { 8   ;2   ;Field     ;
+                SourceExpr="No." }
+
+    { 12  ;2   ;Field     ;
+                SourceExpr=Description }
+
+    { 22  ;2   ;Field     ;
+                SourceExpr=Quantity }
+
+    { 1101353000;2;Field  ;
+                SourceExpr="Consigned Quantity";
+                Visible=TRUE;
+                Editable=FALSE }
+
+    { 24  ;2   ;Field     ;
+                SourceExpr="Unit of Measure Code";
+                AutoFormatExpr='JMD' }
+
+    { 14  ;2   ;Field     ;
+                SourceExpr="Department Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 16  ;2   ;Field     ;
+                SourceExpr="Make Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 18  ;2   ;Field     ;
+                SourceExpr="Location Code";
+                AutoFormatExpr='JMD' }
+
+    { 20  ;2   ;Field     ;
+                SourceExpr="Bin Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 1109400000;2;Field  ;
+                Description=PA045273;
+                SourceExpr="Shelf/Bin No.";
+                Visible=FALSE }
+
+    { 1109400002;2;Field  ;
+                Description=PA045273;
+                SourceExpr="New Location Code";
+                AutoFormatExpr='JMD' }
+
+    { 1109400001;2;Field  ;
+                Description=PA045273;
+                SourceExpr="New Bin Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 1109400003;2;Field  ;
+                Description=PA045273;
+                SourceExpr="New Shelf/Bin No.";
+                Visible=FALSE }
+
+  }
+  CODE
+  {
+    VAR
+      BranchShptHdrItemG@1109400000 : Record 5025373;
+      ToSalesHeaderG@1101353000 : Record 36;
+      Text50000@1101353001 : TextConst 'ENU=Sales Order %1 must be a Consignment Order.';
+      Text50001@1101353002 : TextConst 'ENU=%1 of %2 selected lines copied to Sales Order %3.';
+
+    PROCEDURE SetToSalesHeader@4(ToSalesHeaderP@1000 : Record 36);
+    BEGIN
+      ToSalesHeaderG := ToSalesHeaderP;
+      ToSalesHeaderG.TESTFIELD("Document Type", ToSalesHeaderG."Document Type"::Order);
+      IF NOT ToSalesHeaderG."Consignment Order" THEN
+        ERROR(Text50000, ToSalesHeaderG."No.");
+      ToSalesHeaderG.TESTFIELD("Consignment Location Code");
+    END;
+
+    [Internal]
+    PROCEDURE CopyLineToDoc@5();
+    VAR
+      FromBranchShptLineL@1101353000 : Record 5025374;
+      LinesSelectedL@1101353003 : Integer;
+      LinesNotCopiedL@1101353002 : Integer;
+      LinesCopiedL@1101353001 : Integer;
+    BEGIN
+      ToSalesHeaderG.TESTFIELD("Document Type", ToSalesHeaderG."Document Type"::Order);
+      ToSalesHeaderG.TESTFIELD("Consignment Order");
+      ToSalesHeaderG.TESTFIELD("Consignment Location Code");
+      FromBranchShptLineL.COPY(Rec);
+      CurrPage.SETSELECTIONFILTER(FromBranchShptLineL);
+      LinesSelectedL := FromBranchShptLineL.COUNT;
+      LinesCopiedL := 0;
+      LinesNotCopiedL := 0;
+      CopyBranchShptLinesToDoc(ToSalesHeaderG, FromBranchShptLineL, LinesNotCopiedL);
+      LinesCopiedL := LinesSelectedL - LinesNotCopiedL;
+      MESSAGE(Text50001, LinesCopiedL, LinesSelectedL, ToSalesHeaderG."No.");
+    END;
+
+    LOCAL PROCEDURE CopyBranchShptLinesToDoc@31(ToSalesHeaderP@1002 : Record 36;VAR FromBranchShptLineP@1001 : Record 5025374;VAR LinesNotCopied@1020 : Integer);
+    VAR
+      ToSalesLineL@1010 : Record 37;
+      FromBranchShptHdrL@1005 : Record 5025373;
+      TempSalesLineL@1026 : TEMPORARY Record 37;
+      ContractSalesLineL@1101353008 : Record 37;
+      WindowL@1101353000 : Dialog;
+      BranchShptConsLinkL@1101353001 : Record 50002;
+      BranchShptConsLink2@1101353002 : Record 50002;
+      LastLineNo@1101353003 : Integer;
+      NextLineNo@1101353004 : Integer;
+      FromLineCounter@1101353005 : Integer;
+      ToLineCounter@1101353006 : Integer;
+      ContractSalesLineNoL@1101353007 : Integer;
+      ConsignmentSalesLineNoL@1101353009 : Integer;
+      ContractSalesLineDiscPctL@1101353010 : Decimal;
+      ConsignedQtyL@1101353011 : Decimal;
+    BEGIN
+      IF NOT TempSalesLineL.ISTEMPORARY THEN
+        ERROR('Temporary record check failure in Page50091.CopyBranchShptLinesToDoc()');
+      TempSalesLineL.RESET;
+      TempSalesLineL.DELETEALL;
+
+      IF GUIALLOWED THEN
+        WindowL.OPEN('Copying Branch Shipment Lines\'+
+                     'Branch Shipment Line   #1#### #2####\'+
+                     'Consignment Order Line #3#### #4####');
+
+      // Fill sales line buffer
+      NextLineNo := 0;
+      IF FromBranchShptLineP.FINDSET THEN BEGIN
+        REPEAT
+          FromLineCounter := FromLineCounter + 1;
+          IF GUIALLOWED THEN BEGIN
+            WindowL.UPDATE(1, FromBranchShptLineP."Document No.");
+            WindowL.UPDATE(2, FromBranchShptLineP."Line No.");
+          END;
+          IF (FromBranchShptLineP.Type <> FromBranchShptLineP.Type::Item) OR
+             (FromBranchShptLineP.Quantity = 0) OR
+             (FromBranchShptLineP."New Location Code" <> ToSalesHeaderP."Consignment Location Code")
+          THEN
+            LinesNotCopied += 1
+          ELSE BEGIN
+            BranchShptConsLinkL.RESET;
+            BranchShptConsLinkL.SETRANGE("Document No.", FromBranchShptLineP."Document No.");
+            BranchShptConsLinkL.SETRANGE("Line No.", FromBranchShptLineP."Line No.");
+            IF NOT BranchShptConsLinkL.ISEMPTY THEN
+              // already on sales consignment line
+              LinesNotCopied += 1
+            ELSE BEGIN
+              NextLineNo += 10000;
+              IF FromBranchShptHdrL."No." <> FromBranchShptLineP."Document No." THEN
+                FromBranchShptHdrL.GET("Document No.");
+              TempSalesLineL."Document Type" := ToSalesHeaderP."Document Type";
+              TempSalesLineL."Document No." := ToSalesHeaderP."No.";
+              TempSalesLineL."Line No." := NextLineNo;
+              TempSalesLineL.Type := TempSalesLineL.Type::Item;
+              TempSalesLineL."No." := FromBranchShptLineP."No.";
+              TempSalesLineL."Unit of Measure Code" := FromBranchShptLineP."Unit of Measure Code";
+              TempSalesLineL.Quantity := FromBranchShptLineP.Quantity;
+              TempSalesLineL."Quantity (Base)" := FromBranchShptLineP."Quantity (Base)";
+              TempSalesLineL."Qty. per Unit of Measure" := FromBranchShptLineP."Qty. per Unit of Measure";
+              TempSalesLineL."Location Code" := FromBranchShptLineP."New Location Code";
+              TempSalesLineL."Return Receipt No." := FromBranchShptLineP."Document No.";
+              TempSalesLineL."Return Receipt Line No." := FromBranchShptLineP."Line No.";
+              TempSalesLineL."Dimension Set ID" := FromBranchShptLineP."Dimension Set ID";
+              TempSalesLineL.INSERT;
+            END;
+          END;
+        UNTIL FromBranchShptLineP.NEXT = 0;
+      END;
+
+      ToSalesLineL.RESET;
+      ToSalesLineL.SETRANGE("Document Type", ToSalesHeaderP."Document Type");
+      ToSalesLineL.SETRANGE("Document No.", ToSalesHeaderP."No.");
+      IF ToSalesLineL.FINDLAST THEN
+        LastLineNo := ROUND(ToSalesLineL."Line No.", 10000, '>')
+      ELSE
+        LastLineNo := 0;
+      NextLineNo := LastLineNo;
+
+      TempSalesLineL.RESET;
+      TempSalesLineL.SETCURRENTKEY("Document Type","Document No.","Line No.");
+      IF TempSalesLineL.FINDSET THEN BEGIN
+        ContractSalesLineL.RESET;
+        ContractSalesLineL.SETRANGE("Document Type", TempSalesLineL."Document Type");
+        ContractSalesLineL.SETRANGE("Document No.", TempSalesLineL."Document No.");
+        ContractSalesLineL.SETRANGE(Type, ContractSalesLineL.Type::Item);
+        ContractSalesLineL.SETRANGE("Consignment Type", ContractSalesLineL."Consignment Type"::Contract);
+        REPEAT
+          ContractSalesLineNoL := 0;
+          ContractSalesLineL.SETRANGE("No.", TempSalesLineL."No.");
+          ContractSalesLineL.SETRANGE("Unit of Measure Code", TempSalesLineL."Unit of Measure Code");
+          IF ContractSalesLineL.FINDSET THEN BEGIN
+            REPEAT
+              {#
+              // check if contract line already fully consigned
+              ConsignedQtyL := 0;
+              BranchShptConsLinkL.RESET;
+              BranchShptConsLinkL.SETRANGE("Sales Order No.", ToSalesHeaderP."No.");
+              BranchShptConsLinkL.SETRANGE("Contract Sales Line No.", ContractSalesLineL."Line No.");
+              BranchShptConsLinkL.SETRANGE("Item No.", TempSalesLineL."No.");
+              BranchShptConsLinkL.SETRANGE("Unit of Measure Code", TempSalesLineL."Unit of Measure Code");
+              // @@ add these fields to table 50002 if Webbline decide they want to split the consignments based on pricing
+              //BranchShptConsLinkL.SETRANGE("Unit Price", TempSalesLineL."Unit Price");
+              //BranchShptConsLinkL.SETRANGE("Line Discount %", TempSalesLineL."Line Discount %");
+              IF BranchShptConsLinkL.FINDSET THEN
+                REPEAT
+                  ConsignedQtyL += BranchShptConsLinkL."Quantity";
+                UNTIL BranchShptConsLinkL.NEXT = 0;
+              IF ContractSalesLineL."Orig. Contact Quantity" - ConsignedQtyL >= TempSalesLineL."Quantity" THEN  // using
+                ContractSalesLineNoL := ContractSalesLineL."Line No.";
+              #}
+              IF ContractSalesLineL."Outstanding Qty. (Base)" >= TempSalesLineL."Quantity (Base)" THEN
+                ContractSalesLineNoL := ContractSalesLineL."Line No.";
+            UNTIL (ContractSalesLineNoL <> 0) OR (ContractSalesLineL.NEXT = 0);
+          END;
+          IF ContractSalesLineNoL = 0 THEN
+            LinesNotCopied += 1
+          ELSE BEGIN
+            ContractSalesLineL.GET(ContractSalesLineL."Document Type", ContractSalesLineL."Document No.", ContractSalesLineNoL);
+            ContractSalesLineDiscPctL := ContractSalesLineL."Line Discount %";
+            // search for existing consignment sales line
+            BranchShptConsLinkL.RESET;
+            BranchShptConsLinkL.SETRANGE("Sales Order No.", ToSalesHeaderP."No.");
+            BranchShptConsLinkL.SETRANGE("Contract Sales Line No.", ContractSalesLineNoL);
+            BranchShptConsLinkL.SETRANGE("Item No.", TempSalesLineL."No.");
+            BranchShptConsLinkL.SETRANGE("Unit of Measure Code", TempSalesLineL."Unit of Measure Code");
+            IF BranchShptConsLinkL.FINDLAST THEN BEGIN
+              ConsignmentSalesLineNoL := BranchShptConsLinkL."Consignment Sales Line No.";
+              ToSalesLineL.GET(TempSalesLineL."Document Type", ToSalesLineL."Document No.", ConsignmentSalesLineNoL);
+              ToSalesLineL.TESTFIELD("Unit of Measure Code", TempSalesLineL."Unit of Measure Code");
+              ToSalesLineL.TESTFIELD("Location Code", TempSalesLineL."Location Code");
+            END ELSE BEGIN
+              NextLineNo += 10000;
+              ConsignmentSalesLineNoL := NextLineNo;
+              ToSalesLineL.INIT;
+              ToSalesLineL."Document Type" := TempSalesLineL."Document Type";
+              ToSalesLineL."Document No." := TempSalesLineL."Document No.";
+              ToSalesLineL."Line No." := ConsignmentSalesLineNoL;
+              ToSalesLineL.INSERT(TRUE);
+              ToSalesLineL.VALIDATE(Type, ToSalesLineL.Type::Item);
+              ToSalesLineL.VALIDATE("No.", TempSalesLineL."No.");
+              ToSalesLineL.VALIDATE("Consignment Type", ToSalesLineL."Consignment Type"::Consignment);
+              ToSalesLineL.VALIDATE("Unit of Measure Code", TempSalesLineL."Unit of Measure Code");
+              ToSalesLineL.VALIDATE("Location Code", TempSalesLineL."Location Code");
+            END;
+            IF GUIALLOWED THEN BEGIN
+              WindowL.UPDATE(3, ToSalesLineL."Document No.");
+              WindowL.UPDATE(4, ToSalesLineL."Line No.");
+            END;
+            ToSalesLineL.VALIDATE("Attached to Contract Line No.", ContractSalesLineNoL);
+            ToSalesLineL.VALIDATE("Dimension Set ID", ContractSalesLineL."Dimension Set ID");
+            IF (ContractSalesLineL."Shortcut Dimension 1 Code" <> '') AND (ToSalesLineL."Shortcut Dimension 1 Code" = '') THEN
+              ToSalesLineL.VALIDATE("Shortcut Dimension 1 Code", ContractSalesLineL."Shortcut Dimension 1 Code");
+            IF (ContractSalesLineL."Shortcut Dimension 2 Code" <> '') AND (ToSalesLineL."Shortcut Dimension 2 Code" = '') THEN
+              ToSalesLineL.VALIDATE("Shortcut Dimension 2 Code", ContractSalesLineL."Shortcut Dimension 1 Code");
+            ToSalesLineL.Quantity += TempSalesLineL.Quantity;
+            ToSalesLineL.VALIDATE(Quantity);
+            ToSalesLineL.VALIDATE("Unit Price", ContractSalesLineL."Unit Price");
+            IF ContractSalesLineDiscPctL <> 0 THEN
+              ToSalesLineL.VALIDATE("Line Discount %", ContractSalesLineDiscPctL);
+            ToSalesLineL.MODIFY(TRUE);
+
+            ContractSalesLineL.VALIDATE(Quantity, ContractSalesLineL.Quantity - TempSalesLineL.Quantity);
+            ContractSalesLineL.VALIDATE("Unit Price", ToSalesLineL."Unit Price");
+            IF ContractSalesLineDiscPctL <> 0 THEN
+              ContractSalesLineL.VALIDATE("Line Discount %", ContractSalesLineDiscPctL);
+            ContractSalesLineL.VALIDATE("Qty. to Ship", 0);
+            ContractSalesLineL.MODIFY;
+
+            BranchShptConsLink2.INIT;
+            BranchShptConsLink2."Document No." := TempSalesLineL."Return Receipt No.";
+            BranchShptConsLink2."Line No." := TempSalesLineL."Return Receipt Line No.";
+            BranchShptConsLink2."Sales Order No." := ToSalesHeaderP."No.";
+            BranchShptConsLink2."Contract Sales Line No." := ContractSalesLineNoL;
+            BranchShptConsLink2."Consignment Sales Line No." := ToSalesLineL."Line No.";
+            BranchShptConsLink2."Item No." := ToSalesLineL."No.";
+            BranchShptConsLink2."Unit of Measure Code" := ToSalesLineL."Unit of Measure Code";
+            BranchShptConsLink2."Qty. per Unit of Measure" := ToSalesLineL."Qty. per Unit of Measure";
+            BranchShptConsLink2.Quantity := TempSalesLineL.Quantity;
+            BranchShptConsLink2."Quantity (Base)" := TempSalesLineL."Quantity (Base)";
+            BranchShptConsLink2.INSERT;
+          END;
+        UNTIL TempSalesLineL.NEXT = 0;
+      END;
+      IF GUIALLOWED THEN
+        WindowL.CLOSE;
+    END;
+
+    BEGIN
+    {
+      AP001651 07.08.23 QQ New page for Consignment Orders.
+    }
+    END.
+  }
+}
+

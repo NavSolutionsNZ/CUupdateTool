@@ -1,0 +1,144 @@
+OBJECT Page 5025374 Posted Branch Shipment Subf.
+{
+  OBJECT-PROPERTIES
+  {
+    Date=11/19/15;
+    Time=12:10:28 PM;
+    Version List=N.7.1.3;
+  }
+  PROPERTIES
+  {
+    Editable=No;
+    CaptionML=ENU=Lines;
+    SourceTable=Table5025374;
+    PageType=ListPart;
+    AutoSplitKey=Yes;
+    ActionList=ACTIONS
+    {
+      { 1109400005;0 ;ActionContainer;
+                      ActionContainerType=ActionItems }
+      { 1109400001;1 ;ActionGroup;
+                      CaptionML=ENU=&Line;
+                      Image=Line }
+      { 1109400000;2 ;Action    ;
+                      ShortCutKey=Shift+Ctrl+D;
+                      CaptionML=ENU=Dimensions;
+                      Image=Dimensions;
+                      OnAction=BEGIN
+                                 // Start PA035597
+                                 ShowDimensions;
+                                 // Stop PA035597
+                               END;
+                                }
+    }
+  }
+  CONTROLS
+  {
+    { 1900000001;0;Container;
+                ContainerType=ContentArea }
+
+    { 1   ;1   ;Group     ;
+                Description=PA037533;
+                GroupType=Repeater;
+                FreezeColumnID=No. }
+
+    { 2   ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr=Type;
+                QuickEntry=FALSE }
+
+    { 4   ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="No.";
+                QuickEntry=FALSE }
+
+    { 6   ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr=Description;
+                QuickEntry=FALSE }
+
+    { 50  ;2   ;Field     ;
+                Description=PA035597,PA037533;
+                SourceExpr="Department Code";
+                AutoFormatExpr='JMD';
+                QuickEntry=FALSE }
+
+    { 18  ;2   ;Field     ;
+                Description=PA035597,PA037533;
+                SourceExpr="New Department Code";
+                AutoFormatExpr='JMD';
+                QuickEntry=FALSE }
+
+    { 46  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Location Code";
+                AutoFormatExpr='JMD';
+                QuickEntry=FALSE }
+
+    { 10  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="New Location Code";
+                AutoFormatExpr='JMD';
+                QuickEntry=FALSE }
+
+    { 8   ;2   ;Field     ;
+                BlankZero=Yes;
+                Description=PA037533;
+                SourceExpr=Quantity;
+                QuickEntry=FALSE }
+
+    { 12  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Charging Price";
+                QuickEntry=FALSE }
+
+    { 56  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Description 2";
+                Visible=FALSE }
+
+    { 48  ;2   ;Field     ;
+                Description=PA035597,PA037533;
+                SourceExpr="Make Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 14  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Unit Cost (LCY)";
+                Visible=FALSE }
+
+    { 22  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Unit of Measure Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 42  ;2   ;Field     ;
+                SourceExpr="Appl.-to Item Entry";
+                Visible=FALSE }
+
+    { 16  ;2   ;Field     ;
+                SourceExpr="Shipment Date";
+                Visible=FALSE }
+
+  }
+  CODE
+  {
+
+    BEGIN
+    {
+      +----------------------------------------------+
+      | Copyright (c) incadea                        |
+      +----------------------------------------------+
+      PA-Number  Date
+      ------------------------------------------------
+      PA033067   12.04.12 DR DE Captions implemented
+      PA033259   18.09.12 DR Variable names changed according to incadea styleguide
+      PA035597   10.02.14 GC NAV 2013 R2 Technical Upgrade
+      PA037533   22.10.15 GU Field sequence rearranged for UI.
+    }
+    END.
+  }
+}
+

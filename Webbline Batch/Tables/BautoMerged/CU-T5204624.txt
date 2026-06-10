@@ -1,0 +1,772 @@
+OBJECT Table 5204624 eDoc. Outbound Queue
+{
+  OBJECT-PROPERTIES
+  {
+    Date=07/20/21;
+    Time=11:32:03 AM;
+    Version List=N.7.2.1;
+  }
+  PROPERTIES
+  {
+    CaptionML=ENU=eDoc. Outbound Queue;
+    LookupPageID=Page5204624;
+    DrillDownPageID=Page5204624;
+  }
+  FIELDS
+  {
+    { 1   ;   ;Entry No.           ;Integer       ;AutoIncrement=Yes;
+                                                   DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Entry No. }
+    { 21  ;   ;Status              ;Option        ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Status;
+                                                   OptionCaptionML=ENU=Preparing,Pending,Exporting,Sending,,,,,,,Completed,Error,Cancelled;
+                                                   OptionString=Preparing,Pending,Exporting,Sending,,,,,,,Completed,Error,Cancelled }
+    { 30  ;   ;Creation Date       ;Date          ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Creation Date }
+    { 31  ;   ;Creation Time       ;Time          ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Creation Time }
+    { 32  ;   ;Created by User     ;Code50        ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Created by User }
+    { 33  ;   ;Planned Export Date ;Date          ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Planned Export Date }
+    { 34  ;   ;Planned Export Time ;Time          ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Planned Export Time }
+    { 35  ;   ;Exporting Date      ;Date          ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Exporting Date }
+    { 36  ;   ;Exporting Time      ;Time          ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Exporting Time }
+    { 37  ;   ;Exported by User    ;Code50        ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Exported by User }
+    { 40  ;   ;Layer Code          ;Code20        ;TableRelation=Layer.Code;
+                                                   DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Layer Code }
+    { 41  ;   ;Requirement Code    ;Code30        ;TableRelation=Requirement.Code WHERE (Layer Code=FIELD(Layer Code));
+                                                   DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Requirement Code }
+    { 42  ;   ;Interface Code      ;Code20        ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Interface Code }
+    { 43  ;   ;Transfer Type       ;Option        ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Transfer Type;
+                                                   OptionCaptionML=ENU=E-Mail,Exchange System,Save to Disk;
+                                                   OptionString=E-Mail,Exchange System,Save to Disk;
+                                                   Description=EU.0114065 }
+    { 50  ;   ;Header Type         ;Option        ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Header Type;
+                                                   OptionCaptionML=ENU=" ,Header,Envelope";
+                                                   OptionString=[ ,Header,Envelope] }
+    { 51  ;   ;Header No.          ;Integer       ;TableRelation=IF (Header Type=CONST(Header)) "eDoc. Outbound Header"."Header No."
+                                                                 ELSE IF (Header Type=CONST(Envelope)) "eDoc. Outbound Envelope"."Envelope No.";
+                                                   DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Header No.;
+                                                   Editable=No }
+    { 60  ;   ;Document Type       ;Option        ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Document Type;
+                                                   OptionCaptionML=ENU=" ,Invoice,Credit Memo,,,,,,,,,Reminder,Fin. Charge";
+                                                   OptionString=[ ,Invoice,Credit Memo,,,,,,,,,Reminder,Fin. Charge] }
+    { 61  ;   ;Document No.        ;Code20        ;TableRelation=IF (Document Type=CONST(Invoice)) "Sales Invoice Header".No. WHERE (No.=FIELD(Document No.))
+                                                                 ELSE IF (Document Type=CONST(Credit Memo)) "Sales Credit Memo Header".No. WHERE (No.=FIELD(Document No.));
+                                                   DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Document No. }
+    { 70  ;   ;File Name           ;Text250       ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=File Name }
+    { 71  ;   ;File Upload Id      ;Text50        ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=File Upload Id }
+    { 80  ;   ;Exch. System Status ;Option        ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Exch. System Status;
+                                                   OptionCaptionML=ENU=,Uploaded,,,,Rejected,Not Delivered,,,,Delivered;
+                                                   OptionString=,Uploaded,,,,Rejected,Not Delivered,,,,Delivered }
+    { 81  ;   ;Exch. System Last Message;Text60   ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Exch. System Last Message }
+    { 82  ;   ;Exch. System Updated;DateTime      ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Exch. System Updated }
+    { 83  ;   ;Upload Last Message ;Text60        ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Upload Last Message }
+    { 84  ;   ;Upload Last Update  ;DateTime      ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Upload Last Update }
+    { 85  ;   ;Doc. Unique Id      ;Text80        ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Doc. Unique Id;
+                                                   Description=EU.0114065 }
+  }
+  KEYS
+  {
+    {    ;Entry No.                               ;Clustered=Yes }
+  }
+  FIELDGROUPS
+  {
+  }
+  CODE
+  {
+    VAR
+      C_INC_SuccessfullyTransferred@10136100 : TextConst 'ENU=%1 %2 %3 successfully transferred to %4';
+      CustG@11406501 : Record 18;
+      eDocExchSystemSetupG@11406502 : Record 5204626;
+      ClientFilePathG@11406503 : Text;
+      C_INC_Invoice@11406504 : TextConst 'ENU=Invoice';
+      C_INC_CreditMemo@11406505 : TextConst 'ENU=Credit Memo';
+      ElectronicDocumentFormatG@11406506 : Record 61;
+
+    PROCEDURE InsertFromBufferHeader@9126300(eDocOutboundHeaderP@9126300 : Record 5204620;VAR DontDisplaySuccessMessageP@10136101 : Boolean);
+    VAR
+      eDocQueueL@9126301 : Record 5204624;
+      eDocExchSystemSetupL@10136100 : Record 5204626;
+      SalesInvHdrL@10136102 : Record 112;
+      eDocOutboundHeaderL@10136103 : Record 5204620;
+    BEGIN
+      eDocExchSystemSetupL.GET(eDocOutboundHeaderP."Layer Code", eDocOutboundHeaderP."Requirement Code");
+      eDocQueueL.INIT;
+      eDocQueueL.Status := eDocQueueL.Status::Pending;
+      eDocQueueL."Layer Code" := eDocOutboundHeaderP."Layer Code";
+      eDocQueueL."Requirement Code" := eDocOutboundHeaderP."Requirement Code";
+      eDocQueueL."Creation Date" := TODAY;
+      eDocQueueL."Creation Time" := TIME;
+      eDocQueueL."Created by User" := USERID;
+      eDocQueueL."Header Type" := eDocQueueL."Header Type"::Header;
+      eDocQueueL."Header No." := eDocOutboundHeaderP."Header No.";
+      IF eDocOutboundHeaderP."Document Type" = eDocOutboundHeaderP."Document Type"::Invoice THEN
+        eDocQueueL."Document Type" := eDocQueueL."Document Type"::Invoice
+      ELSE
+        eDocQueueL."Document Type" := eDocQueueL."Document Type"::"Credit Memo";
+
+      eDocQueueL."Document No." := eDocOutboundHeaderP."Document No.";
+      eDocQueueL."Transfer Type" := eDocExchSystemSetupL."Transfer Type";
+      // Start EU.0114065
+      eDocQueueL."Doc. Unique Id" := eDocOutboundHeaderP."Doc. Unique Id";
+      // Stop EU.0114065
+      eDocQueueL.INSERT(TRUE);
+
+      eDocOutboundHeaderL.GET(eDocOutboundHeaderP."Header No.");
+      eDocOutboundHeaderL.Status := eDocOutboundHeaderL.Status::Queued;
+      eDocOutboundHeaderL.MODIFY;
+
+      IF NOT DontDisplaySuccessMessageP THEN
+        MESSAGE(
+          C_INC_SuccessfullyTransferred,
+          FORMAT(eDocQueueL."Document Type"),
+          SalesInvHdrL.FIELDCAPTION("No."),
+          eDocOutboundHeaderP."Document No.",
+          eDocQueueL.TABLECAPTION);
+      DontDisplaySuccessMessageP := TRUE;
+    END;
+
+    PROCEDURE QueueInvoiceHeader@9126301(SalesInvHdrP@9126301 : Record 112;eDocExchSystemSetupP@9126300 : Record 5204626;VAR DontDisplaySuccessMessageP@10136100 : Boolean);
+    VAR
+      eDocQueueL@9126302 : Record 5204624;
+    BEGIN
+      eDocQueueL.INIT;
+      eDocQueueL."Document Type" := eDocQueueL."Document Type"::Invoice;
+      eDocQueueL."Document No." := SalesInvHdrP."No.";
+      // Start EU.0114065
+      eDocQueueL."Doc. Unique Id" := SalesInvHdrP."Doc. Unique Id";
+      // Stop EU.0114065
+
+      UpdateeDocQueuefromExchangeSetup(eDocExchSystemSetupP, eDocQueueL);
+      eDocQueueL.INSERT(TRUE);
+      IF NOT DontDisplaySuccessMessageP THEN
+        MESSAGE(
+          C_INC_SuccessfullyTransferred,
+          FORMAT(eDocQueueL."Document Type"),
+          SalesInvHdrP.FIELDCAPTION("No."),
+          SalesInvHdrP."No.",
+          eDocQueueL.TABLECAPTION);
+      DontDisplaySuccessMessageP := TRUE;
+    END;
+
+    PROCEDURE QueueCreditMemoHeader@9126302(SalesCrMemoHdrP@10136100 : Record 114;eDocExchSystemSetupP@10136101 : Record 5204626;VAR DontDisplaySuccessMessageP@10136103 : Boolean);
+    VAR
+      eDocQueueL@10136102 : Record 5204624;
+    BEGIN
+      eDocQueueL.INIT;
+      eDocQueueL."Document Type" := eDocQueueL."Document Type"::"Credit Memo";
+      eDocQueueL."Document No." := SalesCrMemoHdrP."No.";
+      // Start EU.0114065
+      eDocQueueL."Doc. Unique Id" := SalesCrMemoHdrP."Doc. Unique Id";
+      // Stop EU.0114065
+      UpdateeDocQueuefromExchangeSetup(eDocExchSystemSetupP, eDocQueueL);
+      eDocQueueL.INSERT(TRUE);
+      IF NOT DontDisplaySuccessMessageP THEN
+        MESSAGE(
+          C_INC_SuccessfullyTransferred,
+          FORMAT(eDocQueueL."Document Type"),
+          SalesCrMemoHdrP.FIELDCAPTION("No."),
+          SalesCrMemoHdrP."No.",
+          eDocQueueL.TABLECAPTION);
+      DontDisplaySuccessMessageP := TRUE;
+    END;
+
+    PROCEDURE QueueReminder@9126303(IssuedReminderHeaderP@10136100 : Record 297;eDocExchSystemSetupP@10136102 : Record 5204626);
+    VAR
+      eDocQueueL@10136103 : Record 5204624;
+    BEGIN
+      eDocQueueL.INIT;
+      eDocQueueL."Document Type" := eDocQueueL."Document Type"::Reminder;
+      eDocQueueL."Document No." := IssuedReminderHeaderP."No.";
+      UpdateeDocQueuefromExchangeSetup(eDocExchSystemSetupP, eDocQueueL);
+      eDocQueueL.INSERT(TRUE);
+    END;
+
+    PROCEDURE QueueFinanceCharge@9126304(IssuedFinChargeMemoHeaderP@10136100 : Record 304;eDocExchSystemSetupP@10136102 : Record 5204626);
+    VAR
+      eDocQueueL@10136103 : Record 5204624;
+    BEGIN
+      eDocQueueL.INIT;
+      eDocQueueL."Document Type" := eDocQueueL."Document Type"::"Fin. Charge";
+      eDocQueueL."Document No." := IssuedFinChargeMemoHeaderP."No.";
+      UpdateeDocQueuefromExchangeSetup(eDocExchSystemSetupP, eDocQueueL);
+      eDocQueueL.INSERT(TRUE);
+    END;
+
+    PROCEDURE QueueEnvelope@10136104(eDocOutboundEnvelopeP@9126301 : Record 5204623);
+    VAR
+      eDocQueueL@9126302 : Record 5204624;
+      eDocExchSystemSetupL@10136100 : Record 5204626;
+    BEGIN
+      eDocQueueL.INIT;
+      eDocQueueL."Header No." := eDocOutboundEnvelopeP."Envelope No.";
+      eDocQueueL."Header Type" := eDocQueueL."Header Type"::Envelope;
+      eDocExchSystemSetupL.GET(eDocOutboundEnvelopeP."Layer Code", eDocOutboundEnvelopeP."Requirement Code");
+      UpdateeDocQueuefromExchangeSetup(eDocExchSystemSetupL, eDocQueueL);
+      eDocQueueL.INSERT(TRUE);
+    END;
+
+    PROCEDURE SendSelectedDocuments@10136101();
+    VAR
+      IssuedFinChargeMemoHeaderL@10136100 : Record 304;
+      IssuedReminderHeaderL@10136101 : Record 297;
+      UserSessionUnitL@11406500 : Codeunit 5028665;
+    BEGIN
+      OnBeforeSendSelectedDocument();
+      eDocExchSystemSetupG.GET("Layer Code", "Requirement Code");
+      IF Status = Status::Completed THEN
+        EXIT;
+      CASE "Document Type" OF
+        "Document Type"::Invoice:
+      // Start EU.0114065
+          BEGIN
+            IF eDocExchSystemSetupG."E-Mail Attachment Type" = eDocExchSystemSetupG."E-Mail Attachment Type"::" " THEN
+              EXIT;
+            IF "Transfer Type" = "Transfer Type"::"E-Mail" THEN
+              SendInvoicebyEmail()
+            ELSE
+              IF "Transfer Type" = "Transfer Type"::"Save to Disk" THEN BEGIN
+                IF eDocExchSystemSetupG."E-Mail Attachment Type" <> eDocExchSystemSetupG."E-Mail Attachment Type"::"Electronic Doc." THEN
+                  SaveInvoiceToDisk();
+                IF eDocExchSystemSetupG."E-Mail Attachment Type" IN [eDocExchSystemSetupG."E-Mail Attachment Type"::Both, eDocExchSystemSetupG."E-Mail Attachment Type"::"Electronic Doc."] THEN
+                  SendHeaderbyExChangeSystem();
+              END ELSE
+                SendHeaderbyExChangeSystem();
+          END;
+        "Document Type"::"Credit Memo":
+          BEGIN
+            IF eDocExchSystemSetupG."E-Mail Attachment Type" = eDocExchSystemSetupG."E-Mail Attachment Type"::" " THEN
+              EXIT;
+            IF "Transfer Type" = "Transfer Type"::"E-Mail" THEN
+              SendCrMemobyEmail()
+      // Start EU.0114065
+            ELSE
+              IF "Transfer Type" = "Transfer Type"::"Save to Disk" THEN BEGIN
+                IF eDocExchSystemSetupG."E-Mail Attachment Type" <> eDocExchSystemSetupG."E-Mail Attachment Type"::"Electronic Doc." THEN
+                  SaveCrMemoToDisk();
+                IF eDocExchSystemSetupG."E-Mail Attachment Type" IN [eDocExchSystemSetupG."E-Mail Attachment Type"::Both, eDocExchSystemSetupG."E-Mail Attachment Type"::"Electronic Doc."] THEN
+                  SendHeaderbyExChangeSystem();
+      // Stop EU.0114065
+              END ELSE
+                SendHeaderbyExChangeSystem();
+          END;
+      // Stop EU.0114065
+        "Document Type"::"Fin. Charge":
+          BEGIN
+            IssuedFinChargeMemoHeaderL.SETRANGE("No.", "Document No.");
+            IF IssuedFinChargeMemoHeaderL.FINDFIRST THEN
+              IssuedFinChargeMemoHeaderL.PrintRecords(FALSE, TRUE, TRUE);
+          END;
+        "Document Type"::Reminder:
+          BEGIN
+            IssuedReminderHeaderL.SETRANGE("No.", "Document No.");
+            IF IssuedReminderHeaderL.FINDFIRST THEN
+              IssuedReminderHeaderL.PrintRecords(FALSE, TRUE, TRUE);
+          END;
+      END;
+      Status := Status::Completed;
+      MODIFY;
+      UserSessionUnitL.SetCalledFromeDoc(FALSE, eDocExchSystemSetupG."E-Mail Attachment Type"::" ", '');
+      UserSessionUnitL.SetServerFilePath('', '');
+    END;
+
+    PROCEDURE SendSelectedEnvelope@10136105();
+    BEGIN
+      OnSendEnvelopebyExChangeSystem(Rec);
+      Status := Status::Completed;
+      MODIFY;
+    END;
+
+    LOCAL PROCEDURE SendInvoicebyEmail@10136102();
+    VAR
+      SalesInvoiceHeaderL@10136100 : Record 112;
+      eDocExchSystemSetupL@11406500 : Record 5204626;
+      DocumentSendingProfileL@11406502 : Record 60;
+      UserSessionUnitL@11406501 : Codeunit 5028665;
+    BEGIN
+      SalesInvoiceHeaderL.SETRANGE("No.", "Document No.");
+      SalesInvoiceHeaderL.FINDFIRST;
+      // Start EU.0114065
+      eDocExchSystemSetupL.GET("Layer Code", "Requirement Code");
+      ClientFilePathG := GetAttachmentFileName(eDocExchSystemSetupL, "Doc. Unique Id", "Header No.", "Requirement Code", SalesInvoiceHeaderL."No.", SalesInvoiceHeaderL."Document Date", 'pdf');
+      IF SalesInvoiceHeaderL."Order Type" = SalesInvoiceHeaderL."Order Type"::"Parts Sales & Purchases" THEN
+        IF eDocExchSystemSetupL."E-Mail Attachment Type" = eDocExchSystemSetupL."E-Mail Attachment Type"::PDF THEN BEGIN
+          UserSessionUnitL.SetCalledFromeDoc(TRUE, DocumentSendingProfileL."E-Mail Attachment"::PDF, ClientFilePathG);
+          SalesInvoiceHeaderL.EmailRecords(FALSE);
+          UserSessionUnitL.SetCalledFromeDoc(FALSE, DocumentSendingProfileL."E-Mail Attachment"::PDF, '');
+        END ELSE BEGIN
+          IF eDocExchSystemSetupL."E-Mail Attachment Type" = eDocExchSystemSetupL."E-Mail Attachment Type"::"Electronic Doc." THEN
+            UserSessionUnitL.SetCalledFromeDoc(TRUE, DocumentSendingProfileL."E-Mail Attachment"::"Electronic Document", '')
+          ELSE
+            UserSessionUnitL.SetCalledFromeDoc(TRUE, DocumentSendingProfileL."E-Mail Attachment"::"PDF & Electronic Document", ClientFilePathG);
+          SendHeaderbyExChangeSystem();
+          SalesInvoiceHeaderL.SendRecords();
+          UserSessionUnitL.SetCalledFromeDoc(FALSE, DocumentSendingProfileL."E-Mail Attachment"::PDF, '');
+        END;
+      // Stop EU.0114065
+      IF SalesInvoiceHeaderL."Order Type" = SalesInvoiceHeaderL."Order Type"::"Vehicle Sales & Purchases" THEN
+      // Start EU.0114065
+        IF eDocExchSystemSetupL."E-Mail Attachment Type" = eDocExchSystemSetupL."E-Mail Attachment Type"::PDF THEN BEGIN
+          UserSessionUnitL.SetCalledFromeDoc(TRUE, DocumentSendingProfileL."E-Mail Attachment"::PDF, ClientFilePathG);
+          SalesInvoiceHeaderL.EmailVehicleRecords(FALSE);
+          UserSessionUnitL.SetCalledFromeDoc(FALSE, DocumentSendingProfileL."E-Mail Attachment"::PDF, '');
+        END ELSE BEGIN
+          IF eDocExchSystemSetupL."E-Mail Attachment Type" = eDocExchSystemSetupL."E-Mail Attachment Type"::"Electronic Doc." THEN
+            UserSessionUnitL.SetCalledFromeDoc(TRUE, DocumentSendingProfileL."E-Mail Attachment"::"Electronic Document", '')
+          ELSE
+            UserSessionUnitL.SetCalledFromeDoc(TRUE, DocumentSendingProfileL."E-Mail Attachment"::"PDF & Electronic Document", ClientFilePathG);
+          SendHeaderbyExChangeSystem();
+          SalesInvoiceHeaderL.SendVehicleRecords();
+          UserSessionUnitL.SetCalledFromeDoc(FALSE, DocumentSendingProfileL."E-Mail Attachment"::PDF, '');
+        END;
+      // Stop EU.0114065
+      IF SalesInvoiceHeaderL."Order Type" = SalesInvoiceHeaderL."Order Type"::Service THEN
+      // Start EU.0114065
+        IF eDocExchSystemSetupL."E-Mail Attachment Type" = eDocExchSystemSetupL."E-Mail Attachment Type"::PDF THEN BEGIN
+          UserSessionUnitL.SetCalledFromeDoc(TRUE, DocumentSendingProfileL."E-Mail Attachment"::PDF, ClientFilePathG);
+          SalesInvoiceHeaderL.EmailServiceRecords(FALSE);
+          UserSessionUnitL.SetCalledFromeDoc(FALSE, DocumentSendingProfileL."E-Mail Attachment"::PDF, '');
+        END ELSE BEGIN
+          IF eDocExchSystemSetupL."E-Mail Attachment Type" = eDocExchSystemSetupL."E-Mail Attachment Type"::"Electronic Doc." THEN
+            UserSessionUnitL.SetCalledFromeDoc(TRUE, DocumentSendingProfileL."E-Mail Attachment"::"Electronic Document", '')
+          ELSE
+            UserSessionUnitL.SetCalledFromeDoc(TRUE, DocumentSendingProfileL."E-Mail Attachment"::"PDF & Electronic Document", ClientFilePathG);
+          SendHeaderbyExChangeSystem();
+          SalesInvoiceHeaderL.SendServiceRecords();
+          UserSessionUnitL.SetCalledFromeDoc(FALSE, DocumentSendingProfileL."E-Mail Attachment"::PDF, '');
+        END;
+      // Stop EU.0114065
+    END;
+
+    LOCAL PROCEDURE SendCrMemobyEmail@10136103();
+    VAR
+      SalesCreditMemoHeaderL@10136100 : Record 114;
+      eDocExchSystemSetupL@11406500 : Record 5204626;
+      DocumentSendingProfileL@11406502 : Record 60;
+      UserSessionUnitL@11406501 : Codeunit 5028665;
+    BEGIN
+      SalesCreditMemoHeaderL.SETRANGE("No.", "Document No.");
+      SalesCreditMemoHeaderL.FINDFIRST;
+      // Start EU.0114065
+      eDocExchSystemSetupL.GET("Layer Code", "Requirement Code");
+      ClientFilePathG := GetAttachmentFileName(eDocExchSystemSetupL, "Doc. Unique Id", "Header No.", "Requirement Code", SalesCreditMemoHeaderL."No.", SalesCreditMemoHeaderL."Document Date", 'pdf');
+      IF SalesCreditMemoHeaderL."Order Type" = SalesCreditMemoHeaderL."Order Type"::"Parts Sales & Purchases" THEN
+        IF eDocExchSystemSetupL."E-Mail Attachment Type" = eDocExchSystemSetupL."E-Mail Attachment Type"::PDF THEN BEGIN
+          UserSessionUnitL.SetCalledFromeDoc(TRUE, DocumentSendingProfileL."E-Mail Attachment"::PDF, ClientFilePathG);
+          SalesCreditMemoHeaderL.EmailRecords(FALSE);
+          UserSessionUnitL.SetCalledFromeDoc(FALSE, DocumentSendingProfileL."E-Mail Attachment"::PDF, '');
+        END ELSE BEGIN
+          IF eDocExchSystemSetupL."E-Mail Attachment Type" = eDocExchSystemSetupL."E-Mail Attachment Type"::"Electronic Doc." THEN
+            UserSessionUnitL.SetCalledFromeDoc(TRUE, DocumentSendingProfileL."E-Mail Attachment"::"Electronic Document", '')
+          ELSE
+            UserSessionUnitL.SetCalledFromeDoc(TRUE, DocumentSendingProfileL."E-Mail Attachment"::"PDF & Electronic Document", ClientFilePathG);
+          SendHeaderbyExChangeSystem();
+          SalesCreditMemoHeaderL.SendRecords();
+          UserSessionUnitL.SetCalledFromeDoc(FALSE, DocumentSendingProfileL."E-Mail Attachment"::PDF, '');
+        END;
+      // Stop EU.0114065
+      IF SalesCreditMemoHeaderL."Order Type" = SalesCreditMemoHeaderL."Order Type"::"Vehicle Sales & Purchases" THEN
+      // Start EU.0114065
+        IF eDocExchSystemSetupL."E-Mail Attachment Type" = eDocExchSystemSetupL."E-Mail Attachment Type"::PDF THEN BEGIN
+          UserSessionUnitL.SetCalledFromeDoc(TRUE, DocumentSendingProfileL."E-Mail Attachment"::PDF, ClientFilePathG);
+          SalesCreditMemoHeaderL.EmailVehicleRecords(FALSE);
+          UserSessionUnitL.SetCalledFromeDoc(FALSE, DocumentSendingProfileL."E-Mail Attachment"::PDF, '');
+        END ELSE BEGIN
+          IF eDocExchSystemSetupL."E-Mail Attachment Type" = eDocExchSystemSetupL."E-Mail Attachment Type"::"Electronic Doc." THEN
+            UserSessionUnitL.SetCalledFromeDoc(TRUE, DocumentSendingProfileL."E-Mail Attachment"::"Electronic Document", '')
+          ELSE
+            UserSessionUnitL.SetCalledFromeDoc(TRUE, DocumentSendingProfileL."E-Mail Attachment"::"PDF & Electronic Document", ClientFilePathG);
+          SendHeaderbyExChangeSystem();
+          SalesCreditMemoHeaderL.SendVehicleRecords();
+          UserSessionUnitL.SetCalledFromeDoc(FALSE, DocumentSendingProfileL."E-Mail Attachment"::PDF, '');
+        END;
+      // Stop EU.0114065
+      IF SalesCreditMemoHeaderL."Order Type" = SalesCreditMemoHeaderL."Order Type"::Service THEN
+      // Start EU.0114065
+        IF eDocExchSystemSetupL."E-Mail Attachment Type" = eDocExchSystemSetupL."E-Mail Attachment Type"::PDF THEN BEGIN
+          UserSessionUnitL.SetCalledFromeDoc(TRUE, DocumentSendingProfileL."E-Mail Attachment"::PDF, ClientFilePathG);
+          SalesCreditMemoHeaderL.EmailServiceRecords(FALSE);
+          UserSessionUnitL.SetCalledFromeDoc(FALSE, DocumentSendingProfileL."E-Mail Attachment"::PDF, '');
+        END ELSE BEGIN
+          IF eDocExchSystemSetupL."E-Mail Attachment Type" = eDocExchSystemSetupL."E-Mail Attachment Type"::"Electronic Doc." THEN
+            UserSessionUnitL.SetCalledFromeDoc(TRUE, DocumentSendingProfileL."E-Mail Attachment"::"Electronic Document", '')
+          ELSE
+            UserSessionUnitL.SetCalledFromeDoc(TRUE, DocumentSendingProfileL."E-Mail Attachment"::"PDF & Electronic Document", ClientFilePathG);
+          SendHeaderbyExChangeSystem();
+          SalesCreditMemoHeaderL.SendServiceRecords();
+          UserSessionUnitL.SetCalledFromeDoc(FALSE, DocumentSendingProfileL."E-Mail Attachment"::PDF, '');
+        END;
+      // Stop EU.0114065
+    END;
+
+    LOCAL PROCEDURE SendHeaderbyExChangeSystem@10136108();
+    BEGIN
+      OnSendHeaderbyExChangeSystem(Rec);
+    END;
+
+    LOCAL PROCEDURE UpdateeDocQueuefromExchangeSetup@10136107(eDocExchSystemSetupP@10136100 : Record 5204626;VAR eDocOutboundQueueP@10136101 : Record 5204624);
+    BEGIN
+      eDocOutboundQueueP.Status := eDocOutboundQueueP.Status::Pending;
+      eDocOutboundQueueP."Layer Code" := eDocExchSystemSetupP."Layer Code";
+      eDocOutboundQueueP."Requirement Code" := eDocExchSystemSetupP."Requirement Code";
+      eDocOutboundQueueP."Creation Date" := TODAY;
+      eDocOutboundQueueP."Creation Time" := TIME;
+      eDocOutboundQueueP."Created by User" := USERID;
+      eDocOutboundQueueP."Transfer Type" := eDocExchSystemSetupP."Transfer Type";
+    END;
+
+    PROCEDURE SetCancelled@10136100();
+    VAR
+      eDocOutboundHeaderL@10136102 : Record 5204620;
+    BEGIN
+      IF Status = Status::Completed THEN
+        EXIT;
+
+      Status := Status::Cancelled;
+      MODIFY;
+      IF NOT eDocOutboundHeaderL.GET("Header No.") THEN
+        EXIT;
+      eDocOutboundHeaderL.Status := eDocOutboundHeaderL.Status::Prepared;
+      eDocOutboundHeaderL.MODIFY;
+    END;
+
+    PROCEDURE PrintRecords@1(SalesInvoiceHeaderP@11406500 : Record 112);
+    VAR
+      ReportSelectionL@1001 : Record 77;
+      SalesInvoiceHeaderL@11406501 : Record 112;
+      UserSessionUnitL@1055600 : Codeunit 5028665;
+      PathL@1109400002 : Text[1024];
+      RecordRefL@1109400004 : RecordRef;
+    BEGIN
+      // Start EU.0114065
+      eDocExchSystemSetupG.GET("Layer Code", "Requirement Code");
+      SalesInvoiceHeaderL.SETRANGE("No.", SalesInvoiceHeaderP."No.");
+      SalesInvoiceHeaderL.FINDFIRST;
+      CASE TRUE OF
+        SalesInvoiceHeaderP."General Document":
+          ReportSelectionL.SETRANGE(Usage, ReportSelectionL.Usage::"Gen.S.Inv.");
+        SalesInvoiceHeaderP.Prepayment:
+          ReportSelectionL.SETRANGE(Usage, ReportSelectionL.Usage::"Prepmt. Invoice");
+        ELSE
+          ReportSelectionL.SETRANGE(Usage, ReportSelectionL.Usage::"S.Inv.");
+      END;
+      ReportSelectionL.GetReportSelection(ReportSelectionL,SalesInvoiceHeaderP."Shortcut Dimension 2 Code",SalesInvoiceHeaderP."Location Code");
+      REPEAT
+        RecordRefL.GETTABLE(ReportSelectionL);
+        UserSessionUnitL.SetRecordRef(RecordRefL);
+        ClientFilePathG := GetAttachmentFileName(eDocExchSystemSetupG, "Doc. Unique Id", "Header No.", "Requirement Code", SalesInvoiceHeaderP."No.", SalesInvoiceHeaderP."Document Date", 'pdf');
+        REPORT.SAVEASPDF(ReportSelectionL."Report ID", eDocExchSystemSetupG."Export Path" + ClientFilePathG, SalesInvoiceHeaderL);
+      UNTIL ReportSelectionL.NEXT = 0;
+      // Stop EU.0114065
+    END;
+
+    PROCEDURE PrintVehicleRecords@5025351(SalesInvoiceHeaderP@11406500 : Record 112);
+    VAR
+      ReportSelectionL@1109400001 : Record 5025576;
+      SalesInvoiceHeaderL@11406501 : Record 112;
+      RecordRefL@1109400004 : RecordRef;
+      UserSessionUnitL@1000000000 : Codeunit 5028665;
+    BEGIN
+      // Start EU.0114065
+      eDocExchSystemSetupG.GET("Layer Code", "Requirement Code");
+      SalesInvoiceHeaderL.SETRANGE("No.", SalesInvoiceHeaderP."No.");
+      SalesInvoiceHeaderL.FINDFIRST;
+      CASE TRUE OF
+        SalesInvoiceHeaderP.Prepayment:
+          ReportSelectionL.SETRANGE(Usage, ReportSelectionL.Usage::"Prepmt. Invoice");
+        ELSE
+          ReportSelectionL.SETRANGE(Usage, ReportSelectionL.Usage::"Posted Invoice");
+      END;
+      ReportSelectionL.GetReportSelection(ReportSelectionL, SalesInvoiceHeaderP."Shortcut Dimension 2 Code", SalesInvoiceHeaderP."Location Code");
+      REPEAT
+        RecordRefL.GETTABLE(ReportSelectionL);
+        UserSessionUnitL.SetRecordRef(RecordRefL);
+        ClientFilePathG := GetAttachmentFileName(eDocExchSystemSetupG, "Doc. Unique Id", "Header No.", "Requirement Code", SalesInvoiceHeaderP."No.", SalesInvoiceHeaderP."Document Date", 'pdf');
+        REPORT.SAVEASPDF(ReportSelectionL."Report ID", eDocExchSystemSetupG."Export Path" + ClientFilePathG, SalesInvoiceHeaderL);
+      UNTIL ReportSelectionL.NEXT = 0;
+      // Stop EU.0114065
+    END;
+
+    PROCEDURE PrintServiceRecords@5025352(SalesInvoiceHeaderP@11406500 : Record 112);
+    VAR
+      ServiceReportSelectionL@1109400001 : Record 5045389;
+      SalesInvoiceHeaderL@11406501 : Record 112;
+      SalesHdrL@1055602 : Record 36;
+      UserSessionUnitL@1055600 : Codeunit 5028665;
+      RecordRefL@1055601 : RecordRef;
+    BEGIN
+      // Start EU.0114065
+      eDocExchSystemSetupG.GET("Layer Code", "Requirement Code");
+      SalesInvoiceHeaderL.SETRANGE("No.", SalesInvoiceHeaderP."No.");
+      SalesInvoiceHeaderL.FINDFIRST;
+      PrintOneServiceRecord(SalesInvoiceHeaderP);
+
+      IF CustG.IsServiceContractCustomer(SalesInvoiceHeaderP."Bill-to Customer No.") THEN BEGIN
+        ServiceReportSelectionL.RESET;
+        ServiceReportSelectionL.SETRANGE(Usage, ServiceReportSelectionL.Usage::"Service Contract Inclusive");
+        ServiceReportSelectionL.GetReportSelection(ServiceReportSelectionL, SalesInvoiceHeaderP."Shortcut Dimension 2 Code",
+        SalesInvoiceHeaderP."Location Code");
+        REPEAT
+          RecordRefL.GETTABLE(ServiceReportSelectionL);
+          UserSessionUnitL.SetRecordRef(RecordRefL);
+          ClientFilePathG := GetAttachmentFileName(eDocExchSystemSetupG, "Doc. Unique Id", "Header No.", "Requirement Code", SalesInvoiceHeaderP."No.", SalesInvoiceHeaderP."Document Date", 'pdf');
+          REPORT.SAVEASPDF(ServiceReportSelectionL."Report ID", eDocExchSystemSetupG."Export Path" + ClientFilePathG, SalesInvoiceHeaderL);
+        UNTIL ServiceReportSelectionL.NEXT = 0;
+      END;
+      // Stop EU.0114065
+    END;
+
+    LOCAL PROCEDURE SaveInvoiceToDisk@11406510();
+    VAR
+      SalesInvoiceHeaderL@10136100 : Record 112;
+      SkipSaveReportL@11406500 : Boolean;
+    BEGIN
+      // Start EU.0114065
+      OnSaveInvoiceToDisk(SkipSaveReportL);
+      IF SkipSaveReportL THEN
+        EXIT;
+      IF (eDocExchSystemSetupG."Requirement Code" <> 'PDF') AND (eDocExchSystemSetupG."Requirement Code" <> 'PEPPOLV3') THEN
+        EXIT;
+      SalesInvoiceHeaderL.SETRANGE("No.", "Document No.");
+      SalesInvoiceHeaderL.FINDFIRST;
+      IF SalesInvoiceHeaderL."Order Type" = SalesInvoiceHeaderL."Order Type"::"Parts Sales & Purchases" THEN
+        PrintRecords(SalesInvoiceHeaderL);
+      IF SalesInvoiceHeaderL."Order Type" = SalesInvoiceHeaderL."Order Type"::"Vehicle Sales & Purchases" THEN
+        PrintVehicleRecords(SalesInvoiceHeaderL);
+      IF SalesInvoiceHeaderL."Order Type" = SalesInvoiceHeaderL."Order Type"::Service THEN
+        PrintServiceRecords(SalesInvoiceHeaderL);
+      // Stop EU.0114065
+    END;
+
+    LOCAL PROCEDURE SaveCrMemoToDisk@11406511();
+    VAR
+      SalesCreditMemoHeaderL@10136100 : Record 114;
+      SkipSaveReportL@11406500 : Boolean;
+    BEGIN
+      // Start EU.0114065
+      OnSaveCrMemoToDisk(SkipSaveReportL);
+      IF SkipSaveReportL THEN
+        EXIT;
+      IF (eDocExchSystemSetupG."Requirement Code" <> 'PDF') AND (eDocExchSystemSetupG."Requirement Code" <> 'PEPPOLV3') THEN
+        EXIT;
+      SalesCreditMemoHeaderL.SETRANGE("No.", "Document No.");
+      SalesCreditMemoHeaderL.FINDFIRST;
+      IF SalesCreditMemoHeaderL."Order Type" = SalesCreditMemoHeaderL."Order Type"::"Parts Sales & Purchases" THEN
+        PrintCrMemoRecords(SalesCreditMemoHeaderL);
+      IF SalesCreditMemoHeaderL."Order Type" = SalesCreditMemoHeaderL."Order Type"::"Vehicle Sales & Purchases" THEN
+        PrintVehicleCrMemoRecords(SalesCreditMemoHeaderL);
+      IF SalesCreditMemoHeaderL."Order Type" = SalesCreditMemoHeaderL."Order Type"::Service THEN
+        PrintServiceCrMemoRecords(SalesCreditMemoHeaderL);
+      // Stop EU.0114065
+    END;
+
+    PROCEDURE PrintCrMemoRecords@11406502(SalesCreditMemoHeaderP@11406500 : Record 114);
+    VAR
+      ReportSelectionL@1001 : Record 77;
+      SalesCreditMemoHeaderL@11406501 : Record 114;
+      RecordrefL@1109400001 : RecordRef;
+      UserSessionUnitL@1109400000 : Codeunit 5028665;
+    BEGIN
+      // Start EU.0114065
+      eDocExchSystemSetupG.GET("Layer Code", "Requirement Code");
+      SalesCreditMemoHeaderL.SETRANGE("No.", SalesCreditMemoHeaderP."No.");
+      SalesCreditMemoHeaderL.FINDFIRST;
+      IF SalesCreditMemoHeaderP.Prepayment THEN
+        ReportSelectionL.SETRANGE(Usage,ReportSelectionL.Usage::"Prepmt. Cr. Memo")
+      ELSE
+        IF SalesCreditMemoHeaderP."General Document" THEN
+          ReportSelectionL.SETRANGE(Usage, ReportSelectionL.Usage::"Gen.S.Cr. Memo")
+      ELSE
+        ReportSelectionL.SETRANGE(Usage,ReportSelectionL.Usage::"S.Cr.Memo");
+      ReportSelectionL.GetReportSelection(ReportSelectionL, SalesCreditMemoHeaderP."Shortcut Dimension 2 Code", SalesCreditMemoHeaderP."Location Code");
+      REPEAT
+        RecordrefL.GETTABLE(ReportSelectionL);
+        UserSessionUnitL.SetRecordRef(RecordrefL);
+        ClientFilePathG := GetAttachmentFileName(eDocExchSystemSetupG, "Doc. Unique Id", "Header No.", "Requirement Code", SalesCreditMemoHeaderP."No.", SalesCreditMemoHeaderP."Document Date", 'pdf');
+        REPORT.SAVEASPDF(ReportSelectionL."Report ID", eDocExchSystemSetupG."Export Path" + ClientFilePathG, SalesCreditMemoHeaderL);
+      UNTIL ReportSelectionL.NEXT = 0;
+      // Stop EU.0114065
+    END;
+
+    PROCEDURE PrintVehicleCrMemoRecords@11406504(SalesCreditMemoHeaderP@11406500 : Record 114);
+    VAR
+      ReportSelectionL@1109400001 : Record 5025576;
+      SalesCreditMemoHeaderL@11406501 : Record 114;
+      RecordrefL@1109400003 : RecordRef;
+      UserSessionUnitL@1109400002 : Codeunit 5028665;
+    BEGIN
+      // Start EU.0114065
+      eDocExchSystemSetupG.GET("Layer Code", "Requirement Code");
+      SalesCreditMemoHeaderL.SETRANGE("No.", SalesCreditMemoHeaderP."No.");
+      SalesCreditMemoHeaderL.FINDFIRST;
+      IF SalesCreditMemoHeaderP.Prepayment THEN
+        ReportSelectionL.SETRANGE(Usage,ReportSelectionL.Usage::"Prepmt. Cr. Memo")
+      ELSE
+        ReportSelectionL.SETRANGE(Usage,ReportSelectionL.Usage::"Posted Cr. Memo");
+      ReportSelectionL.GetReportSelection(ReportSelectionL, SalesCreditMemoHeaderP."Shortcut Dimension 2 Code", SalesCreditMemoHeaderP."Location Code");
+      REPEAT
+        RecordrefL.GETTABLE(ReportSelectionL);
+        UserSessionUnitL.SetRecordRef(RecordrefL);
+        ClientFilePathG := GetAttachmentFileName(eDocExchSystemSetupG, "Doc. Unique Id", "Header No.", "Requirement Code", SalesCreditMemoHeaderP."No.", SalesCreditMemoHeaderP."Document Date", 'pdf');
+        REPORT.SAVEASPDF(ReportSelectionL."Report ID", eDocExchSystemSetupG."Export Path" + ClientFilePathG, SalesCreditMemoHeaderL);
+      UNTIL ReportSelectionL.NEXT = 0;
+      // Stop EU.0114065
+    END;
+
+    PROCEDURE PrintServiceCrMemoRecords@11406506(SalesCreditMemoHeaderP@11406500 : Record 114);
+    VAR
+      ReportSelectionL@1109400001 : Record 5045389;
+      SalesCreditMemoHeaderL@11406501 : Record 114;
+      ServHeaderL@1109400002 : Record 5025624;
+      RecordrefL@1109400004 : RecordRef;
+      UserSessionUnitL@1109400003 : Codeunit 5028665;
+    BEGIN
+      // Start EU.0114065
+      eDocExchSystemSetupG.GET("Layer Code", "Requirement Code");
+      SalesCreditMemoHeaderL.SETRANGE("No.", SalesCreditMemoHeaderP."No.");
+      SalesCreditMemoHeaderL.FINDFIRST;
+      IF ServHeaderL.IsInternalCustomer(SalesCreditMemoHeaderP."Bill-to Customer No.") THEN
+        ReportSelectionL.SETRANGE(Usage,ReportSelectionL.Usage::"Posted Internal Cr. Memo")
+      ELSE
+        ReportSelectionL.SETRANGE(Usage,ReportSelectionL.Usage::"Posted Cr. Memo");
+
+      IF SalesCreditMemoHeaderP.Prepayment THEN
+        ReportSelectionL.SETRANGE(Usage, ReportSelectionL.Usage::"Prepmt. Cr. Memo");
+
+      ReportSelectionL.GetReportSelection(ReportSelectionL, SalesCreditMemoHeaderP."Shortcut Dimension 2 Code", SalesCreditMemoHeaderP."Location Code");
+      REPEAT
+        RecordrefL.GETTABLE(ReportSelectionL);
+        UserSessionUnitL.SetRecordRef(RecordrefL);
+        ClientFilePathG := "Doc. Unique Id" + GetAttachmentFileName(eDocExchSystemSetupG, "Doc. Unique Id", "Header No.", "Requirement Code", SalesCreditMemoHeaderP."No.", SalesCreditMemoHeaderP."Document Date", 'pdf');
+        REPORT.SAVEASPDF(ReportSelectionL."Report ID", eDocExchSystemSetupG."Export Path" + ClientFilePathG, SalesCreditMemoHeaderL);
+      UNTIL ReportSelectionL.NEXT = 0;
+      // Stop EU.0114065
+    END;
+
+    PROCEDURE PrintOneServiceRecord@1055601(VAR SalesInvHdrP@1055602 : Record 112);
+    VAR
+      ServiceReportSelectionL@1055604 : Record 5045389;
+      SalesInvoiceHeaderL@11406500 : Record 112;
+      SalesHdrL@1055603 : Record 36;
+      UserSessionUnitL@1055601 : Codeunit 5028665;
+      RecordRefL@1055600 : RecordRef;
+    BEGIN
+      // @ Print the Service Invoice for one Posted Invoice Header without printing Service Contract reports.
+      // @ currently this function is called to directly perfrom a Proforema Print for unposted Service Invoices.
+      // @ In fact, the Service Contract report should not be part of the Proforma print.
+      // Start EU.0114065
+      eDocExchSystemSetupG.GET("Layer Code", "Requirement Code");
+      SalesInvoiceHeaderL.SETRANGE("No.",SalesInvHdrP."No.");
+      SalesInvoiceHeaderL.FINDFIRST;
+      CASE TRUE OF
+        SalesInvHdrP.Prepayment:
+          ServiceReportSelectionL.SETRANGE(Usage, ServiceReportSelectionL.Usage::"Prepmt. Invoice");
+        CustG.IsInternalCustomer(SalesInvHdrP."Bill-to Customer No."):
+          ServiceReportSelectionL.SETRANGE(Usage, ServiceReportSelectionL.Usage::"Posted Internal Invoice")
+        ELSE
+          ServiceReportSelectionL.SETRANGE(Usage, ServiceReportSelectionL.Usage::"Posted Invoice");
+      END;
+      ServiceReportSelectionL.GetReportSelection(ServiceReportSelectionL, SalesInvHdrP."Shortcut Dimension 2 Code", SalesInvHdrP."Location Code");
+      REPEAT
+        RecordRefL.GETTABLE(ServiceReportSelectionL);
+        UserSessionUnitL.SetRecordRef(RecordRefL);
+        ClientFilePathG := GetAttachmentFileName(eDocExchSystemSetupG, "Doc. Unique Id", "Header No.", "Requirement Code", SalesInvHdrP."No.", SalesInvHdrP."Document Date", 'pdf');
+        REPORT.SAVEASPDF(ServiceReportSelectionL."Report ID", eDocExchSystemSetupG."Export Path" + ClientFilePathG, SalesInvoiceHeaderL);
+      UNTIL ServiceReportSelectionL.NEXT = 0;
+      // Stop EU.0114065
+    END;
+
+    PROCEDURE GetAttachmentFileName@30(eDocExchSystemSetupP@11406500 : Record 5204626;DocIDP@11406501 : GUID;HeaderNoP@11406503 : Integer;RequirementCodeP@11406504 : Code[10];DocNoP@11406502 : Code[20];DocumentDateP@11406505 : Date;ExtensionP@11406506 : Text) : Text[250];
+    VAR
+      FileMgt@1000 : Codeunit 419;
+      DateTimeTextL@11406507 : Text;
+      DocumentDateL@11406508 : Text;
+    BEGIN
+      // Start EU.0114065
+      DateTimeTextL := FORMAT(TODAY, 0, '<Year4><Month,2><Day,2>');
+      DateTimeTextL += '_' + FORMAT(TIME, 0, '<Hours24,2><Minutes,2><Seconds,2>');
+      IF eDocExchSystemSetupP."File Name Format" = '' THEN
+        EXIT(ElectronicDocumentFormatG.GetAttachmentFileName(DocNoP, "Doc. Unique Id" + '_' + FORMAT("Document Type"), ExtensionP))
+      ELSE
+        BEGIN
+          DocumentDateL := FORMAT(DocumentDateP, 0, '<Year4><Month,2><Day,2>');
+          EXIT(
+            FileMgt.StripNotsupportChrInFileName(
+              COPYSTR(
+                STRSUBSTNO(eDocExchSystemSetupP."File Name Format", DocIDP, HeaderNoP, RequirementCodeP, DocNoP, DocumentDateL, DateTimeTextL), 1, 250)) + '.' + ExtensionP);
+        END;
+      // Stop EU.0114065
+    END;
+
+    [Integration(TRUE)]
+    LOCAL PROCEDURE OnSaveInvoiceToDisk@11406500(VAR SkipSaveReportP@11406500 : Boolean);
+    BEGIN
+    END;
+
+    [Integration(TRUE,FALSE)]
+    LOCAL PROCEDURE OnSaveCrMemoToDisk@11406501(VAR SkipSaveReportP@11406500 : Boolean);
+    BEGIN
+    END;
+
+    [Integration(TRUE)]
+    LOCAL PROCEDURE OnBeforeSendSelectedDocument@10136106();
+    BEGIN
+    END;
+
+    [Integration(TRUE)]
+    PROCEDURE OnSendHeaderbyExChangeSystem@10136110(VAR eDocOutboundQueueP@10136100 : Record 5204624);
+    BEGIN
+    END;
+
+    [Integration(TRUE)]
+    PROCEDURE OnSendEnvelopebyExChangeSystem@10136109(VAR eDocOutboundQueueP@10136100 : Record 5204624);
+    BEGIN
+    END;
+
+    BEGIN
+    {
+      // @ Area Parts, Vehicle
+      +----------------------------------------------+
+      | Copyright (c) incadea                        |
+      +----------------------------------------------+
+      PA-Number  Date
+      ------------------------------------------------
+      EU.0101361 31.07.20 KR New object created
+      EU.0114065 26.03.21 PS Assigned "Doc. Unique Id" field from Sales Invoice Header and Sales Credit Memo Header to eDoc. Outbound Queue
+      EU.0114065 26.03.21 PS Added new field "Doc. Unique Id"
+      EU.0114065 26.03.21 PS Assigned "Doc. Unique Id" field from eDoc. Outbound Header to eDoc. Outbound Queue
+      EU.0114065 02.04.21 PS Added Code to save General Documents as pdf to disk
+      EU.0114065 20.04.21 PS Added a new function "GetAttachmentFileName"
+      EU.0114065 24.05.21 PS Modified "SendInvoicebyEmail" & "SendCrMemobyEmail" functions for different E-Mail Attachment Types
+      EU.0114065 08.06.21 NA GetAttachmentFileName() Function code modified to get right filename
+                             ElectronicDocumentFormatG Global Variable added
+      EU.0114065 10.06.21 KR Code has been modified to consider File Name Format & Eamil Attachemnt Type  of eDoc Exchange Setup
+      EU.0114065 14.07.21 KR Modified the condition in SaveInvoiceToDisk() & SaveCrMemoToDisk() Functions.
+      EU.0114065 20.07.21 PS Made changes in function GetAttachmentFileName() to modify file name format
+    }
+    END.
+  }
+}
+

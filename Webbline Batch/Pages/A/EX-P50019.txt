@@ -1,0 +1,124 @@
+OBJECT Page 50019 Vendor Transactions FactBox2
+{
+  OBJECT-PROPERTIES
+  {
+    Date=04/15/26;
+    Time=[ 5:44:04 PM];
+    Modified=Yes;
+    Version List=NAVW16.00.01,N.7.1.0,AP-2362;
+  }
+  PROPERTIES
+  {
+    CaptionML=ENU=Vendor Transactions - Vehicle;
+    SourceTable=Table23;
+    PageType=CardPart;
+  }
+  CONTROLS
+  {
+    { 1900000001;0;Container;
+                ContainerType=ContentArea }
+
+    { 21  ;1   ;Field     ;
+                CaptionML=ENU=Vendor No.;
+                SourceExpr="No.";
+                Visible=FALSE;
+                OnDrillDown=BEGIN
+                              ShowDetails;
+                            END;
+                             }
+
+    { 1119427002;1;Field  ;
+                SourceExpr="No. of Vehicle Orders";
+                OnDrillDown=VAR
+                              PurchHdrL@1119427001 : Record 38;
+                              PurchaseListL@1119427000 : Page 5205809;
+                            BEGIN
+                              // Start PA031550
+                              PurchHdrL.SETRANGE("Buy-from Vendor No.","No.");
+                              PurchaseListL.SETTABLEVIEW(PurchHdrL);
+                              PurchaseListL.RUN;
+                              // Stop PA031550
+                            END;
+                             }
+
+    { 1109400007;1;Field  ;
+                SourceExpr="No. of Vehicle Receipts";
+                OnDrillDown=VAR
+                              PurchRcptL@1119427001 : Record 5046911;
+                              PurchaseListL@1119427000 : Page 5205812;
+                            BEGIN
+                              // Start PA031550
+                              PurchRcptL.SETRANGE("Buy-from Vendor No.","No.");
+                              PurchaseListL.SETTABLEVIEW(PurchRcptL);
+                              PurchaseListL.RUN;
+                              // Stop PA031550
+                            END;
+                             }
+
+    { 1109400006;1;Field  ;
+                SourceExpr="No. of Vehicle Invoices";
+                OnDrillDown=VAR
+                              PurchHdrL@1119427001 : Record 38;
+                              PurchaseListL@1119427000 : Page 5205810;
+                            BEGIN
+                              // Start PA031550
+                              PurchHdrL.SETRANGE("Buy-from Vendor No.","No.");
+                              PurchaseListL.SETTABLEVIEW(PurchHdrL);
+                              PurchaseListL.RUN;
+                              // Stop PA031550
+                            END;
+                             }
+
+    { 1109400005;1;Field  ;
+                SourceExpr="No. of Vehicle Return Orders";
+                OnDrillDown=VAR
+                              PurchHdrL@1119427001 : Record 38;
+                              PurchaseListL@1119427000 : Page 5205813;
+                            BEGIN
+                              // Start PA031550
+                              PurchHdrL.SETRANGE("Buy-from Vendor No.","No.");
+                              PurchaseListL.SETTABLEVIEW(PurchHdrL);
+                              PurchaseListL.RUN;
+                              // Stop PA031550
+                            END;
+                             }
+
+    { 1109400004;1;Field  ;
+                SourceExpr="No. of Vehicle Credit Memos";
+                OnDrillDown=VAR
+                              PurchHdrL@1119427001 : Record 38;
+                              PurchaseListL@1119427000 : Page 5205811;
+                            BEGIN
+                              // Start PA031550
+                              PurchHdrL.SETRANGE("Buy-from Vendor No.","No.");
+                              PurchaseListL.SETTABLEVIEW(PurchHdrL);
+                              PurchaseListL.RUN;
+                              // Stop PA031550
+                            END;
+                             }
+
+  }
+  CODE
+  {
+
+    PROCEDURE ShowDetails@1102601000();
+    BEGIN
+      PAGE.RUN(PAGE::"Vendor Card",Rec);
+    END;
+
+    BEGIN
+    {
+      PA-Number  Date
+      ------------------------------------------------
+      PA031550   25.01.10 New Object from NAVW16.00.01
+      PA032111   12.08.10 (BRL): Object renumbering changes due to Microsoft Agreement.
+      PA033067   12.04.12 DR DE Captions implemented
+      PA033259   18.09.12 DR Variable names changed according to incadea styleguide
+      PA035903   03.10.14 LR NAV 2013 UI Enhancement
+      AP-2362    09.04.26 LU Created and Added the FactBox "Vendor History FactBox2", "Vendor Transactions FactBox2" and "Vendor Transactions FactBox3"
+                             - Divided the fields from "Vendor History FactBox" and "Vendor Transactions FactBox" into "Vendor History FactBox2", "Vendor Transactions FactBox2" and "Vendor Transactions FactBox3"
+    }
+    END.
+  }
+}
+

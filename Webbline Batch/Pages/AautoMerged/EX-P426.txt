@@ -1,0 +1,141 @@
+OBJECT Page 426 Vendor Bank Account List
+{
+  OBJECT-PROPERTIES
+  {
+    Date=07/27/23;
+    Time=[ 9:49:46 AM];
+    Modified=Yes;
+    Version List=NAVW15.00,N.6.1.2,DC;
+  }
+  PROPERTIES
+  {
+    Editable=No;
+    CaptionML=ENU=Vendor Bank Account List;
+    SourceTable=Table288;
+    DataCaptionFields=Vendor No.;
+    PageType=List;
+    CardPageID=Vendor Bank Account Card;
+  }
+  CONTROLS
+  {
+    { 1900000001;0;Container;
+                ContainerType=ContentArea }
+
+    { 1   ;1   ;Group     ;
+                GroupType=Repeater }
+
+    { 6   ;2   ;Field     ;
+                SourceExpr="Vendor No.";
+                Visible=FALSE }
+
+    { 2   ;2   ;Field     ;
+                SourceExpr=Code }
+
+    { 4   ;2   ;Field     ;
+                SourceExpr=Name }
+
+    { 87  ;2   ;Field     ;
+                SourceExpr="Post Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 89  ;2   ;Field     ;
+                SourceExpr="Country/Region Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 91  ;2   ;Field     ;
+                SourceExpr="Phone No." }
+
+    { 93  ;2   ;Field     ;
+                SourceExpr="Fax No.";
+                Visible=FALSE }
+
+    { 23  ;2   ;Field     ;
+                SourceExpr=Contact }
+
+    { 105 ;2   ;Field     ;
+                SourceExpr="Bank Account No.";
+                Visible=FALSE }
+
+    { 206 ;2   ;Field     ;
+                SourceExpr="SWIFT-BIC";
+                Visible=FALSE }
+
+    { 210 ;2   ;Field     ;
+                SourceExpr=IBAN;
+                Visible=FALSE }
+
+    { 8   ;2   ;Field     ;
+                SourceExpr="Currency Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 103 ;2   ;Field     ;
+                SourceExpr="Language Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 1101353000;2;Field  ;
+                SourceExpr="Transit No." }
+
+    { 1101353001;2;Field  ;
+                SourceExpr="Bank Branch No." }
+
+    { 1101353002;2;Field  ;
+                SourceExpr="Other Party Reference" }
+
+    { 1101353003;2;Field  ;
+                SourceExpr="Other Party Code" }
+
+    { 1101353004;2;Field  ;
+                SourceExpr="Other Party Name" }
+
+    { 1101353005;2;Field  ;
+                SourceExpr="Other Party Particulars" }
+
+    { 1101353006;2;Field  ;
+                SourceExpr="DC Bank No." }
+
+    { 1101353007;2;Field  ;
+                SourceExpr="DC Bank Branch No." }
+
+    { 1101353008;2;Field  ;
+                SourceExpr="DC Bank Account No." }
+
+    { 1101353009;2;Field  ;
+                SourceExpr="DC Bank Suffix" }
+
+    { 1900000007;0;Container;
+                ContainerType=FactBoxArea }
+
+    { 1900383207;1;Part   ;
+                Visible=FALSE;
+                PartType=System;
+                SystemPartID=RecordLinks }
+
+    { 1905767507;1;Part   ;
+                Visible=FALSE;
+                PartType=System;
+                SystemPartID=Notes }
+
+  }
+  CODE
+  {
+
+    BEGIN
+    {
+      //@ Area GeneralLedger
+      PA-Number  Date
+      ------------------------------------------------
+      PA032441   01.07.11 GC NAV 2009 SP1 W1 General Ledger Integration
+      PA032651   27.02.12 GL 6683708: fixed reference to renamed field
+      PA033067   12.04.12 DR DE Captions implemented
+      PA033259   18.09.12 DR Variable names changed according to incadea styleguide
+      DC10.0     31.08.17 DE Added Fields "Bank Branch No.","Other Party Reference","Other Party Code","Other Party Name","Other Party Particulars","DC Bank No.","DC Bank Branch No.","DC Bank Account No.","DC Bank Suffix"
+      DC14.0     27.07.23 QQ Direct Credits NZ
+    }
+    END.
+  }
+}
+

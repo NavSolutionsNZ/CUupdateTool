@@ -1,0 +1,217 @@
+OBJECT Page 5205832 Vehicle List Subform
+{
+  OBJECT-PROPERTIES
+  {
+    Date=09/28/23;
+    Time=11:51:16 AM;
+    Modified=Yes;
+    Version List=N.7.2.1,AP1760;
+  }
+  PROPERTIES
+  {
+    Editable=No;
+    CaptionML=ENU=Vehicle List;
+    SourceTable=Table5025400;
+    PageType=ListPart;
+    ActionList=ACTIONS
+    {
+      { 1900000004;0 ;ActionContainer;
+                      ActionContainerType=ActionItems }
+      { 1119427001;1 ;Action    ;
+                      CaptionML=ENU=New &Scheduling Order;
+                      Promoted=Yes;
+                      Image=WorkCenterLoad;
+                      PromotedCategory=Process;
+                      OnAction=BEGIN
+                                 // Start PA032178.1590733
+                                 ServMgmtG.CreateServiceDocument(DocTypeG::Scheduling,VIN);
+                                 // Stop PA032178.1590733
+                               END;
+                                }
+      { 1119427002;1 ;Action    ;
+                      CaptionML=ENU=New Service &Quote;
+                      Promoted=Yes;
+                      Image=Quote;
+                      PromotedCategory=Process;
+                      OnAction=BEGIN
+                                 // Start PA032178.1590733
+                                 ServMgmtG.CreateServiceDocument(DocTypeG::Quote,VIN);
+                                 // Stop PA032178.1590733
+                               END;
+                                }
+      { 1119427006;1 ;Action    ;
+                      CaptionML=ENU=New Service &Order;
+                      Promoted=Yes;
+                      Image=Document;
+                      PromotedCategory=Process;
+                      OnAction=BEGIN
+                                 // Start PA032178.1590733
+                                 ServMgmtG.CreateServiceDocument(DocTypeG::Order,VIN);
+                                 // Stop PA032178.1590733
+                               END;
+                                }
+      { 1115000000;1 ;Action    ;
+                      CaptionML=ENU=Vehicle Service History;
+                      Promoted=Yes;
+                      Image=History;
+                      PromotedCategory=Process;
+                      OnAction=BEGIN
+                                 // Start EU.0019250
+                                 VehServHistoryUnitG.OpenVehicleServiceHistory(VIN);
+                                 // Stop EU.0019250
+                               END;
+                                }
+      { 1900568204;1 ;Action    ;
+                      ShortCutKey=Return;
+                      CaptionML=ENU=Open;
+                      RunObject=Page 5025401;
+                      RunPageLink=VIN=FIELD(VIN);
+                      Promoted=No;
+                      Image=View;
+                      PromotedCategory=Process }
+      { 1904397504;1 ;Action    ;
+                      CaptionML=ENU=Ledger Entries;
+                      RunObject=Page 5025414;
+                      RunPageLink=VIN=FIELD(VIN);
+                      Promoted=No;
+                      Image=MaintenanceLedgerEntries;
+                      PromotedCategory=Process }
+      { 1900158904;1 ;Action    ;
+                      CaptionML=ENU=Vehicle Appointments;
+                      RunObject=Page 5025508;
+                      RunPageLink=VIN=FIELD(VIN);
+                      Promoted=No;
+                      Image=CreateYear;
+                      PromotedCategory=Process }
+      { 1906654004;1 ;Action    ;
+                      CaptionML=ENU=Vehicle Customers;
+                      RunObject=Page 5025542;
+                      RunPageLink=VIN=FIELD(VIN);
+                      Promoted=No;
+                      Image=TeamSales;
+                      PromotedCategory=Process }
+    }
+  }
+  CONTROLS
+  {
+    { 1900000001;0;Container;
+                ContainerType=ContentArea }
+
+    { 1119432000;1;Group  ;
+                GroupType=Repeater }
+
+    { 1119432001;2;Field  ;
+                SourceExpr=VIN }
+
+    { 1119432003;2;Field  ;
+                SourceExpr="License No." }
+
+    { 1119432005;2;Field  ;
+                SourceExpr="Make Code";
+                AutoFormatExpr='JMD' }
+
+    { 1119432007;2;Field  ;
+                SourceExpr="Model No.";
+                AutoFormatExpr='JMD' }
+
+    { 1119432009;2;Field  ;
+                SourceExpr=Model }
+
+    { 1119432033;2;Field  ;
+                Description=PA032807;
+                SourceExpr="Vehicle Status";
+                Visible=FALSE }
+
+    { 1119432035;2;Field  ;
+                Description=PA032807;
+                SourceExpr="Dealer Status";
+                Visible=FALSE }
+
+    { 1119432037;2;Field  ;
+                Description=PA032807;
+                SourceExpr="Ready for Sale";
+                Visible=FALSE }
+
+    { 1119432013;2;Field  ;
+                SourceExpr=Mileage }
+
+    { 1119432015;2;Field  ;
+                SourceExpr="Initial Registration" }
+
+    { 1119432017;2;Field  ;
+                SourceExpr="Date of Sale" }
+
+    { 1119432019;2;Field  ;
+                CaptionML=ENU=Date Last Service Order;
+                SourceExpr=DateLastServOrdGet }
+
+    { 1101353000;2;Field  ;
+                Name=Serial No.;
+                CaptionML=ENU=Serial No.;
+                SourceExpr="Text 1" }
+
+    { 1119432011;2;Field  ;
+                SourceExpr="Model Year";
+                Visible=FALSE }
+
+    { 1119432021;2;Field  ;
+                SourceExpr="Old Customer No.";
+                Visible=FALSE }
+
+    { 1119432023;2;Field  ;
+                SourceExpr="Old Customer Name";
+                Visible=FALSE }
+
+    { 1119432025;2;Field  ;
+                SourceExpr="Customer Registration Date";
+                Visible=FALSE }
+
+    { 1119432027;2;Field  ;
+                SourceExpr="Engine Type Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 1119432029;2;Field  ;
+                SourceExpr="Transmission Type Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 1119432031;2;Field  ;
+                SourceExpr="Own Sale";
+                Visible=FALSE }
+
+  }
+  CODE
+  {
+    VAR
+      ServMgmtG@1119427000 : Codeunit 5025614;
+      VehServHistoryUnitG@1925000 : Codeunit 5206765;
+      DocTypeG@1119427001 : 'Quote,Order,,,,,,Scheduling';
+
+    BEGIN
+    {
+      // @ Area Vehicle
+      +----------------------------------------------+
+      | Copyright (c) incadea                        |
+      +----------------------------------------------+
+      PA-Number  Date
+      ------------------------------------------------
+      PA031550   04.08.10 AA New object
+      PA032178   13.10.10 AA #1590733: New buttons added for creating new service documents
+      PA032453   26.05.11 SS - Created Vehicle Service History Menu Button
+                             - HorzGlue, VertGlue properties of existing Buttons corrected.
+      PA032807   20.10.11 BL New fields added: "Vehicle Status", "Dealer Status", "Ready for Sale".
+      PA033067   12.04.12 DR DE Captions implemented
+      PA033259   18.09.12 DR Variable names changed according to incadea styleguide
+      PA034477   26.06.13 MF Replacement from Field 5025352 of Vehicle table (deleted) to DateLastServOrdGet function.
+      EU.0019250 24.04.18 DR Wrong "Vehicle Service History" Page call corrected
+      --- 7.3.0 ---
+      EU.0005630 28.05.18 MS Merge of EU.0019250
+      --- 7.2.1 ---
+      EU.0102243 13.07.20 ER Down-merge EU.0005630 from N730
+      AP001760   28.09.23 RL Add "Text 1" field as 'Serial No.'.
+    }
+    END.
+  }
+}
+

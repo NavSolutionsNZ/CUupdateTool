@@ -1,0 +1,311 @@
+OBJECT Table 312 Purchases & Payables Setup
+{
+  OBJECT-PROPERTIES
+  {
+    Date=08/04/23;
+    Time=[ 2:42:11 PM];
+    Modified=Yes;
+    Version List=NAVW1.x,N.7.2.1,DC;
+  }
+  PROPERTIES
+  {
+    CaptionML=ENU=Purchases & Payables Setup;
+  }
+  FIELDS
+  {
+    { 1   ;   ;Primary Key         ;Code10        ;CaptionML=ENU=Primary Key }
+    { 2   ;   ;Discount Posting    ;Option        ;CaptionML=ENU=Discount Posting;
+                                                   OptionCaptionML=ENU=No Discounts,Invoice Discounts,Line Discounts,All Discounts;
+                                                   OptionString=No Discounts,Invoice Discounts,Line Discounts,All Discounts }
+    { 6   ;   ;Receipt on Purch. Invoice;Boolean  ;CaptionML=ENU=Receipt on Purch. Invoice }
+    { 7   ;   ;Invoice Rounding    ;Boolean       ;CaptionML=ENU=Invoice Rounding }
+    { 8   ;   ;Ext. Doc. No. Mandatory;Boolean    ;InitValue=Yes;
+                                                   CaptionML=ENU=Ext. Doc. No. Mandatory }
+    { 9   ;   ;Vendor Nos.         ;Code10        ;TableRelation="No. Series";
+                                                   CaptionML=ENU=Vendor Nos. }
+    { 10  ;   ;Inquiry Nos.        ;Code10        ;TableRelation="No. Series";
+                                                   CaptionML=ENU=Inquiry Nos. }
+    { 11  ;   ;Order Nos.          ;Code10        ;TableRelation="No. Series";
+                                                   CaptionML=ENU=Order Nos. }
+    { 12  ;   ;Invoice Nos.        ;Code10        ;TableRelation="No. Series";
+                                                   CaptionML=ENU=Invoice Nos. }
+    { 13  ;   ;Posted Invoice Nos. ;Code10        ;TableRelation="No. Series";
+                                                   CaptionML=ENU=Posted Invoice Nos. }
+    { 14  ;   ;Credit Memo Nos.    ;Code10        ;TableRelation="No. Series";
+                                                   CaptionML=ENU=Credit Memo Nos. }
+    { 15  ;   ;Posted Credit Memo Nos.;Code10     ;TableRelation="No. Series";
+                                                   CaptionML=ENU=Posted Credit Memo Nos. }
+    { 16  ;   ;Posted Receipt Nos. ;Code10        ;TableRelation="No. Series";
+                                                   CaptionML=ENU=Posted Receipt Nos. }
+    { 19  ;   ;Blanket Order Nos.  ;Code10        ;TableRelation="No. Series";
+                                                   CaptionML=ENU=Blanket Order Nos. }
+    { 20  ;   ;Calc. Inv. Discount ;Boolean       ;CaptionML=ENU=Calc. Inv. Discount }
+    { 21  ;   ;Appln. between Currencies;Option   ;CaptionML=ENU=Appln. between Currencies;
+                                                   OptionCaptionML=ENU=None,EMU,All;
+                                                   OptionString=None,EMU,All }
+    { 22  ;   ;Copy Blanket Comments to Order;Boolean;
+                                                   InitValue=Yes;
+                                                   CaptionML=ENU=Copy Blanket Comments to Order }
+    { 23  ;   ;Copy Order Comments to Invoice;Boolean;
+                                                   InitValue=Yes;
+                                                   CaptionML=ENU=Copy Order Comments to Invoice }
+    { 24  ;   ;Copy Order Comments to Rcpt.;Boolean;
+                                                   InitValue=Yes;
+                                                   CaptionML=ENU=Copy Order Comments to Rcpt. }
+    { 38  ;   ;Post with Job Queue ;Boolean       ;CaptionML=ENU=Post with Job Queue;
+                                                   Description=PA035901 }
+    { 39  ;   ;Job Queue Category Code;Code10     ;TableRelation="Job Queue Category";
+                                                   CaptionML=ENU=Job Queue Category Code;
+                                                   Description=PA035901 }
+    { 40  ;   ;Job Queue Priority for Post;Integer;InitValue=1000;
+                                                   OnValidate=BEGIN
+                                                                IF "Job Queue Priority for Post" < 0 THEN
+                                                                  ERROR(Text001);
+                                                              END;
+
+                                                   CaptionML=ENU=Job Queue Priority for Post;
+                                                   MinValue=0;
+                                                   Description=PA035901 }
+    { 41  ;   ;Post & Print with Job Queue;Boolean;CaptionML=ENU=Post & Print with Job Queue }
+    { 42  ;   ;Job Q. Prio. for Post & Print;Integer;
+                                                   InitValue=1000;
+                                                   OnValidate=BEGIN
+                                                                IF "Job Queue Priority for Post" < 0 THEN
+                                                                  ERROR(Text001);
+                                                              END;
+
+                                                   CaptionML=ENU=Job Queue Priority for Post & Print;
+                                                   MinValue=0;
+                                                   Description=PA035901 }
+    { 43  ;   ;Notify On Success   ;Boolean       ;CaptionML=ENU=Notify On Success;
+                                                   Description=PA035901 }
+    { 5800;   ;Posted Return Shpt. Nos.;Code10    ;TableRelation="No. Series";
+                                                   CaptionML=ENU=Posted Return Shpt. Nos. }
+    { 5801;   ;Copy Cmts Ret.Ord. to Ret.Shpt;Boolean;
+                                                   InitValue=Yes;
+                                                   CaptionML=ENU=Copy Cmts Ret.Ord. to Ret.Shpt }
+    { 5802;   ;Copy Cmts Ret.Ord. to Cr. Memo;Boolean;
+                                                   InitValue=Yes;
+                                                   CaptionML=ENU=Copy Cmts Ret.Ord. to Cr. Memo }
+    { 6600;   ;Return Order Nos.   ;Code10        ;TableRelation="No. Series";
+                                                   CaptionML=ENU=Return Order Nos. }
+    { 6601;   ;Return Shipment on Credit Memo;Boolean;
+                                                   CaptionML=ENU=Return Shipment on Credit Memo }
+    { 6602;   ;Exact Cost Reversing Mandatory;Boolean;
+                                                   CaptionML=ENU=Exact Cost Reversing Mandatory }
+    { 81100;  ;DC Remittance File Path;Text250    ;OnValidate=BEGIN
+                                                                // Start DC4.02
+                                                                IF STRLEN("DC Remittance File Path") > 0 THEN
+                                                                  IF COPYSTR("DC Remittance File Path",
+                                                                            STRLEN("DC Remittance File Path"), 1) <> '\' THEN
+                                                                  "DC Remittance File Path" := "DC Remittance File Path" + '\';
+                                                                // Stop DC4.02
+                                                              END;
+
+                                                   Description=DC5.00 }
+    { 81101;  ;DC Remittance E-Mail Method;Option ;DataClassification=ToBeClassified;
+                                                   OptionString=Outlook,SMTP;
+                                                   Description=DC14.0 }
+    { 81102;  ;DC Remittance From E-Mail SMTP;Text80;
+                                                   DataClassification=ToBeClassified;
+                                                   Description=DC14.0 }
+    { 5005230;;Archive Purch. Order;Boolean       ;CaptionML=ENU=Archive Purch. Order }
+    { 5005231;;Archive Inquiry     ;Option        ;CaptionML=ENU=Archive Inquiry;
+                                                   OptionCaptionML=ENU=Never,Prompt,Always;
+                                                   OptionString=Never,Prompt,Always }
+    { 5005232;;Archive Blanket Purchase Order;Boolean;
+                                                   CaptionML=ENU=Archive Blanket Purchase Order }
+    { 5005250;;Receipt Nos.        ;Code10        ;TableRelation="No. Series";
+                                                   CaptionML=ENU=Receipt Nos. }
+    { 5005270;;Delivery Reminder Nos.;Code10      ;TableRelation="No. Series";
+                                                   CaptionML=ENU=Delivery Reminder Nos. }
+    { 5005271;;Issued Delivery Reminder Nos.;Code10;
+                                                   TableRelation="No. Series";
+                                                   CaptionML=ENU=Issued Delivery Reminder Nos. }
+    { 5025350;;Vehicle Inquiry Nos.;Code10        ;TableRelation="No. Series";
+                                                   CaptionML=ENU=Vehicle Inquiry Nos. }
+    { 5025351;;Vehicle Purch. Order Nos.;Code10   ;TableRelation="No. Series";
+                                                   CaptionML=ENU=Vehicle Purch. Order Nos. }
+    { 5025352;;Vehicle Invoice Nos.;Code10        ;TableRelation="No. Series";
+                                                   CaptionML=ENU=Vehicle Invoice Nos. }
+    { 5025353;;Posted Vehicle Invoice Nos.;Code10 ;TableRelation="No. Series";
+                                                   CaptionML=ENU=Posted Vehicle Invoice Nos. }
+    { 5025354;;Vehicle Credit Memo Nos.;Code10    ;TableRelation="No. Series";
+                                                   CaptionML=ENU=Vehicle Credit Memo Nos. }
+    { 5025355;;Posted Vehicle Cr. Memo Nos.;Code10;TableRelation="No. Series";
+                                                   CaptionML=ENU=Posted Vehicle Cr. Memo Nos. }
+    { 5025356;;Posted Vehicle Receipt Nos.;Code10 ;TableRelation="No. Series";
+                                                   CaptionML=ENU=Posted Vehicle Receipt Nos. }
+    { 5025357;;Vehicle Receipt Nos.;Code10        ;TableRelation="No. Series";
+                                                   CaptionML=ENU=Vehicle Receipt Nos. }
+    { 5025358;;Installment Bal. Account;Code20    ;TableRelation="G/L Account";
+                                                   OnValidate=VAR
+                                                                GLAccL@1109400000 : Record 15;
+                                                              BEGIN
+                                                                //INC START
+                                                                GLAccL.GET("Installment Bal. Account");
+                                                                GLAccL.TESTFIELD("Gen. Posting Type", GLAccL."Gen. Posting Type"::Purchase);
+                                                                //INC STOP
+                                                              END;
+
+                                                   CaptionML=ENU=Installment Bal. Account }
+    { 5025359;;Installments Auto. Numbering;Boolean;
+                                                   CaptionML=ENU=Installments Auto. Numbering }
+    { 5025360;;Installment Nos.    ;Code10        ;TableRelation="No. Series";
+                                                   CaptionML=ENU=Installment Nos. }
+    { 5025361;;Send Cockpit Doc. immediately;Boolean;
+                                                   CaptionML=ENU=Transfer Cockpit Document Immediately;
+                                                   Description=Parameter for the permision to forward new Cockpit purch. documents immediately after their creation }
+    { 5025362;;Item Transfer Req. Worksh. via;Option;
+                                                   CaptionML=ENU=Item Transfer Req. Worksh. via;
+                                                   OptionCaptionML=ENU=Item Journal,Branch Order;
+                                                   OptionString=Item Journal,Branch Order;
+                                                   Description=EU.0000370 }
+    { 5025363;;Transfer Journal Template Name;Code10;
+                                                   TableRelation="Item Journal Template".Name WHERE (Type=CONST(Transfer));
+                                                   CaptionML=ENU=Transfer Journal Template Name;
+                                                   Description=PA032452 }
+    { 5025364;;No. of Lines % per Seas. Perd.;Integer;
+                                                   CaptionML=ENU=Line Count % per Seasonal Period }
+    { 5025365;;Seasonal Period     ;Option        ;CaptionML=ENU=Seasonal Period;
+                                                   OptionCaptionML=ENU=" ,1M,2M,3M,4M";
+                                                   OptionString=[ ,1M,2M,3M,4M] }
+    { 5025366;;Req. Status No Req. Planning;Code10;TableRelation="Requisition Status";
+                                                   CaptionML=ENU=Disable Requisition if Req. Status is }
+    { 5025367;;Consider Default Purch. Bin;Boolean;CaptionML=ENU=Consider Default Purch. Bin }
+    { 5025368;;Seasonal Items Req. Status;Code10  ;TableRelation="Requisition Status";
+                                                   CaptionML=ENU=Seasonal Items Req. Status }
+    { 5025369;;Date Item Requisition;Option       ;CaptionML=ENU=Date Item Requisition;
+                                                   OptionCaptionML=ENU=Creation Date,First Pos. Adjustment;
+                                                   OptionString=Creation Date,First Pos. Adjustment }
+    { 5025370;;Upper Tendency Limit;Decimal       ;CaptionML=ENU=Upper Tendency Limit }
+    { 5025371;;Lower Tendency Limit;Decimal       ;CaptionML=ENU=Lower Tendency Limit }
+    { 5025372;;Upper Tend. Limit/Seas. Items;Decimal;
+                                                   CaptionML=ENU=Upper Tend. Limit/Seas. Items }
+    { 5025373;;Lower Tend. Limit/Seas. Items;Decimal;
+                                                   CaptionML=ENU=Lower Tend. Limit/Seas. Items }
+    { 5025374;;New Parts Forecast  ;Option        ;CaptionML=ENU=New Parts Forecast;
+                                                   OptionCaptionML=ENU=12M Forecast,Actual Usage;
+                                                   OptionString=12M Forecast,Actual Usage }
+    { 5025375;;Min. No. of Lines Seas. Item;Integer;
+                                                   CaptionML=ENU=Min. Line Count for Seasonal Item }
+    { 5025376;;Replaced Items Req. Status;Code10  ;TableRelation="Requisition Status";
+                                                   CaptionML=ENU=Replaced Items Req. Status }
+    { 5025377;;Req. Qty. Calculation Type;Option  ;CaptionML=ENU=Req. Quantities Calculation Type;
+                                                   OptionCaptionML=ENU=Item Level,Location Level,Bin Level;
+                                                   OptionString=Item Level,Location Level,Bin Level }
+    { 5025378;;Transfer Journal Name;Code10       ;TableRelation="Item Journal Batch".Name WHERE (Journal Template Name=FIELD(Transfer Journal Template Name));
+                                                   CaptionML=ENU=Transfer Journal Name;
+                                                   Description=PA032651 }
+    { 5025379;;Vehicle Return Order Nos.;Code10   ;TableRelation="No. Series";
+                                                   CaptionML=ENU=Vehicle Return Order Nos. }
+    { 5025380;;Posted Veh. Return Shpt. Nos.;Code10;
+                                                   TableRelation="No. Series";
+                                                   CaptionML=ENU=Posted Vehicle Return Shpt. Nos.;
+                                                   Description=PA033019.Defect8319026 }
+    { 5045915;;Backorder Req.W.sheet Template;Code10;
+                                                   TableRelation="Req. Worksheet Template".Name;
+                                                   CaptionML=ENU=Backorder Req. W.sheet Template;
+                                                   Description=INC }
+    { 5045916;;Backorder Req. Worksheet Name;Code10;
+                                                   TableRelation="Requisition Worksheet Name".Name WHERE (Worksheet Template Name=FIELD(Backorder Req.W.sheet Template));
+                                                   CaptionML=ENU=Backorder Req. Worksheet Name;
+                                                   Description=INC }
+    { 5045917;;Vendor Shipment No. Mandatory;Boolean;
+                                                   CaptionML=ENU=Vendor Shipment No. Mandatory;
+                                                   Description=PA032774 }
+    { 5045918;;Gen. Purch. Invoice Nos.;Code10    ;TableRelation="No. Series";
+                                                   DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=General Purchase Invoice Nos.;
+                                                   Description=EU.0114065 }
+    { 5045919;;Posted Gen. Purch. Inv Nos.;Code10 ;TableRelation="No. Series";
+                                                   DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Posted General Purchase Invoice Nos.;
+                                                   Description=EU.0114065 }
+    { 5045920;;Gen. Purch. Cr. Memo Nos.;Code10   ;TableRelation="No. Series";
+                                                   DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=General Purchase Credit Memo Nos.;
+                                                   Description=EU.0114065 }
+    { 5045921;;Posted Gen. Purch. C. Me. Nos.;Code10;
+                                                   TableRelation="No. Series";
+                                                   DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Posted General Purchase Credit Memo Nos.;
+                                                   Description=EU.0114065 }
+    { 5045922;;Gen. Purch. Receipt Nos.;Code10    ;TableRelation="No. Series";
+                                                   DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=General Purchase Receipt Nos.;
+                                                   Description=EU.0114065 }
+    { 5045923;;Gen. Purch. Re. Receipt Nos.;Code10;TableRelation="No. Series";
+                                                   DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=General Purchase Return Receipt Nos.;
+                                                   Description=EU.0114065 }
+    { 5045924;;Allow Add.Cost Post. CustVeh.;Boolean;
+                                                   DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Allow Posting G/L Account for Cust. Vehicle;
+                                                   Description=EU.0152364 }
+  }
+  KEYS
+  {
+    {    ;Primary Key                             ;MaintainSIFTIndex=No;
+                                                   Clustered=Yes }
+  }
+  FIELDGROUPS
+  {
+  }
+  CODE
+  {
+    VAR
+      Text001@1000 : TextConst 'ENU=Job Queue Priority must be zero or positive.';
+
+    PROCEDURE JobQueueActive@1() : Boolean;
+    BEGIN
+      // Start PA035901
+      GET;
+      EXIT("Post with Job Queue" OR "Post & Print with Job Queue");
+      // Stop PA035901
+    END;
+
+    BEGIN
+    {
+      // @ Area PartsPurchase, VehiclePurchase, ServicePurchasing
+
+      PA-Number  Date
+      ------------------------------------------------
+      PA032651   08.07.11 GM 1951860 Table relation changed in field "Transfer Journal Name"
+      PA032452   08.07.11 DR In field "Transfer Journal Template Name" show only Item Journal Template Names of Type Transfer
+      PA032774   06.10.11 GM New field "Vendor Shipment No. Mandatory" added
+      PA033067   12.04.12 DR DE Captions implemented
+      PA032651   25.04.12 DR 6012646: DEU and ENU Captions corrected
+      PA033019   07.08.12 DR 8319026: Change Names and ENU Caption for fields changed where "Posted" appeared as second word after
+                             "Vehicle", "Part" or "Service". The correct witing is "Posted Vehicle.." Posted Part.." or "Posted Service.."
+      PA033259   18.09.12 DR Variable names changed according to incadea styleguide
+      PA033259   27.11.12 AI Deletion of Start/Stop History in Code, update copyright and Version List
+      PA033733   06.12.12 DR 9493227: All captions removed which are not: ENU, DEU, ESP, FRA or RUS.
+      PA033733   10.12.12 DR DE Captions added for version: N.6.1.2
+      PA033960   09.01.13 GC Field "Duplicate Item Warning" added
+      PA035597   10.02.14 GC NAV 2013 R2 Technical Upgrade
+      PA036118   26.05.14 DR New Location / Branch check: New field "Purchase Line Location Sync"
+      PA035901   12.11.14 CH NAV 2013 R2 General Ledger Integration (JobQueue).
+      PA036827   02.12.14 DT 30779: Caption of fied 5025385 "Purchase Line Location Sync" changed
+      PA036547   07.10.14 GF Merge N.6.1.4 to N.7.1.0 - PA036118.
+      PA036549   18.02.15 CH 34230 Field 5025385 "Purchase Line Location Sync" removed.
+      PA037942   20.10.15 SM Field "Duplicate Item Warning" is removed.
+      --- 7.2.1 ---
+      EU.0090125 21.02.20 JV Downmerge of EU.0005636
+                             - EU.0005636 MS Downmerge of EU.0000370
+                                             - EU.0000370 UX Change property editable of field "Item Transfer Req. Worksh. via".
+      EU.0114065 25.03.21 DS Fields Added for General Documents:
+                             - Gen. Purch. Invoice Nos.
+                             - Posted Gen. Purch. Invoice Nos.
+                             - Gen. Sales Cr. Purch. Nos.
+                             - Posted Gen. Sales Cr. Purch. Nos.
+                             - Gen. Purch. Shipment Nos.
+                             - Gen. Purch. Re. Receipt Nos.
+      EU.0114065 20.04.21 DS Field name changed from "Gen. Purch. Shipment Nos. to "Gen. Purch. Receipt Nos.
+      EU.0152364 13.02.22 JN 152757 Field added to Allow Additonal cost for Customer Vehicle while posting vehicle purchase.
+      DC14.0     04.08.23 QQ Direct Credits NZ
+    }
+    END.
+  }
+}
+

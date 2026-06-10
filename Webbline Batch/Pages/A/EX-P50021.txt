@@ -1,0 +1,439 @@
+OBJECT Page 50021 IJL
+{
+  OBJECT-PROPERTIES
+  {
+    Date=02/15/24;
+    Time=[ 4:47:18 AM];
+    Modified=Yes;
+    Version List=;
+  }
+  PROPERTIES
+  {
+    Permissions=TableData 83=rimd;
+    SourceTable=Table83;
+    PageType=List;
+  }
+  CONTROLS
+  {
+    { 1   ;0   ;Container ;
+                ContainerType=ContentArea }
+
+    { 2   ;1   ;Group     ;
+                Name=Group;
+                GroupType=Repeater }
+
+    { 3   ;2   ;Field     ;
+                SourceExpr="Journal Template Name" }
+
+    { 4   ;2   ;Field     ;
+                SourceExpr="Line No." }
+
+    { 5   ;2   ;Field     ;
+                SourceExpr="Item No." }
+
+    { 6   ;2   ;Field     ;
+                SourceExpr="Posting Date" }
+
+    { 7   ;2   ;Field     ;
+                SourceExpr="Entry Type" }
+
+    { 8   ;2   ;Field     ;
+                SourceExpr="Source No." }
+
+    { 9   ;2   ;Field     ;
+                SourceExpr="Document No." }
+
+    { 10  ;2   ;Field     ;
+                SourceExpr=Description }
+
+    { 11  ;2   ;Field     ;
+                SourceExpr="Location Code" }
+
+    { 12  ;2   ;Field     ;
+                SourceExpr="Inventory Posting Group" }
+
+    { 13  ;2   ;Field     ;
+                SourceExpr="Source Posting Group" }
+
+    { 14  ;2   ;Field     ;
+                SourceExpr=Quantity }
+
+    { 15  ;2   ;Field     ;
+                SourceExpr="Invoiced Quantity" }
+
+    { 16  ;2   ;Field     ;
+                SourceExpr="Unit Amount" }
+
+    { 17  ;2   ;Field     ;
+                SourceExpr="Unit Cost" }
+
+    { 18  ;2   ;Field     ;
+                SourceExpr=Amount }
+
+    { 19  ;2   ;Field     ;
+                SourceExpr="Discount Amount" }
+
+    { 20  ;2   ;Field     ;
+                SourceExpr="Salespers./Purch. Code" }
+
+    { 21  ;2   ;Field     ;
+                SourceExpr="Source Code" }
+
+    { 22  ;2   ;Field     ;
+                SourceExpr="Applies-to Entry" }
+
+    { 23  ;2   ;Field     ;
+                SourceExpr="Item Shpt. Entry No." }
+
+    { 24  ;2   ;Field     ;
+                SourceExpr="Shortcut Dimension 1 Code" }
+
+    { 25  ;2   ;Field     ;
+                SourceExpr="Shortcut Dimension 2 Code" }
+
+    { 26  ;2   ;Field     ;
+                SourceExpr="Indirect Cost %" }
+
+    { 27  ;2   ;Field     ;
+                SourceExpr="Serial No." }
+
+    { 28  ;2   ;Field     ;
+                SourceExpr="Source Type" }
+
+    { 29  ;2   ;Field     ;
+                SourceExpr="Journal Batch Name" }
+
+    { 30  ;2   ;Field     ;
+                SourceExpr="Reason Code" }
+
+    { 31  ;2   ;Field     ;
+                SourceExpr="Recurring Method" }
+
+    { 32  ;2   ;Field     ;
+                SourceExpr="Expiration Date" }
+
+    { 33  ;2   ;Field     ;
+                SourceExpr="Recurring Frequency" }
+
+    { 34  ;2   ;Field     ;
+                SourceExpr="Drop Shipment" }
+
+    { 35  ;2   ;Field     ;
+                SourceExpr="Transaction Type" }
+
+    { 36  ;2   ;Field     ;
+                SourceExpr="Transport Method" }
+
+    { 37  ;2   ;Field     ;
+                SourceExpr="Country Code" }
+
+    { 38  ;2   ;Field     ;
+                SourceExpr="New Location Code" }
+
+    { 39  ;2   ;Field     ;
+                SourceExpr="New Department Code" }
+
+    { 40  ;2   ;Field     ;
+                SourceExpr="New Make Code" }
+
+    { 41  ;2   ;Field     ;
+                SourceExpr="Qty. (Calculated)";
+                Editable=TRUE }
+
+    { 42  ;2   ;Field     ;
+                SourceExpr="Qty. (Phys. Inventory)" }
+
+    { 43  ;2   ;Field     ;
+                SourceExpr="Last Item Ledger Entry No." }
+
+    { 44  ;2   ;Field     ;
+                SourceExpr="Phys. Inventory" }
+
+    { 45  ;2   ;Field     ;
+                SourceExpr="Gen. Bus. Posting Group" }
+
+    { 46  ;2   ;Field     ;
+                SourceExpr="Gen. Prod. Posting Group" }
+
+    { 47  ;2   ;Field     ;
+                SourceExpr="Entry/Exit Point" }
+
+    { 48  ;2   ;Field     ;
+                SourceExpr="Document Date" }
+
+    { 49  ;2   ;Field     ;
+                SourceExpr="External Document No." }
+
+    { 50  ;2   ;Field     ;
+                SourceExpr=Area }
+
+    { 51  ;2   ;Field     ;
+                SourceExpr="Transaction Specification" }
+
+    { 52  ;2   ;Field     ;
+                SourceExpr="Posting No. Series" }
+
+    { 53  ;2   ;Field     ;
+                SourceExpr="Positive Reserved Quantity" }
+
+    { 54  ;2   ;Field     ;
+                SourceExpr="Negative Reserved Quantity" }
+
+    { 55  ;2   ;Field     ;
+                SourceExpr=Reserve }
+
+    { 56  ;2   ;Field     ;
+                SourceExpr="Source Currency Unit Cost" }
+
+    { 57  ;2   ;Field     ;
+                SourceExpr="Source Currency Code" }
+
+    { 58  ;2   ;Field     ;
+                SourceExpr="Document Line No." }
+
+    { 59  ;2   ;Field     ;
+                SourceExpr="Order Line No." }
+
+    { 60  ;2   ;Field     ;
+                SourceExpr="Dimension Set ID" }
+
+    { 61  ;2   ;Field     ;
+                SourceExpr="New Dimension Set ID" }
+
+    { 62  ;2   ;Field     ;
+                SourceExpr="Book No." }
+
+    { 63  ;2   ;Field     ;
+                SourceExpr="Prod. Order No." }
+
+    { 64  ;2   ;Field     ;
+                SourceExpr="Variant Code" }
+
+    { 65  ;2   ;Field     ;
+                SourceExpr="Bin Code" }
+
+    { 66  ;2   ;Field     ;
+                SourceExpr="Qty. per Unit of Measure" }
+
+    { 67  ;2   ;Field     ;
+                SourceExpr="New Bin Code" }
+
+    { 68  ;2   ;Field     ;
+                SourceExpr="Unit of Measure Code" }
+
+    { 69  ;2   ;Field     ;
+                SourceExpr="Quantity (Base)" }
+
+    { 70  ;2   ;Field     ;
+                SourceExpr="Invoiced Qty. (Base)" }
+
+    { 71  ;2   ;Field     ;
+                SourceExpr="Positive Reserved Qty. (Base)" }
+
+    { 72  ;2   ;Field     ;
+                SourceExpr="Negative Reserved Qty. (Base)" }
+
+    { 73  ;2   ;Field     ;
+                SourceExpr="Order Date" }
+
+    { 74  ;2   ;Field     ;
+                SourceExpr="Value Entry Type" }
+
+    { 75  ;2   ;Field     ;
+                SourceExpr="Item Charge No." }
+
+    { 76  ;2   ;Field     ;
+                SourceExpr="Inventory Value (Calculated)" }
+
+    { 77  ;2   ;Field     ;
+                SourceExpr="Inventory Value (Revalued)" }
+
+    { 78  ;2   ;Field     ;
+                SourceExpr="Variance Type" }
+
+    { 79  ;2   ;Field     ;
+                SourceExpr="Inventory Value Per" }
+
+    { 80  ;2   ;Field     ;
+                SourceExpr="Partial Revaluation" }
+
+    { 81  ;2   ;Field     ;
+                SourceExpr="Applies-from Entry" }
+
+    { 82  ;2   ;Field     ;
+                SourceExpr="Invoice No." }
+
+    { 83  ;2   ;Field     ;
+                SourceExpr="Unit Cost (Calculated)" }
+
+    { 84  ;2   ;Field     ;
+                SourceExpr="Unit Cost (Revalued)" }
+
+    { 85  ;2   ;Field     ;
+                SourceExpr="Applied Amount" }
+
+    { 86  ;2   ;Field     ;
+                SourceExpr="Update Standard Cost" }
+
+    { 87  ;2   ;Field     ;
+                SourceExpr="Amount (ACY)" }
+
+    { 88  ;2   ;Field     ;
+                SourceExpr=Correction }
+
+    { 89  ;2   ;Field     ;
+                SourceExpr=Adjustment }
+
+    { 90  ;2   ;Field     ;
+                SourceExpr="Applies-to Value Entry" }
+
+    { 91  ;2   ;Field     ;
+                SourceExpr="Prod. Order Line No." }
+
+    { 92  ;2   ;Field     ;
+                SourceExpr="Lot No." }
+
+    { 93  ;2   ;Field     ;
+                SourceExpr="Warranty Date" }
+
+    { 94  ;2   ;Field     ;
+                SourceExpr="New Serial No." }
+
+    { 95  ;2   ;Field     ;
+                SourceExpr="New Lot No." }
+
+    { 96  ;2   ;Field     ;
+                SourceExpr="Return Reason Code" }
+
+    { 97  ;2   ;Field     ;
+                SourceExpr="Phys Invt Counting Period Code" }
+
+    { 98  ;2   ;Field     ;
+                SourceExpr="Phys Invt Counting Period Type" }
+
+    { 99  ;2   ;Field     ;
+                SourceExpr="Item Type" }
+
+    { 100 ;2   ;Field     ;
+                SourceExpr="From Vehicle Sales & Purchases" }
+
+    { 101 ;2   ;Field     ;
+                SourceExpr="Invoice Discount" }
+
+    { 102 ;2   ;Field     ;
+                SourceExpr="Quantity Discount" }
+
+    { 103 ;2   ;Field     ;
+                SourceExpr="Sales Discount" }
+
+    { 104 ;2   ;Field     ;
+                SourceExpr="Sales Surcharge" }
+
+    { 105 ;2   ;Field     ;
+                SourceExpr="Item Group Code" }
+
+    { 106 ;2   ;Field     ;
+                SourceExpr="Customer Group Code" }
+
+    { 107 ;2   ;Field     ;
+                SourceExpr="Purch. Order Type" }
+
+    { 108 ;2   ;Field     ;
+                SourceExpr="Vehicle Status" }
+
+    { 109 ;2   ;Field     ;
+                SourceExpr="Vehicle Direct Unit Cost" }
+
+    { 110 ;2   ;Field     ;
+                SourceExpr="Vehicle Unit Cost" }
+
+    { 111 ;2   ;Field     ;
+                SourceExpr="Main Group Code" }
+
+    { 112 ;2   ;Field     ;
+                SourceExpr="Subgroup Code" }
+
+    { 113 ;2   ;Field     ;
+                SourceExpr="Line Group Code" }
+
+    { 114 ;2   ;Field     ;
+                SourceExpr="Main Area" }
+
+    { 115 ;2   ;Field     ;
+                SourceExpr="Source No. (Payment)" }
+
+    { 116 ;2   ;Field     ;
+                SourceExpr="Shelf/Bin No." }
+
+    { 117 ;2   ;Field     ;
+                SourceExpr="Vendor Group Code" }
+
+    { 118 ;2   ;Field     ;
+                SourceExpr="Qty. on First Purchase" }
+
+    { 119 ;2   ;Field     ;
+                SourceExpr="Total Qty. First Receipt" }
+
+    { 120 ;2   ;Field     ;
+                SourceExpr="Purch. Order Date" }
+
+    { 121 ;2   ;Field     ;
+                SourceExpr="Purchase Order No." }
+
+    { 122 ;2   ;Field     ;
+                SourceExpr="Order No." }
+
+    { 123 ;2   ;Field     ;
+                SourceExpr="Branch Code" }
+
+    { 124 ;2   ;Field     ;
+                SourceExpr="New Branch Code" }
+
+    { 125 ;2   ;Field     ;
+                SourceExpr="Disable for Requisition" }
+
+    { 126 ;2   ;Field     ;
+                SourceExpr="Automatically Generated" }
+
+    { 127 ;2   ;Field     ;
+                SourceExpr=VIN }
+
+    { 128 ;2   ;Field     ;
+                SourceExpr="License No." }
+
+    { 129 ;2   ;Field     ;
+                SourceExpr="Import Costing No." }
+
+    { 130 ;2   ;Field     ;
+                SourceExpr="Factory No." }
+
+    { 131 ;2   ;Field     ;
+                SourceExpr="Supply VIN" }
+
+    { 132 ;2   ;Field     ;
+                SourceExpr="Int. Customer Portion %" }
+
+    { 133 ;2   ;Field     ;
+                SourceExpr="New Vehicle Status" }
+
+    { 134 ;2   ;Field     ;
+                SourceExpr="New Inventory Posting Group" }
+
+    { 135 ;2   ;Field     ;
+                SourceExpr="Value Increasing Measure" }
+
+    { 136 ;2   ;Field     ;
+                SourceExpr="New Gen. Prod. Posting Group" }
+
+    { 137 ;2   ;Field     ;
+                SourceExpr="Salesperson Code 2" }
+
+  }
+  CODE
+  {
+
+    BEGIN
+    END.
+  }
+}
+

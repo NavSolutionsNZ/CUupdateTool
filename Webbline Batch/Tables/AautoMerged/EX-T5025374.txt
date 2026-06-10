@@ -1,0 +1,313 @@
+OBJECT Table 5025374 Branch Shipment Doc. Line Item
+{
+  OBJECT-PROPERTIES
+  {
+    Date=08/03/23;
+    Time=[ 8:21:42 PM];
+    Modified=Yes;
+    Version List=N.7.2.0_SLA,AP001651;
+  }
+  PROPERTIES
+  {
+    CaptionML=ENU=Branch Shipment Doc. Line Item;
+    LookupPageID=Page5025376;
+    DrillDownPageID=Page5025376;
+  }
+  FIELDS
+  {
+    { 1   ;No ;FIELD ID 1 BLOCKED  ;Integer       ;CaptionML=ENU=FIELD ID 1 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+    { 2   ;   ;Sell-to Customer No.;Code20        ;TableRelation=Customer;
+                                                   CaptionML=ENU=Sell-to Customer No.;
+                                                   Editable=No }
+    { 3   ;   ;Document No.        ;Code20        ;CaptionML=ENU=Document No. }
+    { 4   ;   ;Line No.            ;Integer       ;CaptionML=ENU=Line No. }
+    { 5   ;   ;Type                ;Option        ;CaptionML=ENU=Type;
+                                                   OptionCaptionML=ENU=" ,Vehicle,Item";
+                                                   OptionString=[ ,Vehicle,Item] }
+    { 6   ;   ;No.                 ;Code20        ;TableRelation=IF (Type=CONST(" ")) "Standard Text"
+                                                                 ELSE IF (Type=CONST(Vehicle)) Vehicle
+                                                                 ELSE IF (Type=CONST(Item)) Item;
+                                                   CaptionML=ENU=No. }
+    { 7   ;   ;Location Code       ;Code10        ;TableRelation=Location;
+                                                   CaptionML=ENU=Location Code }
+    { 8   ;   ;Posting Group       ;Code10        ;TableRelation=IF (Type=CONST(Item)) "Inventory Posting Group";
+                                                   CaptionML=ENU=Posting Group;
+                                                   Editable=No }
+    { 9   ;No ;FIELD ID 9 BLOCKED  ;Integer       ;CaptionML=ENU=FIELD ID 9 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+    { 10  ;   ;Shipment Date       ;Date          ;CaptionML=ENU=Shipment Date }
+    { 11  ;   ;Description         ;Text50        ;CaptionML=ENU=Description }
+    { 12  ;   ;Description 2       ;Text50        ;CaptionML=ENU=Description 2 }
+    { 13  ;   ;Unit of Measure     ;Text10        ;CaptionML=ENU=Unit of Measure }
+    { 15  ;   ;Quantity            ;Decimal       ;CaptionML=ENU=Quantity;
+                                                   DecimalPlaces=0:5 }
+    { 18  ;No ;FIELD ID 18 BLOCKED ;Integer       ;CaptionML=ENU=FIELD ID 18 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+    { 22  ;   ;Unit Price          ;Decimal       ;CaptionML=ENU=Unit Price;
+                                                   AutoFormatType=2;
+                                                   AutoFormatExpr=GetCurrencyCode }
+    { 23  ;   ;Unit Cost (LCY)     ;Decimal       ;CaptionML=ENU=Unit Cost (LCY);
+                                                   AutoFormatType=2 }
+    { 25  ;No ;FIELD ID 25 BLOCKED ;Integer       ;CaptionML=ENU=FIELD ID 25 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+    { 29  ;No ;FIELD ID 29 BLOCKED ;Integer       ;CaptionML=ENU=FIELD ID 29 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+    { 34  ;   ;Gross Weight        ;Decimal       ;CaptionML=ENU=Gross Weight;
+                                                   DecimalPlaces=0:5 }
+    { 35  ;   ;Net Weight          ;Decimal       ;CaptionML=ENU=Net Weight;
+                                                   DecimalPlaces=0:5 }
+    { 36  ;   ;Units per Parcel    ;Decimal       ;CaptionML=ENU=Units per Parcel;
+                                                   DecimalPlaces=0:5 }
+    { 37  ;   ;Unit Volume         ;Decimal       ;CaptionML=ENU=Unit Volume;
+                                                   DecimalPlaces=0:5 }
+    { 38  ;   ;Appl.-to Item Entry ;Integer       ;CaptionML=ENU=Appl.-to Item Entry }
+    { 39  ;   ;Item Shpt. Entry No.;Integer       ;CaptionML=ENU=Item Shpt. Entry No. }
+    { 40  ;   ;Department Code     ;Code20        ;TableRelation=Department;
+                                                   CaptionML=ENU=Department Code;
+                                                   Description=PA035597 }
+    { 41  ;   ;Make Code           ;Code20        ;TableRelation=Make;
+                                                   CaptionML=ENU=Make Code;
+                                                   Description=PA035597 }
+    { 42  ;No ;FIELD ID 42 BLOCKED ;Integer       ;CaptionML=ENU=FIELD ID 42 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+    { 52  ;   ;Work Type Code      ;Code10        ;TableRelation="Work Type";
+                                                   CaptionML=ENU=Work Type Code }
+    { 53  ;   ;Serial No.          ;Code20        ;CaptionML=ENU=Serial No. }
+    { 57  ;No ;FIELD ID 57 BLOCKED ;Integer       ;CaptionML=ENU=FIELD ID 57 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+    { 58  ;No ;FIELD ID 58 BLOCKED ;Integer       ;CaptionML=ENU=FIELD ID 58 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+    { 60  ;No ;FIELD ID 60 BLOCKED ;Integer       ;CaptionML=ENU=FIELD ID 60 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+    { 61  ;   ;Qty. Returned       ;Decimal       ;CaptionML=ENU=Qty. Returned;
+                                                   DecimalPlaces=0:5;
+                                                   Editable=No }
+    { 63  ;No ;FIELD ID 63 BLOCKED ;Integer       ;CaptionML=ENU=FIELD ID 63 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+    { 64  ;No ;FIELD ID 64 BLOCKED ;Integer       ;CaptionML=ENU=FIELD ID 64 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+    { 65  ;   ;Order No.           ;Code20        ;CaptionML=ENU=Order No. }
+    { 66  ;   ;Order Line No.      ;Integer       ;CaptionML=ENU=Order Line No. }
+    { 67  ;No ;FIELD ID 67 BLOCKED ;Integer       ;CaptionML=ENU=FIELD ID 67 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+    { 68  ;No ;FIELD ID 68 BLOCKED ;Integer       ;CaptionML=ENU=FIELD ID 68 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+    { 71  ;   ;Purchase Order No.  ;Code20        ;CaptionML=ENU=Purchase Order No. }
+    { 72  ;   ;Purch. Order Line No.;Integer      ;CaptionML=ENU=Purch. Order Line No. }
+    { 73  ;   ;Drop Shipment       ;Boolean       ;CaptionML=ENU=Drop Shipment }
+    { 74  ;   ;Gen. Bus. Posting Group;Code10     ;TableRelation="Gen. Business Posting Group";
+                                                   CaptionML=ENU=Gen. Bus. Posting Group }
+    { 75  ;   ;Gen. Prod. Posting Group;Code10    ;TableRelation="Gen. Product Posting Group";
+                                                   CaptionML=ENU=Gen. Prod. Posting Group }
+    { 78  ;   ;Transaction Type    ;Code10        ;TableRelation="Transaction Type";
+                                                   CaptionML=ENU=Transaction Type }
+    { 79  ;   ;Transport Method    ;Code10        ;TableRelation="Transport Method";
+                                                   CaptionML=ENU=Transport Method }
+    { 80  ;   ;Attached to Line No.;Integer       ;CaptionML=ENU=Attached to Line No. }
+    { 81  ;   ;Exit Point          ;Code10        ;TableRelation="Entry/Exit Point";
+                                                   CaptionML=ENU=Exit Point }
+    { 82  ;   ;Area                ;Code10        ;TableRelation=Area;
+                                                   CaptionML=ENU=Area }
+    { 83  ;   ;Transaction Specification;Code10   ;TableRelation="Transaction Specification";
+                                                   CaptionML=ENU=Transaction Specification }
+    { 91  ;No ;FIELD ID 91 BLOCKED ;Integer       ;CaptionML=ENU=FIELD ID 91 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+    { 95  ;No ;FIELD ID 95 BLOCKED ;Integer       ;CaptionML=ENU=FIELD ID 95 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+    { 96  ;No ;FIELD ID 96 BLOCKED ;Integer       ;CaptionML=ENU=FIELD ID 96 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+    { 97  ;   ;Blanket Order No.   ;Code20        ;TableRelation="Sales Header".No. WHERE (Document Type=CONST(Blanket Order));
+                                                   TestTableRelation=No;
+                                                   CaptionML=ENU=Blanket Order No. }
+    { 98  ;   ;Blanket Order Line No.;Integer     ;TableRelation="Sales Line"."Line No." WHERE (Document Type=CONST(Blanket Order),
+                                                                                                Document No.=FIELD(Blanket Order No.));
+                                                   TestTableRelation=No;
+                                                   CaptionML=ENU=Blanket Order Line No. }
+    { 100 ;   ;Unit Cost           ;Decimal       ;CaptionML=ENU=Unit Cost;
+                                                   Editable=No;
+                                                   AutoFormatType=2;
+                                                   AutoFormatExpr=GetCurrencyCode }
+    { 480 ;   ;Dimension Set ID    ;Integer       ;TableRelation="Dimension Set Entry";
+                                                   OnLookup=BEGIN
+                                                              // Start PA035597
+                                                              ShowDimensions;
+                                                              // Stop PA035597
+                                                            END;
+
+                                                   CaptionML=ENU=Dimension Set ID;
+                                                   Description=PA035597;
+                                                   Editable=No }
+    { 5400;   ;Book No.            ;Code20        ;CaptionML=ENU=Book No.;
+                                                   AutoFormatExpr='JMD' }
+    { 5402;   ;Variant Code        ;Code10        ;TableRelation=IF (Type=CONST(Item)) "Item Variant".Code WHERE (Item No.=FIELD(No.));
+                                                   CaptionML=ENU=Variant Code }
+    { 5403;   ;Bin Code            ;Code20        ;CaptionML=ENU=Bin Code;
+                                                   Description=PA035597 }
+    { 5404;   ;Qty. per Unit of Measure;Decimal   ;CaptionML=ENU=Qty. per Unit of Measure;
+                                                   DecimalPlaces=0:5;
+                                                   Editable=No }
+    { 5405;No ;FIELD ID 5405 BLOCKED;Integer      ;CaptionML=ENU=FIELD ID 5405 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+    { 5407;   ;Unit of Measure Code;Code10        ;TableRelation=IF (Type=CONST(Item)) "Item Unit of Measure".Code WHERE (Item No.=FIELD(No.))
+                                                                 ELSE "Unit of Measure";
+                                                   CaptionML=ENU=Unit of Measure Code }
+    { 5415;   ;Quantity (Base)     ;Decimal       ;CaptionML=ENU=Quantity (Base);
+                                                   DecimalPlaces=0:5 }
+    { 5418;No ;FIELD ID 5418 BLOCKED;Integer      ;CaptionML=ENU=FIELD ID 5418 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+    { 5460;No ;FIELD ID 5460 BLOCKED;Integer      ;CaptionML=ENU=FIELD ID 5460 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+    { 5461;   ;Qty. Returned (Base);Decimal       ;CaptionML=ENU=Qty. Returned (Base);
+                                                   DecimalPlaces=0:5;
+                                                   Editable=No }
+    { 5495;No ;FIELD ID 5495 BLOCKED;Integer      ;CaptionML=ENU=FIELD ID 5495 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+    { 50090;  ;Your Reference      ;Text35        ;FieldClass=FlowField;
+                                                   CalcFormula=Lookup("Branch Shipment Header Item"."Your Reference" WHERE (No.=FIELD(Document No.)));
+                                                   Description=AP001651;
+                                                   Editable=No }
+    { 50091;  ;Consigned Quantity  ;Decimal       ;FieldClass=FlowField;
+                                                   CalcFormula=Sum("Branch Shpt. Consignment Link".Quantity WHERE (Document No.=FIELD(Document No.),
+                                                                                                                   Line No.=FIELD(Line No.)));
+                                                   DecimalPlaces=0:5;
+                                                   BlankZero=Yes;
+                                                   Description=AP001651;
+                                                   Editable=No }
+    { 50092;  ;Consigned Quantity (Base);Decimal  ;FieldClass=FlowField;
+                                                   CalcFormula=Sum("Branch Shpt. Consignment Link"."Quantity (Base)" WHERE (Document No.=FIELD(Document No.),
+                                                                                                                            Line No.=FIELD(Line No.)));
+                                                   DecimalPlaces=0:5;
+                                                   BlankZero=Yes;
+                                                   Description=AP001651;
+                                                   Editable=No }
+    { 50095;  ;Posting Date        ;Date          ;FieldClass=FlowField;
+                                                   CalcFormula=Lookup("Branch Shipment Header Item"."Posting Date" WHERE (No.=FIELD(Document No.)));
+                                                   Description=AP001651;
+                                                   Editable=No }
+    { 5025350;;New Location Code   ;Code10        ;TableRelation=Location;
+                                                   CaptionML=ENU=New Location Code }
+    { 5025351;;New Bin Code        ;Code20        ;CaptionML=ENU=New Bin Code;
+                                                   Description=PA035597 }
+    { 5025352;No;FIELD ID 5025352 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025352 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+    { 5025353;No;FIELD ID 5025353 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025353 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+    { 5025354;;Charging Price      ;Decimal       ;CaptionML=ENU=Charging Price;
+                                                   AutoFormatType=2;
+                                                   AutoFormatExpr=GetCurrencyCode }
+    { 5025355;;New Department Code ;Code20        ;TableRelation=Department;
+                                                   CaptionML=ENU=New Department Code;
+                                                   Description=PA035597 }
+    { 5025356;;Vehicle Status      ;Option        ;CaptionML=ENU=Vehicle Status;
+                                                   OptionCaptionML=ENU=" ,New Vehicle,Used Vehicle,Demo Vehicle";
+                                                   OptionString=[ ,New Vehicle,Used Vehicle,Demo Vehicle];
+                                                   Editable=No }
+    { 5025357;No;FIELD ID 5025357 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025357 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+    { 5025358;No;FIELD ID 5025358 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025358 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+    { 5025359;No;FIELD ID 5025359 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025359 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+    { 5025360;No;FIELD ID 5025360 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025360 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+    { 5025371;;Shelf/Bin No.       ;Code10        ;CaptionML=ENU=Shelf No.;
+                                                   Description=PA045273;
+                                                   Editable=No }
+    { 5025372;;New Shelf/Bin No.   ;Code10        ;CaptionML=ENU=New Shelf No.;
+                                                   Description=PA045273 }
+    { 5025380;No;FIELD ID 5025380 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025380 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+    { 5025384;No;FIELD ID 5025384 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025384 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+    { 5025400;No;FIELD ID 5025400 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025400 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+    { 5025410;No;FIELD ID 5025410 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025410 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+    { 5025415;No;FIELD ID 5025415 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025415 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+    { 5025420;No;FIELD ID 5025420 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025420 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+    { 5025421;No;FIELD ID 5025421 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025421 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+    { 5025424;No;FIELD ID 5025424 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025424 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+    { 5025425;No;FIELD ID 5025425 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025425 BLOCKED;
+                                                   Description=reserved for tables 5025371|5025374|5025376|5025385 }
+  }
+  KEYS
+  {
+    {    ;Document No.,Line No.                   ;MaintainSIFTIndex=No;
+                                                   Clustered=Yes }
+    {    ;Order No.,Order Line No.,Shipment Date  ;MaintainSIFTIndex=No }
+    { No ;Blanket Order No.,Blanket Order Line No.;MaintainSIFTIndex=No }
+    {    ;Blanket Order No.,Blanket Order Line No.,Shipment Date;
+                                                   SumIndexFields=Quantity;
+                                                   MaintainSIFTIndex=No }
+    {    ;Blanket Order No.,Blanket Order Line No.,Department Code,Make Code,Shipment Date;
+                                                   SumIndexFields=Quantity;
+                                                   MaintainSIFTIndex=No }
+    {    ;Type,No.                                ;MaintainSIFTIndex=No }
+  }
+  FIELDGROUPS
+  {
+  }
+  CODE
+  {
+    VAR
+      DimMgtG@1109400000 : Codeunit 408;
+
+    PROCEDURE GetCurrencyCode@1() : Code[10];
+    VAR
+      SalDocShptHdrL@1109400000 : Record 5025373;
+    BEGIN
+      IF ("Document No." = SalDocShptHdrL."No.") THEN
+        EXIT(SalDocShptHdrL."Currency Code")
+      ELSE
+        IF SalDocShptHdrL.GET("Document No.") THEN
+          EXIT(SalDocShptHdrL."Currency Code")
+        ELSE
+          EXIT('');
+    END;
+
+    PROCEDURE ShowDimensions@1109400002();
+    BEGIN
+      // Start PA035597
+      DimMgtG.ShowDimensionSet("Dimension Set ID",STRSUBSTNO('%1 %2 %3',TABLECAPTION,"Document No.","Line No."));
+      // Stop PA035597
+    END;
+
+    BEGIN
+    {
+      TRANSFERFIELDS 5025371|5025374|5025376|5025385
+
+      ** ATTENTION! TRANSFERFIELDS ******************************
+      * Fields are exchanged with following tables:             *
+      *    5025371  Branch Order Line                           *
+      *    5025376  Archived Branch Order Line                  *
+      *    5025385  Branch Ship Doc. Line Vehicle               *
+      ***********************************************************
+
+      +----------------------------------------------+
+      | Copyright (c) incadea                        |
+      +----------------------------------------------+
+      PA-Number  Date
+      ------------------------------------------------
+      PA031882   08.06.10    Deactivation of field 'Job No.'
+      PA033067   12.04.12 DR DE Captions implemented
+      PA032651   25.04.12 DR 6012646: DEU and ENU Captions corrected
+      PA033259   08.08.12 AI Deletion of Start/Stop History in Code, update copyright and Version List
+      PA033259   18.09.12 DR Variable names changed according to incadea styleguide
+      PA035597   10.02.14 GC NAV 2013 R2 Technical Upgrade, New Function ShowDimensions
+      PA036008   20.05.14 DR TRANSFERFIELDS incaDoc and dummy fields added for field type error prevention in TRANSFERFIELDS
+      PA036549   20.01.15 TS 32895 Rename disabled fields used to accommodate TRANSFERFIELDS without braces.
+      --- 7.1.5 ---
+      PA045273   21.12.17 DR New fields "Shelf/Bin No." and "New Shelf/Bin No." added.
+      --- 7.2.0 ---
+      EU.0012838 29.01.18 DR Merge of PA045273
+      AP001651   02.08.23 QQ Added Consignment flow fields 50090, 50091, 50092.
+    }
+    END.
+  }
+}
+

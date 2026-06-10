@@ -1,0 +1,1802 @@
+OBJECT Table 112 Sales Invoice Header
+{
+  OBJECT-PROPERTIES
+  {
+    Date=10/06/26;
+    Time=[ 3:20:20 PM];
+    Modified=Yes;
+    Version List=NAVW1.x,N.7.2.1,AP2308,CU26Q1;
+  }
+  PROPERTIES
+  {
+    Permissions=TableData 113=rm;
+    DataCaptionFields=No.,Sell-to Customer Name;
+    OnInsert=BEGIN
+               // Start PA036727
+               IF ExitPoint(ExitPointSetupG.Trigger::OnInsert,ExitPointSetupG.Type::Pre,'') THEN
+                 EXIT;
+               // Stop PA036727
+
+               // Start PA036727
+               ExitPoint(ExitPointSetupG.Trigger::OnInsert,ExitPointSetupG.Type::Post,'');
+               // Stop PA036727
+             END;
+
+    OnModify=BEGIN
+               // Start PA036727
+               IF ExitPoint(ExitPointSetupG.Trigger::OnModify,ExitPointSetupG.Type::Pre,'') THEN
+                 EXIT;
+               // Stop PA036727
+
+               // Start PA036727
+               ExitPoint(ExitPointSetupG.Trigger::OnModify,ExitPointSetupG.Type::Post,'');
+               // Stop PA036727
+             END;
+
+    OnDelete=VAR
+               PostSalesDocTextL@1055600 : Record 5028679;
+               PostVehicleOptionInvL@17425801 : Record 5025476;
+               PostOptVariantL@17425806 : Record 5025427;
+               PostSalesTradeInL@17425804 : Record 5025443;
+               PostSalesDocDiffTaxTextL@17425802 : Record 5025484;
+               PostEmissionsRelatedTextL@17425800 : Record 5205864;
+             BEGIN
+               // Start PA036727
+               IF ExitPoint(ExitPointSetupG.Trigger::OnDelete,ExitPointSetupG.Type::Pre,'') THEN
+                 EXIT;
+               // Stop PA036727
+               // Start EU.0174523
+               IF NOT "Created for Proforma Print" THEN
+               // Stop EU.0174523
+                 TESTFIELD("No. Printed");
+               LOCKTABLE;
+               PostSalesLinesDelete.DeleteSalesInvLines(Rec);
+               // Start EU.0174523
+               PostVehicleOptionInvL.SETRANGE("Document No.", "No.");
+               PostVehicleOptionInvL.SETRANGE("Document Type", PostVehicleOptionInvL."Document Type"::"Posted Invoice");
+               PostVehicleOptionInvL.DELETEALL;
+               PostOptVariantL.SETRANGE("Document No.", "No.");
+               PostOptVariantL.SETRANGE("Document Type", PostOptVariantL."Document Type"::"1");
+               PostOptVariantL.DELETEALL;
+               PostSalesTradeInL.SETRANGE("Document No.", "No.");
+               PostSalesTradeInL.SETRANGE("Document Type", PostSalesTradeInL."Document Type"::Invoice);
+               PostSalesTradeInL.DELETEALL;
+               PostSalesDocDiffTaxTextL.SETRANGE("Document No.", "No.");
+               PostSalesDocDiffTaxTextL.SETRANGE("Document Type", PostSalesDocDiffTaxTextL."Document Type"::"1");
+               PostSalesDocDiffTaxTextL.DELETEALL;
+               PostEmissionsRelatedTextL.SETRANGE("Document No.", "No.");
+               PostEmissionsRelatedTextL.SETRANGE("Document Type", PostEmissionsRelatedTextL."Document Type"::"1");
+               PostEmissionsRelatedTextL.DELETEALL;
+               // Stop EU.0174523
+               // Start EU.0000039
+               PostSalesDocTextL.SETRANGE("Document Type", PostSalesDocTextL."Document Type"::Invoice);
+               PostSalesDocTextL.SETRANGE("Document No.", "No.");
+               PostSalesDocTextL.DELETEALL;
+               // Stop EU.0000039
+               SalesCommentLine.SETRANGE("Document Type",SalesCommentLine."Document Type"::"Posted Invoice");
+               SalesCommentLine.SETRANGE("No.","No.");
+               SalesCommentLine.DELETEALL;
+
+               PostedSalesAssistanceLineG.DeleteDocSalesAssistLine(
+                 PostedSalesAssistanceLineG.Area::Sale,
+                 PostedSalesAssistanceLineG."Document Type"::Invoice,
+                 "No.",
+                 0);
+
+               // Start PA036727
+               ExitPoint(ExitPointSetupG.Trigger::OnDelete,ExitPointSetupG.Type::Post,'');
+               // Stop PA036727
+             END;
+
+    CaptionML=ENU=Sales Invoice Header;
+    LookupPageID=Page143;
+    DrillDownPageID=Page143;
+  }
+  FIELDS
+  {
+    { 2   ;   ;Sell-to Customer No.;Code20        ;TableRelation=Customer;
+                                                   CaptionML=ENU=Sell-to Customer No.;
+                                                   NotBlank=Yes }
+    { 3   ;   ;No.                 ;Code20        ;CaptionML=ENU=No. }
+    { 4   ;   ;Bill-to Customer No.;Code20        ;TableRelation=Customer;
+                                                   CaptionML=ENU=Bill-to Customer No.;
+                                                   NotBlank=Yes }
+    { 5   ;   ;Bill-to Name        ;Text50        ;CaptionML=ENU=Bill-to Name;
+                                                   Description=PA032438 }
+    { 6   ;   ;Bill-to Name 2      ;Text50        ;CaptionML=ENU=Bill-to Name 2;
+                                                   Description=PA032438 }
+    { 7   ;   ;Bill-to Address     ;Text50        ;CaptionML=ENU=Bill-to Address;
+                                                   Description=PA032438 }
+    { 8   ;   ;Bill-to Address 2   ;Text50        ;CaptionML=ENU=Bill-to Address 2;
+                                                   Description=PA032438 }
+    { 9   ;   ;Bill-to City        ;Text30        ;OnValidate=BEGIN
+                                                                // Start PA033005
+                                                                // Start PA035901
+                                                                PostCodeG.ValidateCity("Bill-to City", "Bill-to Post Code", "Bill-to County", "Bill-to Country Code", (CurrFieldNo <> 0) AND GUIALLOWED);
+                                                                // Stop PA035901
+                                                                // Stop PA033005
+                                                              END;
+
+                                                   OnLookup=BEGIN
+                                                              // Start PA033005
+                                                              // Start PA035901
+                                                              PostCodeG.LookUpCity("Bill-to City", "Bill-to Post Code", "Bill-to County", "Bill-to Country Code", TRUE);
+                                                              // Stop PA035901
+                                                              // Stop PA033005
+                                                            END;
+
+                                                   CaptionML=ENU=Bill-to City }
+    { 10  ;   ;Bill-to Contact     ;Text50        ;CaptionML=ENU=Bill-to Contact;
+                                                   Description=PA032438 }
+    { 11  ;   ;Your Reference      ;Text35        ;CaptionML=ENU=Your Reference;
+                                                   Description=PA035597,AP2308 }
+    { 12  ;   ;Ship-to Code        ;Code10        ;OnLookup=BEGIN
+                                                              ShipToAddr.SETRANGE("Customer No.","Sell-to Customer No.");
+                                                              PAGE.RUN(0,ShipToAddr);
+                                                            END;
+
+                                                   CaptionML=ENU=Ship-to Code }
+    { 13  ;   ;Ship-to Name        ;Text50        ;CaptionML=ENU=Ship-to Name;
+                                                   Description=PA032438 }
+    { 14  ;   ;Ship-to Name 2      ;Text50        ;CaptionML=ENU=Ship-to Name 2;
+                                                   Description=PA032438 }
+    { 15  ;   ;Ship-to Address     ;Text50        ;CaptionML=ENU=Ship-to Address;
+                                                   Description=PA032438 }
+    { 16  ;   ;Ship-to Address 2   ;Text50        ;CaptionML=ENU=Ship-to Address 2;
+                                                   Description=PA032438 }
+    { 17  ;   ;Ship-to City        ;Text30        ;OnValidate=BEGIN
+                                                                // Start PA033005
+                                                                // Start PA035901
+                                                                PostCodeG.ValidateCity("Ship-to City", "Ship-to Post Code", "Ship-to County", "Ship-to Country Code", (CurrFieldNo <> 0) AND GUIALLOWED);
+                                                                // Stop PA035901
+                                                                // Stop PA033005
+                                                              END;
+
+                                                   OnLookup=BEGIN
+                                                              // Start PA033005
+                                                              // Start PA035901
+                                                              PostCodeG.LookUpCity("Ship-to City", "Ship-to Post Code", "Ship-to County", "Ship-to Country Code", TRUE);
+                                                              // Stop PA035901
+                                                              // Stop PA033005
+                                                            END;
+
+                                                   CaptionML=ENU=Ship-to City }
+    { 18  ;   ;Ship-to Contact     ;Text50        ;CaptionML=ENU=Ship-to Contact;
+                                                   Description=PA032438 }
+    { 19  ;   ;Order Date          ;Date          ;CaptionML=ENU=Order Date }
+    { 20  ;   ;Posting Date        ;Date          ;CaptionML=ENU=Posting Date }
+    { 21  ;   ;Shipment Date       ;Date          ;CaptionML=ENU=Shipment Date }
+    { 22  ;   ;Posting Description ;Text50        ;CaptionML=ENU=Posting Description }
+    { 23  ;   ;Payment Terms Code  ;Code10        ;TableRelation="Payment Terms";
+                                                   CaptionML=ENU=Payment Terms Code }
+    { 24  ;   ;Due Date            ;Date          ;CaptionML=ENU=Due Date }
+    { 25  ;   ;Payment Discount %  ;Decimal       ;CaptionML=ENU=Payment Discount %;
+                                                   DecimalPlaces=0:5 }
+    { 26  ;   ;Pmt. Discount Date  ;Date          ;CaptionML=ENU=Pmt. Discount Date }
+    { 27  ;   ;Shipment Method Code;Code10        ;TableRelation="Shipment Method";
+                                                   CaptionML=ENU=Shipment Method Code }
+    { 28  ;   ;Location Code       ;Code10        ;TableRelation=Location;
+                                                   CaptionML=ENU=Location Code }
+    { 29  ;   ;Shortcut Dimension 1 Code;Code20   ;TableRelation=Department;
+                                                   CaptionML=ENU=Shortcut Dimension 1 Code;
+                                                   Description=PA035597;
+                                                   CaptionClass='1,2,1' }
+    { 30  ;   ;Shortcut Dimension 2 Code;Code20   ;TableRelation=Make;
+                                                   CaptionML=ENU=Shortcut Dimension 2 Code;
+                                                   Description=PA035597;
+                                                   CaptionClass='1,2,2' }
+    { 31  ;   ;Customer Posting Group;Code10      ;TableRelation="Customer Posting Group";
+                                                   CaptionML=ENU=Customer Posting Group;
+                                                   Editable=No }
+    { 32  ;   ;Currency Code       ;Code10        ;TableRelation=Currency;
+                                                   CaptionML=ENU=Currency Code;
+                                                   Editable=No }
+    { 33  ;   ;Currency Factor     ;Decimal       ;CaptionML=ENU=Currency Factor;
+                                                   DecimalPlaces=0:15;
+                                                   MinValue=0 }
+    { 34  ;   ;Price Group Code    ;Code10        ;TableRelation="Price Group";
+                                                   CaptionML=ENU=Price Group Code }
+    { 35  ;   ;Prices Including VAT;Boolean       ;CaptionML=ENU=Prices Including VAT }
+    { 36  ;   ;Allow Quantity Disc.;Boolean       ;CaptionML=ENU=Allow Quantity Disc. }
+    { 37  ;   ;Invoice Disc. Code  ;Code20        ;CaptionML=ENU=Invoice Disc. Code }
+    { 40  ;   ;Cust./Item Disc. Gr.;Code20        ;TableRelation="Customer Discount Group";
+                                                   CaptionML=ENU=Cust./Item Disc. Gr.;
+                                                   Description=PA035597 }
+    { 41  ;   ;Language Code       ;Code10        ;TableRelation=Language;
+                                                   CaptionML=ENU=Language Code }
+    { 43  ;   ;Salesperson Code    ;Code10        ;TableRelation=Salesperson/Purchaser;
+                                                   CaptionML=ENU=Salesperson Code }
+    { 44  ;   ;Order No.           ;Code20        ;CaptionML=ENU=Order No. }
+    { 46  ;   ;Comment             ;Boolean       ;FieldClass=FlowField;
+                                                   CalcFormula=Exist("Sales Comment Line" WHERE (Document Type=CONST(Posted Invoice),
+                                                                                                 No.=FIELD(No.),
+                                                                                                 Document Line No.=CONST(0)));
+                                                   CaptionML=ENU=Comment;
+                                                   Description=PA036549.32799;
+                                                   Editable=No }
+    { 47  ;   ;No. Printed         ;Integer       ;CaptionML=ENU=No. Printed;
+                                                   Editable=No }
+    { 51  ;   ;On Hold             ;Code3         ;CaptionML=ENU=On Hold }
+    { 52  ;   ;Applies-to Doc. Type;Option        ;CaptionML=ENU=Applies-to Doc. Type;
+                                                   OptionCaptionML=ENU=" ,Payment,Invoice,Credit Memo,Finance Charge Memo,Reminder";
+                                                   OptionString=[ ,Payment,Invoice,Credit Memo,Finance Charge Memo,Reminder] }
+    { 53  ;   ;Applies-to Doc. No. ;Code20        ;OnLookup=BEGIN
+                                                              // Start PA036544
+                                                              IF NOT ExitPoint(ExitPointSetupG.Trigger::OnLookup,ExitPointSetupG.Type::Pre,FIELDNAME("Applies-to Doc. No.")) THEN
+                                                                EXIT;
+                                                              // Stop PA036544
+
+                                                              CustLedgEntry.SETCURRENTKEY("Document Type","Document No.","Customer No.");
+                                                              CustLedgEntry.SETRANGE("Document Type","Applies-to Doc. Type");
+                                                              CustLedgEntry.SETRANGE("Document No.","Applies-to Doc. No.");
+                                                              PAGE.RUN(0,CustLedgEntry);
+
+                                                              // Start PA036544
+                                                              ExitPoint(ExitPointSetupG.Trigger::OnLookup,ExitPointSetupG.Type::Post,FIELDNAME("Applies-to Doc. No."));
+                                                              // Stop PA036544
+                                                            END;
+
+                                                   CaptionML=ENU=Applies-to Doc. No. }
+    { 55  ;   ;Bal. Account No.    ;Code20        ;TableRelation=IF (Bal. Account Type=CONST(G/L Account)) "G/L Account"
+                                                                 ELSE IF (Bal. Account Type=CONST(Bank Account)) "Bank Account";
+                                                   CaptionML=ENU=Bal. Account No. }
+    { 60  ;   ;Amount              ;Decimal       ;FieldClass=FlowField;
+                                                   CalcFormula=Sum("Sales Invoice Line".Amount WHERE (Document No.=FIELD(No.)));
+                                                   CaptionML=ENU=Amount;
+                                                   Editable=No;
+                                                   AutoFormatType=1;
+                                                   AutoFormatExpr="Currency Code" }
+    { 61  ;   ;Amount Including VAT;Decimal       ;FieldClass=FlowField;
+                                                   CalcFormula=Sum("Sales Invoice Line"."Amount Including VAT" WHERE (Document No.=FIELD(No.)));
+                                                   CaptionML=ENU=Amount Including VAT;
+                                                   Editable=No;
+                                                   AutoFormatType=1;
+                                                   AutoFormatExpr="Currency Code" }
+    { 70  ;   ;VAT Registration No.;Text20        ;CaptionML=ENU=VAT Registration No. }
+    { 73  ;   ;Reason Code         ;Code10        ;TableRelation="Reason Code";
+                                                   CaptionML=ENU=Reason Code }
+    { 74  ;   ;Gen. Bus. Posting Group;Code10     ;TableRelation="Gen. Business Posting Group";
+                                                   CaptionML=ENU=Gen. Bus. Posting Group }
+    { 75  ;   ;EU 3-Party Trade    ;Boolean       ;CaptionML=ENU=EU 3-Party Trade }
+    { 76  ;   ;Transaction Type    ;Code10        ;TableRelation="Transaction Type";
+                                                   CaptionML=ENU=Transaction Type }
+    { 77  ;   ;Transport Method    ;Code10        ;TableRelation="Transport Method";
+                                                   CaptionML=ENU=Transport Method }
+    { 78  ;   ;VAT Country Code    ;Code10        ;TableRelation=Country/Region;
+                                                   CaptionML=ENU=VAT Country Code }
+    { 79  ;   ;Sell-to Customer Name;Text50       ;CaptionML=ENU=Sell-to Customer Name;
+                                                   Description=PA032438 }
+    { 80  ;   ;Sell-to Customer Name 2;Text50     ;CaptionML=ENU=Sell-to Customer Name 2;
+                                                   Description=PA032438 }
+    { 81  ;   ;Sell-to Address     ;Text50        ;CaptionML=ENU=Sell-to Address;
+                                                   Description=PA032438 }
+    { 82  ;   ;Sell-to Address 2   ;Text50        ;CaptionML=ENU=Sell-to Address 2;
+                                                   Description=PA032438 }
+    { 83  ;   ;Sell-to City        ;Text30        ;OnValidate=BEGIN
+                                                                // Start PA033005
+                                                                // Start PA035901
+                                                                PostCodeG.ValidateCity("Sell-to City", "Sell-to Post Code", "Sell-to County", "Sell-to Country Code", (CurrFieldNo <> 0) AND GUIALLOWED);
+                                                                // Stop PA035901
+                                                                // Stop PA033005
+                                                              END;
+
+                                                   OnLookup=BEGIN
+                                                              // Start PA033005
+                                                              // Start PA035901
+                                                              PostCodeG.LookUpCity("Sell-to City", "Sell-to Post Code", "Sell-to County", "Sell-to Country Code", TRUE);
+                                                              // Stop PA035901
+                                                              // Stop PA033005
+                                                            END;
+
+                                                   CaptionML=ENU=Sell-to City }
+    { 84  ;   ;Sell-to Contact     ;Text50        ;CaptionML=ENU=Sell-to Contact;
+                                                   Description=PA032438 }
+    { 85  ;   ;Bill-to Post Code   ;Code20        ;TableRelation="Post Code";
+                                                   OnValidate=BEGIN
+                                                                // Start PA033005
+                                                                // Start PA035901
+                                                                PostCodeG.ValidatePostCode("Bill-to City", "Bill-to Post Code", "Bill-to County", "Bill-to Country Code", (CurrFieldNo <> 0) AND GUIALLOWED);
+                                                                // Stop PA035901
+                                                                // Stop PA033005
+                                                              END;
+
+                                                   OnLookup=BEGIN
+                                                              // Start PA033005
+                                                              // Start PA035901
+                                                              PostCodeG.LookUpPostCode("Bill-to City", "Bill-to Post Code", "Bill-to County", "Bill-to Country Code", TRUE);
+                                                              // Stop PA035901
+                                                              // Stop PA033005
+                                                            END;
+
+                                                   ValidateTableRelation=No;
+                                                   TestTableRelation=No;
+                                                   CaptionML=ENU=Bill-to Post Code }
+    { 86  ;   ;Bill-to County      ;Text30        ;CaptionML=ENU=Bill-to County }
+    { 87  ;   ;Bill-to Country Code;Code10        ;TableRelation=Country/Region;
+                                                   CaptionML=ENU=Bill-to Country Code }
+    { 88  ;   ;Sell-to Post Code   ;Code20        ;TableRelation="Post Code";
+                                                   OnValidate=BEGIN
+                                                                // Start PA033005
+                                                                // Start PA035901
+                                                                PostCodeG.ValidatePostCode("Sell-to City", "Sell-to Post Code", "Sell-to County", "Sell-to Country Code", (CurrFieldNo <> 0) AND GUIALLOWED);
+                                                                // Stop PA035901
+                                                                // Stop PA033005
+                                                              END;
+
+                                                   OnLookup=BEGIN
+                                                              // Start PA033005
+                                                              // Start PA035901
+                                                              PostCodeG.LookUpPostCode("Sell-to City", "Sell-to Post Code", "Sell-to County", "Sell-to Country Code", TRUE);
+                                                              // Stop PA035901
+                                                              // Stop PA033005
+                                                            END;
+
+                                                   ValidateTableRelation=No;
+                                                   TestTableRelation=No;
+                                                   CaptionML=ENU=Sell-to Post Code }
+    { 89  ;   ;Sell-to County      ;Text30        ;CaptionML=ENU=Sell-to County }
+    { 90  ;   ;Sell-to Country Code;Code10        ;TableRelation=Country/Region;
+                                                   CaptionML=ENU=Sell-to Country Code }
+    { 91  ;   ;Ship-to Post Code   ;Code20        ;TableRelation="Post Code";
+                                                   OnValidate=BEGIN
+                                                                // Start PA033005
+                                                                // Start PA035901
+                                                                PostCodeG.ValidatePostCode("Ship-to City", "Ship-to Post Code", "Ship-to County", "Ship-to Country Code", (CurrFieldNo <> 0) AND GUIALLOWED);
+                                                                // Stop PA035901
+                                                                // Stop PA033005
+                                                              END;
+
+                                                   OnLookup=BEGIN
+                                                              // Start PA033005
+                                                              // Start PA035901
+                                                              PostCodeG.LookUpPostCode("Ship-to City", "Ship-to Post Code", "Ship-to County", "Ship-to Country Code", TRUE);
+                                                              // Stop PA035901
+                                                              // Stop PA033005
+                                                            END;
+
+                                                   ValidateTableRelation=No;
+                                                   TestTableRelation=No;
+                                                   CaptionML=ENU=Ship-to Post Code }
+    { 92  ;   ;Ship-to County      ;Text30        ;CaptionML=ENU=Ship-to County }
+    { 93  ;   ;Ship-to Country Code;Code10        ;TableRelation=Country/Region;
+                                                   CaptionML=ENU=Ship-to Country Code }
+    { 94  ;   ;Bal. Account Type   ;Option        ;CaptionML=ENU=Bal. Account Type;
+                                                   OptionCaptionML=ENU=G/L Account,Bank Account;
+                                                   OptionString=G/L Account,Bank Account }
+    { 97  ;   ;Exit Point          ;Code10        ;TableRelation="Entry/Exit Point";
+                                                   CaptionML=ENU=Exit Point }
+    { 98  ;   ;Correction          ;Boolean       ;CaptionML=ENU=Correction }
+    { 99  ;   ;Document Date       ;Date          ;CaptionML=ENU=Document Date }
+    { 100 ;   ;External Document No.;Code35       ;CaptionML=ENU=External Document No.;
+                                                   Description=PA035901,AP2308 }
+    { 101 ;   ;Area                ;Code10        ;TableRelation=Area;
+                                                   CaptionML=ENU=Area }
+    { 102 ;   ;Transaction Specification;Code10   ;TableRelation="Transaction Specification";
+                                                   CaptionML=ENU=Transaction Specification }
+    { 104 ;   ;Payment Method Code ;Code10        ;TableRelation="Payment Method";
+                                                   CaptionML=ENU=Payment Method Code }
+    { 105 ;   ;Shipping Agent Code ;Code10        ;TableRelation="Shipping Agent";
+                                                   CaptionML=ENU=Shipping Agent Code }
+    { 106 ;   ;Package Tracking No.;Text30        ;CaptionML=ENU=Package Tracking No. }
+    { 107 ;   ;Pre-Assigned No. Series;Code10     ;TableRelation="No. Series";
+                                                   CaptionML=ENU=Pre-Assigned No. Series }
+    { 108 ;   ;No. Series          ;Code10        ;TableRelation="No. Series";
+                                                   CaptionML=ENU=No. Series;
+                                                   Editable=No }
+    { 110 ;   ;Order No. Series    ;Code10        ;TableRelation="No. Series";
+                                                   CaptionML=ENU=Order No. Series }
+    { 111 ;   ;Pre-Assigned No.    ;Code20        ;CaptionML=ENU=Pre-Assigned No. }
+    { 112 ;   ;User ID             ;Code50        ;TableRelation=User."User Name";
+                                                   OnValidate=BEGIN
+                                                                // Start PA035901
+                                                                UserMgtG.ValidateUserID("User ID");
+                                                                // Stop PA035901
+                                                              END;
+
+                                                   OnLookup=BEGIN
+                                                              // Start PA035901
+                                                              UserMgtG.LookupUserID("User ID");
+                                                              // Stop PA035901
+                                                            END;
+
+                                                   TestTableRelation=No;
+                                                   CaptionML=ENU=User ID;
+                                                   Description=PA035597 }
+    { 113 ;   ;Source Code         ;Code10        ;TableRelation="Source Code";
+                                                   CaptionML=ENU=Source Code }
+    { 114 ;   ;Tax Area Code       ;Code20        ;TableRelation="Tax Area";
+                                                   CaptionML=ENU=Tax Area Code }
+    { 115 ;   ;Tax Liable          ;Boolean       ;CaptionML=ENU=Tax Liable }
+    { 116 ;   ;VAT Bus. Posting Group;Code10      ;TableRelation="VAT Business Posting Group";
+                                                   CaptionML=ENU=VAT Bus. Posting Group }
+    { 119 ;   ;VAT Base Discount % ;Decimal       ;CaptionML=ENU=VAT Base Discount %;
+                                                   DecimalPlaces=0:5;
+                                                   MinValue=0;
+                                                   MaxValue=100 }
+    { 480 ;   ;Dimension Set ID    ;Integer       ;TableRelation="Dimension Set Entry";
+                                                   OnLookup=BEGIN
+                                                              ShowDimensions;
+                                                            END;
+
+                                                   CaptionML=ENU=Dimension Set ID;
+                                                   Description=PA035597;
+                                                   Editable=No }
+    { 710 ;   ;Document Exchange Identifier;Text50;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Document Exchange Identifier }
+    { 711 ;   ;Document Exchange Status;Option    ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Document Exchange Status;
+                                                   OptionCaptionML=ENU=Not Sent,Sent to Document Exchange Service,Delivered to Recipient,Delivery Failed,Pending Connection to Recipient;
+                                                   OptionString=Not Sent,Sent to Document Exchange Service,Delivered to Recipient,Delivery Failed,Pending Connection to Recipient }
+    { 712 ;   ;Doc. Exch. Original Identifier;Text50;
+                                                   DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Doc. Exch. Original Identifier }
+    { 1200;   ;Direct Debit Mandate ID;Code35     ;TableRelation="SEPA Direct Debit Mandate" WHERE (Customer No.=FIELD(Bill-to Customer No.));
+                                                   CaptionML=ENU=Direct Debit Mandate ID;
+                                                   Description=PA036966 }
+    { 5052;   ;Sell-to Contact No. ;Code20        ;TableRelation=Contact WHERE (Type=CONST(Company));
+                                                   CaptionML=ENU=Sell-to Contact No.;
+                                                   Description=PA035597 }
+    { 5053;   ;Bill-to Contact No. ;Code20        ;TableRelation=Contact WHERE (Type=CONST(Company));
+                                                   CaptionML=ENU=Bill-to Contact No.;
+                                                   Description=PA035597, PA032178 }
+    { 5055;   ;Opportunity No.     ;Code20        ;CaptionML=ENU=Opportunity No.;
+                                                   Description=PA035597, PA034402, PA034402.I002002;
+                                                   Editable=No }
+    { 7001;No ;FIELD ID 7001 BLOCKED;Integer      ;CaptionML=ENU=FIELD ID 7001 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025350;;General Document    ;Boolean       ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=General Document;
+                                                   Description=EU.0114065 }
+    { 5025351;;Order Type          ;Option        ;CaptionML=ENU=Order Type;
+                                                   OptionCaptionML=ENU=Parts Sales & Purchases,Vehicle Sales & Purchases,Service;
+                                                   OptionString=Parts Sales & Purchases,Vehicle Sales & Purchases,Service;
+                                                   Description=INC }
+    { 5025352;;Customer Confirmation Date;Date    ;CaptionML=ENU=Customer Confirmation Date;
+                                                   Description=INC }
+    { 5025353;;Price Freeze Until  ;Date          ;CaptionML=ENU=Price Freeze Until;
+                                                   Description=INC }
+    { 5025354;;Service Order No.   ;Code20        ;CaptionML=ENU=Service Order No.;
+                                                   Description=INC }
+    { 5025355;;Item Sales Price Group;Code10      ;TableRelation="Item Sales Price Group";
+                                                   CaptionML=ENU=Item Sales Price Group;
+                                                   Description=Item Price Group }
+    { 5025356;;Show Discount       ;Boolean       ;InitValue=Yes;
+                                                   CaptionML=ENU=Show Discount;
+                                                   Description=Flag to show discounts Yes/No }
+    { 5025357;;Purch. Order Type   ;Code10        ;TableRelation="Purch. Order Type";
+                                                   CaptionML=ENU=Purch. Order Type;
+                                                   Description=Order Type }
+    { 5025358;;Inv. Discount %     ;Decimal       ;CaptionML=ENU=Inv. Discount %;
+                                                   DecimalPlaces=0:5;
+                                                   MinValue=0;
+                                                   MaxValue=100;
+                                                   Description=Inv. Discount in Percent }
+    { 5025359;;Sell-to Salutation Code;Code10     ;TableRelation="Address Salutation".Code;
+                                                   CaptionML=ENU=Sell-to Salutation Code;
+                                                   Description=INC }
+    { 5025360;;Bill-to Salutation Code;Code10     ;TableRelation="Address Salutation".Code;
+                                                   CaptionML=ENU=Bill-to Salutation Code;
+                                                   Description=INC }
+    { 5025361;;Ship-to Addr. Salutation Code;Code10;
+                                                   TableRelation="Address Salutation".Code;
+                                                   CaptionML=ENU=Ship-to Addr. Salutation Code;
+                                                   Description=INC }
+    { 5025362;;Vehicle Sales Price Group;Code10   ;TableRelation="Vehicle Sales Price Group".Code;
+                                                   CaptionML=ENU=Vehicle Sales Price Group;
+                                                   Description=Vehicle Price Group }
+    { 5025363;;Option Sales Price Group;Code10    ;TableRelation="Option Sales Price Group".Code;
+                                                   CaptionML=ENU=Option Sales Price Group;
+                                                   Description=Option Sales Price Group }
+    { 5025364;;Copy Header Text to Next Doc.;Boolean;
+                                                   CaptionML=ENU=Copy Header Text to Next Doc.;
+                                                   Description=INC }
+    { 5025365;;Copy Footer Text to Next Doc.;Boolean;
+                                                   CaptionML=ENU=Copy Footer Text to Next Doc.;
+                                                   Description=INC }
+    { 5025366;;Customer Group Code ;Code10        ;CaptionML=ENU=Customer Group Code;
+                                                   Description=INC;
+                                                   Editable=No }
+    { 5025367;;Cockpit Entry No.   ;Integer       ;CaptionML=ENU=Cockpit Entry No.;
+                                                   Description=Cockpit No. of the original (unposted) document;
+                                                   Editable=No }
+    { 5025368;;Service Order No. 2 ;Code20        ;CaptionML=ENU=Service Order No. 2;
+                                                   Description=INC }
+    { 5025369;;Service Order Line No.;Integer     ;CaptionML=ENU=Service Order Line No.;
+                                                   Description=INC }
+    { 5025370;;Cockpit Posting Entry No.;Integer  ;CaptionML=ENU=Cockpit Posting Entry No.;
+                                                   Description=Running No. from transfer to Cockpit Control;
+                                                   Editable=No }
+    { 5025371;;Transfer Method     ;Option        ;CaptionML=ENU=Transfer Method;
+                                                   OptionCaptionML=ENU=" ,Cockpit,Cockpit - Transfer Immediately";
+                                                   OptionString=[ ,Cockpit,Cockpit - Transfer Immediately];
+                                                   Description=Flag for the method used to forward sales documents: Normal (paper), Cockpit, Cockpit and immediate forwarding }
+    { 5025372;No;FIELD ID 5025372 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025372 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905;
+                                                   Editable=No }
+    { 5025373;No;FIELD ID 5025373 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025373 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905;
+                                                   Editable=No }
+    { 5025374;;Document Line No. Filter;Integer   ;FieldClass=FlowFilter;
+                                                   CaptionML=ENU=Document Line No. Filter;
+                                                   Description=EU.0095631 }
+    { 5025375;No;FIELD ID 5025375 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025375 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025376;No;FIELD ID 5025376 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025376 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025377;;First Shipment Date ;Date          ;CaptionML=ENU=First Shipment Date;
+                                                   Description=Shipment Date }
+    { 5025378;;Last Shipment Date  ;Date          ;CaptionML=ENU=Last Shipment Date;
+                                                   Description=Shipment Date }
+    { 5025379;;Main Shipment Date  ;Date          ;CaptionML=ENU=Main Shipment Date;
+                                                   Description=Shipment Date }
+    { 5025380;;Sell-to Address No. ;Integer       ;FieldClass=FlowField;
+                                                   CalcFormula=Lookup(Customer."Address No." WHERE (No.=FIELD(Sell-to Customer No.)));
+                                                   CaptionML=ENU=Sell-to Address No.;
+                                                   Description=PA038224.46899,PA037938.50855 }
+    { 5025381;;Fair Deal           ;Boolean       ;FieldClass=FlowField;
+                                                   CalcFormula=Exist("Sales Invoice Line" WHERE (Document No.=FIELD(No.),
+                                                                                                 Fair Deal=CONST(Yes)));
+                                                   CaptionML=ENU=Fair Deal;
+                                                   Description=INC;
+                                                   Editable=No }
+    { 5025382;No;FIELD ID 5025382 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025382 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025383;;VAT Calculation Logic;Option       ;CaptionML=ENU=VAT Calculation Logic;
+                                                   OptionCaptionML=ENU=Amount + VAT,Amount incl. VAT;
+                                                   OptionString=Amount + VAT,Amount incl. VAT;
+                                                   Description=EU.0104306;
+                                                   Editable=No }
+    { 5025387;;Delete Proforma After;Date         ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Delete Proforma After;
+                                                   Description=EU.0174523 }
+    { 5025388;;Special Control Parameters;Text100 ;FieldClass=FlowFilter;
+                                                   CaptionML=ENU=Special Control Parameters;
+                                                   Description=EU.0000039;
+                                                   Editable=No }
+    { 5025389;;Created for Proforma Print;Boolean ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Created for Proforma Print;
+                                                   Description=EU.0174523 }
+    { 5025390;;Branch Code         ;Code10        ;TableRelation="Branch Description";
+                                                   CaptionML=ENU=Branch Code;
+                                                   Description=INC }
+    { 5025391;No;FIELD ID 5025391 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025391 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025400;;No. of Sales Incentives;Integer    ;FieldClass=FlowField;
+                                                   CalcFormula=Count("Posted Sales Incentive Line" WHERE (Area=CONST(Sale),
+                                                                                                          Document Type=CONST(Invoice),
+                                                                                                          Document No.=FIELD(No.)));
+                                                   CaptionML=ENU=No. of Sales Incentives;
+                                                   Description=PA033985;
+                                                   Editable=No }
+    { 5025401;;Vehicle Unit Price Date;Date       ;CaptionML=ENU=Vehicle Unit Price Date;
+                                                   Description=Date for finding the vehicle and options sales prices }
+    { 5025450;No;FIELD ID 5025450 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025450 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025451;No;FIELD ID 5025451 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025451 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025452;No;FIELD ID 5025452 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025452 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025453;No;FIELD ID 5025453 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025453 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025454;No;FIELD ID 5025454 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025454 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025455;No;FIELD ID 5025455 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025455 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025456;No;FIELD ID 5025456 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025456 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025457;No;FIELD ID 5025457 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025457 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025458;No;FIELD ID 5025458 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025458 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025459;No;FIELD ID 5025459 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025459 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025460;No;FIELD ID 5025460 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025460 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025461;No;FIELD ID 5025461 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025461 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025462;No;FIELD ID 5025462 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025462 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025463;No;FIELD ID 5025463 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025463 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025466;No;FIELD ID 5025466 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025466 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025470;No;FIELD ID 5025470 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025470 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025471;No;FIELD ID 5025471 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025471 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025472;No;FIELD ID 5025472 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025472 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025473;No;FIELD ID 5025473 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025473 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025474;No;FIELD ID 5025474 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025474 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025475;No;FIELD ID 5025475 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025475 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025476;No;FIELD ID 5025476 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025476 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025477;No;FIELD ID 5025477 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025477 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025478;No;FIELD ID 5025478 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025478 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025479;No;FIELD ID 5025479 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025479 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025480;No;FIELD ID 5025480 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025480 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025820;;Dealer Code         ;Code10        ;TableRelation="Dealer Setup";
+                                                   CaptionML=ENU=Dealer Code;
+                                                   Description=INC;
+                                                   Editable=No }
+    { 5025821;;Dealer Confirmed    ;Boolean       ;CaptionML=ENU=Dealer Confirmed;
+                                                   Description=INC }
+    { 5025822;;Dealer Confirmed Date;Date         ;CaptionML=ENU=Dealer Confirmed Date;
+                                                   Description=INC;
+                                                   Editable=No }
+    { 5025823;;Dealer Confirmed Time;Time         ;CaptionML=ENU=Dealer Confirmed Time;
+                                                   Description=INC;
+                                                   Editable=No }
+    { 5025824;;Dealer Confirmed User Code;Code50  ;TableRelation=User."User Name";
+                                                   TestTableRelation=No;
+                                                   CaptionML=ENU=Dealer Confirmed User Code;
+                                                   Description=PA035597;
+                                                   Editable=No }
+    { 5025825;No;FIELD ID 5025825 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025825 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025826;;Dealer Reason Code  ;Code10        ;TableRelation="Reason Code";
+                                                   CaptionML=ENU=Dealer Reason Code;
+                                                   Description=INC }
+    { 5025827;;Authorisation  No.  ;Code20        ;CaptionML=ENU=Authorisation No.;
+                                                   Description=INC;
+                                                   Editable=No }
+    { 5025828;No;FIELD ID 5025828 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025828 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025831;No;FIELD ID 5025831 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025831 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025832;No;FIELD ID 5025832 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025832 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025836;No;FIELD ID 5025836 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5025836 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5025841;;Supply VIN          ;Code20        ;TableRelation=Vehicle;
+                                                   ValidateTableRelation=No;
+                                                   CaptionML=ENU=Reference VIN;
+                                                   Description=PA041023;
+                                                   AutoFormatExpr='JMD' }
+    { 5025850;;Reference License No.;Code11       ;CaptionML=ENU=Reference License No.;
+                                                   Description=PA041023 }
+    { 5028650;;Cash Payment        ;Boolean       ;CaptionML=ENU=Cash Payment;
+                                                   Description=INC }
+    { 5028651;;Cash Payment Document Type;Option  ;CaptionML=ENU=Cash Payment Document Type;
+                                                   OptionCaptionML=ENU=" ,Cash Receipt Slip,Full Cash Receipt";
+                                                   OptionString=[ ,Cash Receipt Slip,Full Cash Receipt];
+                                                   Description=INC }
+    { 5028652;;Cash Register Receipt;Code20       ;CaptionML=ENU=Cash Register Receipt;
+                                                   Description=INC }
+    { 5028653;;Activities Created  ;Boolean       ;CaptionML=ENU=Activities Created;
+                                                   Description=INC }
+    { 5045200;;Disable for Requisition;Boolean    ;OnValidate=BEGIN
+                                                                SalesInvLineG.RESET;
+                                                                SalesInvLineG.SETRANGE("Document No.","No.");
+                                                                IF SalesInvLineG.FINDFIRST THEN
+                                                                // Start PA032441
+                                                                  SalesInvLineG.MODIFYALL("Disable for Requisition","Disable for Requisition");
+                                                                // Stop PA032441
+                                                              END;
+
+                                                   CaptionML=ENU=Disable for Requisition;
+                                                   Description=INC }
+    { 5045201;;Warranty Lock       ;Boolean       ;CaptionML=ENU=Warranty Lock;
+                                                   Description=INC }
+    { 5045350;No;FIELD ID 5045350 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5045350 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5045351;No;FIELD ID 5045351 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5045351 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5045352;No;FIELD ID 5045352 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5045352 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5045650;;Customer Contact Program;Boolean   ;InitValue=Yes;
+                                                   CaptionML=ENU=Customer Contact Program;
+                                                   Description=INC }
+    { 5045651;;Mobile Service      ;Boolean       ;CaptionML=ENU=Mobile Service;
+                                                   Description=INC }
+    { 5045652;;Proposal for Alternative Part;Option;
+                                                   InitValue=No Proposal;
+                                                   CaptionML=ENU=Proposal for Alternative Part;
+                                                   OptionCaptionML=ENU=No Alternative Parts,No Proposal,Sort by Unit Price,Sort by Quality,Only Original Parts;
+                                                   OptionString=No Alternative Parts,No Proposal,Sort by Unit Price,Sort by Quality,Only Original Parts;
+                                                   Description=INC }
+    { 5045653;No;FIELD ID 5045653 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5045653 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5045663;;Service Contract Lock;Boolean      ;CaptionML=ENU=Service Contract Lock;
+                                                   Description=INC }
+    { 5047000;;Message Sent Parts  ;Boolean       ;FieldClass=FlowField;
+                                                   CalcFormula=Exist(Message WHERE (Area=FILTER(Parts Sales),
+                                                                                    Document No.=FIELD(No.)));
+                                                   CaptionML=ENU=Message Sent Parts;
+                                                   Description=PA032665,PA038224;
+                                                   Editable=No }
+    { 5047001;;Message Sent Vehicles;Boolean      ;FieldClass=FlowField;
+                                                   CalcFormula=Exist(Message WHERE (Area=FILTER(Vehicle Sales),
+                                                                                    Document No.=FIELD(No.)));
+                                                   CaptionML=ENU=Message Sent Vehicles;
+                                                   Description=PA032665,PA038224;
+                                                   Editable=No }
+    { 5085551;No;FIELD ID 5085551 BLOCKED;Code20  ;TableRelation="Sales Invoice Header";
+                                                   DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=FIELD ID 5085551 BLOCKED;
+                                                   Description=EU.0199372 }
+    { 5086600;No;FIELD ID 5086600 BLOCKED;Integer ;Description=PA038226 - reserved for tables 36|110|112|114|6660|5028930|5046905;
+                                                   Editable=No }
+    { 5204600;No;FIELD ID 5204600 BLOCKED;Text70  ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=FIELD ID 5204600 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5204601;No;FIELD ID 5204601 BLOCKED;Text70  ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=FIELD ID 5204601 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5204602;No;FIELD ID 5204602 BLOCKED;Text70  ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=FIELD ID 5204602 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5204603;No;FIELD ID 5204603 BLOCKED;Text70  ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=FIELD ID 5204603 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5204604;No;FIELD ID 5204604 BLOCKED;Text70  ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=FIELD ID 5204604 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5204605;No;FIELD ID 5204605 BLOCKED;Text70  ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=FIELD ID 5204605 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5204606;No;FIELD ID 5204606 BLOCKED;Code20  ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=FIELD ID 5204606 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5204607;No;FIELD ID 5204607 BLOCKED;Code20  ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=FIELD ID 5204607 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5204608;No;FIELD ID 5204608 BLOCKED;Code20  ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=FIELD ID 5204608 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5204609;No;FIELD ID 5204609 BLOCKED;Boolean ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=FIELD ID 5204609 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5204610;No;FIELD ID 5204610 BLOCKED;Boolean ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=FIELD ID 5204610 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5204611;No;FIELD ID 5204611 BLOCKED;Date    ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=FIELD ID 5204611 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5204612;No;FIELD ID 5204612 BLOCKED;Date    ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=FIELD ID 5204612 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5204613;No;FIELD ID 5204613 BLOCKED;Decimal ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=FIELD ID 5204613 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5204614;No;FIELD ID 5204614 BLOCKED;Decimal ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=FIELD ID 5204614 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5204615;No;FIELD ID 5204615 BLOCKED;Integer ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=FIELD ID 5204615 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5204616;No;FIELD ID 5204616 BLOCKED;Integer ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=FIELD ID 5204616 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5204617;No;FIELD ID 5204617 BLOCKED;Integer ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=FIELD ID 5204617 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5204618;No;FIELD ID 5204618 BLOCKED;Integer ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=FIELD ID 5204618 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5205300;No;FIELD ID 5205300 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5205300 BLOCKED;
+                                                   Description=EU.0032453 }
+    { 5205301;No;FIELD ID 5205301 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5205301 BLOCKED;
+                                                   Description=EU.0032453 }
+    { 5205302;No;FIELD ID 5205302 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5205302 BLOCKED;
+                                                   Description=EU.0032453 }
+    { 5205306;No;FIELD ID 5205306 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5205306 BLOCKED;
+                                                   Description=EU.0032453 }
+    { 5205307;No;FIELD ID 5205307 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5205307 BLOCKED;
+                                                   Description=EU.0032453 }
+    { 5205400;;Service Advisor No. ;Code20        ;TableRelation=Employee WHERE (Service Advisor=CONST(Yes));
+                                                   CaptionML=ENU=Service Advisor No./Appointment;
+                                                   Description=PA031550 }
+    { 5205401;;Service Advisor No./Pick-Up;Code20 ;TableRelation=Employee WHERE (Service Advisor=CONST(Yes));
+                                                   CaptionML=ENU=Service Advisor No./Pick-Up;
+                                                   Description=PA031550 }
+    { 5205402;No;FIELD ID 5205402 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5205402 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5205403;;Prepayment          ;Boolean       ;CaptionML=ENU=Prepayment;
+                                                   Description=PA034291 }
+    { 5205404;;Prepayment Order No.;Code20        ;CaptionML=ENU=Prepayment Order No.;
+                                                   Description=PA034291 }
+    { 5205405;;Prepayment Assignment;Boolean      ;CaptionML=ENU=Prepayment Assignment;
+                                                   Description=PA034291 }
+    { 5205406;;Salesperson Code 2  ;Code10        ;TableRelation=Salesperson/Purchaser;
+                                                   CaptionML=ENU=Salesperson Code 2;
+                                                   Description=PA036728 }
+    { 5205408;;Messaging App Type  ;Code50        ;TableRelation="Messaging App Type";
+                                                   CaptionML=ENU=Messaging App Type;
+                                                   Description=PA038224,PA038224.47832 }
+    { 5205409;;Message Type        ;Option        ;CaptionML=ENU=Message Type;
+                                                   OptionCaptionML=ENU=SMS,E-Mail,Message;
+                                                   OptionString=SMS,E-Mail,Message;
+                                                   Description=PA038224 }
+    { 5208410;;Message Notification;Text80        ;CaptionML=ENU=Message Notification;
+                                                   Description=PA038224,PA038224.47723 }
+    { 5208420;;Document Chain No.  ;Integer       ;CaptionML=ENU=Document Chain No.;
+                                                   Description=PA042167,PA041187.93102 }
+    { 5208421;No;FIELD ID 5208421 BLOCKED;Date    ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=FIELD ID 5208421 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5208430;No;FIELD ID 5208430 BLOCKED;Boolean ;CaptionML=ENU=FIELD ID 5208430 BLOCKED;
+                                                   Description=EU.0005640 }
+    { 5208500;;External Purch. Order Date;Date    ;CaptionML=ENU=External Purch. Order Date;
+                                                   Description=EU.0000048 }
+    { 5208501;No;FIELD ID 5208501 BLOCKED;Integer ;CaptionML=ENU=FIELD ID 5208501 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
+    { 5208502;;Doc. Unique Id      ;GUID          ;DataClassification=ToBeClassified;
+                                                   CaptionML=ENU=Doc. Unique Id;
+                                                   Description=EU.0114065 }
+  }
+  KEYS
+  {
+    {    ;No.                                     ;Clustered=Yes }
+    {    ;Order No.                                }
+    {    ;Pre-Assigned No.                         }
+    {    ;Service Order No.                       ;KeyGroups=ENGINE }
+    {    ;Shortcut Dimension 2 Code,Bill-to Customer No.;
+                                                   KeyGroups=ENGINE }
+    {    ;Order Type,Bill-to Customer No.,Posting Date;
+                                                   KeyGroups=ENGINE }
+    {    ;Order Type,Sell-to Customer No.         ;KeyGroups=ENGINE }
+    {    ;Posting Date                            ;KeyGroups=ENGINE }
+    {    ;Order Type,Warranty Lock                 }
+    {    ;Order Type,Posting Date,Service Order No. }
+    {    ;Order Type,Service Contract Lock         }
+    {    ;External Document No.                   ;KeyGroups=ENGINE }
+    {    ;Order Type,Sell-to Customer No.,Order Date;
+                                                   KeyGroups=IMS }
+    {    ;Order Type,Sell-to Customer No.,Posting Date }
+    {    ;Prepayment Order No.,Delete Proforma After }
+  }
+  FIELDGROUPS
+  {
+    { 1   ;DropDown            ;No.,Sell-to Customer No.,Sell-to Customer Name,Posting Date,Location Code,Shortcut Dimension 1 Code,Shortcut Dimension 2 Code }
+  }
+  CODE
+  {
+    VAR
+      SalesInvHeader@1000 : Record 112;
+      SalesCommentLine@1001 : Record 44;
+      ShipToAddr@1109400002 : Record 222;
+      CustLedgEntry@1003 : Record 21;
+      CustomReportSelectionG@11406500 : Record 9657;
+      PostSalesLinesDelete@1004 : Codeunit 363;
+      DocTxt@10136100 : TextConst 'ENU=Invoice';
+      C_INC001@1109400005 : TextConst 'ENU=Do you want to remove the fair deal flag from the posted invoice %1?';
+      C_INC002@1109400006 : TextConst 'ENU=The %1 flag cannot be removed, because there is already a warranty claim with the %2 ''%3''!';
+      DimMgt@1005 : Codeunit 408;
+      _INCADEA_@1109400007 : Boolean;
+      __START_EXIT_POINT___@5025350 : Integer;
+      ExitPointSetupG@5025351 : Record 5207300;
+      ExitPointParamG@5025352 : TEMPORARY Record 5207301;
+      ExitPointUnitG@5025353 : Codeunit 5207300;
+      EPRecRef2G@5025354 : RecordRef;
+      __STOP_EXIT_POINT___@5025355 : Integer;
+      CustG@1109400010 : Record 18;
+      PostedSalesAssistanceLineG@1109400008 : Record 5025487;
+      SalesInvLineG@1109400009 : Record 113;
+      PostCodeG@1119418000 : Record 225;
+      RTCMgmtG@1109400012 : Codeunit 5206801;
+      UserMgtG@1109400000 : Codeunit 418;
+
+    [Internal]
+    PROCEDURE SendRecords@12();
+    VAR
+      DocumentSendingProfile@1001 : Record 60;
+      DummyReportSelections@1000 : Record 77;
+      IsHandled@1002 : Boolean;
+      UserSessionUnitL@10136100 : Codeunit 5028665;
+    BEGIN
+      IsHandled := FALSE;
+      OnBeforeSendRecords(DummyReportSelections,Rec,DocTxt,IsHandled);
+      IF IsHandled THEN
+        EXIT;
+      // Start EU.0114065
+      IF "General Document" THEN
+          UserSessionUnitL.SetUsage(DummyReportSelections.Usage::"Gen.S.Inv.")
+      ELSE
+        IF Prepayment THEN
+          UserSessionUnitL.SetUsage(DummyReportSelections.Usage::"Prepmt. Invoice")
+        ELSE
+          UserSessionUnitL.SetUsage(DummyReportSelections.Usage::"S.Inv.");
+      IF "General Document" THEN
+          DocumentSendingProfile.SendCustomerRecords(
+          DummyReportSelections.Usage::"Gen.S.Inv.", Rec, DocTxt, "Bill-to Customer No.", "No.",
+          FIELDNO("Bill-to Customer No."), FIELDNO("No."), "Shortcut Dimension 2 Code", "Location Code", CustomReportSelectionG."Main Area"::"General Sales & Purchases")
+      ELSE
+        DocumentSendingProfile.SendCustomerRecords(
+          DummyReportSelections.Usage::"S.Inv.", Rec, DocTxt, "Bill-to Customer No.", "No.",
+          FIELDNO("Bill-to Customer No."), FIELDNO("No."), "Shortcut Dimension 2 Code", "Location Code", "Order Type");
+      // Stop EU.0114065
+    END;
+
+    [External]
+    PROCEDURE SendProfile@72(VAR DocumentSendingProfile@1000 : Record 60);
+    VAR
+      DummyReportSelections@1003 : Record 77;
+      IsHandled@1001 : Boolean;
+      UserSessionUnitL@10136100 : Codeunit 5028665;
+    BEGIN
+      IsHandled := FALSE;
+      OnBeforeSendProfile(DummyReportSelections,Rec,DocTxt,IsHandled,DocumentSendingProfile);
+      IF IsHandled THEN
+        EXIT;
+      // Start EU.0114065
+      IF "General Document" THEN
+          UserSessionUnitL.SetUsage(DummyReportSelections.Usage::"Gen.S.Inv.")
+      ELSE
+        IF Prepayment THEN
+          UserSessionUnitL.SetUsage(DummyReportSelections.Usage::"Prepmt. Invoice")
+        ELSE
+          UserSessionUnitL.SetUsage(DummyReportSelections.Usage::"S.Inv.");
+      IF "General Document" THEN
+        DocumentSendingProfile.Send(
+          DummyReportSelections.Usage::"Gen.S.Inv.", Rec, "No.", "Bill-to Customer No.",
+          DocTxt, FIELDNO("Bill-to Customer No."), FIELDNO("No."), "Shortcut Dimension 2 Code", "Location Code", CustomReportSelectionG."Main Area"::"General Sales & Purchases")
+      ELSE
+        DocumentSendingProfile.Send(
+          DummyReportSelections.Usage::"S.Inv.", Rec, "No.", "Bill-to Customer No.",
+          DocTxt, FIELDNO("Bill-to Customer No."), FIELDNO("No."), "Shortcut Dimension 2 Code", "Location Code", "Order Type");
+      // Stop EU.0114065
+    END;
+
+    [External]
+    PROCEDURE EmailRecords@17(ShowDialog@1000 : Boolean);
+    VAR
+      DocumentSendingProfile@1003 : Record 60;
+      DummyReportSelections@1001 : Record 77;
+      IsHandled@1002 : Boolean;
+      UserSessionUnitL@10136100 : Codeunit 5028665;
+    BEGIN
+      IsHandled := FALSE;
+      OnBeforeEmailRecords(DummyReportSelections,Rec,DocTxt,ShowDialog,IsHandled);
+      IF IsHandled THEN
+        EXIT;
+      // Start EU.0114065
+      IF "General Document" THEN
+          UserSessionUnitL.SetUsage(DummyReportSelections.Usage::"Gen.S.Inv.")
+      ELSE
+        IF Prepayment THEN
+          UserSessionUnitL.SetUsage(DummyReportSelections.Usage::"Prepmt. Invoice")
+        ELSE
+          UserSessionUnitL.SetUsage(DummyReportSelections.Usage::"S.Inv.");
+      IF "General Document" THEN
+        DocumentSendingProfile.TrySendToEMail(
+          DummyReportSelections.Usage::"Gen.S.Inv.", Rec, FIELDNO("No."), DocTxt, FIELDNO("Bill-to Customer No."), ShowDialog,
+          "Shortcut Dimension 2 Code", "Location Code", CustomReportSelectionG."Main Area"::"General Sales & Purchases")
+      ELSE
+        DocumentSendingProfile.TrySendToEMail(
+          DummyReportSelections.Usage::"S.Inv.", Rec, FIELDNO("No."), DocTxt, FIELDNO("Bill-to Customer No."), ShowDialog, "Shortcut Dimension 2 Code", "Location Code", "Order Type");
+      // Stop EU.0114065
+    END;
+
+    [External]
+    PROCEDURE GetDocTypeTxt@140() : Text[50];
+    BEGIN
+      EXIT(DocTxt);
+    END;
+
+    [External]
+    PROCEDURE GetDefaultEmailDocumentName@21() : Text[150];
+    BEGIN
+      EXIT(DocTxt);
+    END;
+
+    [Integration]
+    LOCAL PROCEDURE OnBeforeEmailRecords@25(VAR ReportSelections@1003 : Record 77;VAR SalesInvoiceHeader@1002 : Record 112;DocTxt@1004 : Text;ShowDialog@1001 : Boolean;VAR IsHandled@1000 : Boolean);
+    BEGIN
+    END;
+
+    [Integration]
+    LOCAL PROCEDURE OnBeforeSendProfile@23(VAR ReportSelections@1003 : Record 77;VAR SalesInvoiceHeader@1002 : Record 112;DocTxt@1001 : Text;VAR IsHandled@1000 : Boolean;VAR DocumentSendingProfile@1004 : Record 60);
+    BEGIN
+    END;
+
+    [Integration]
+    LOCAL PROCEDURE OnBeforeSendRecords@16(VAR ReportSelections@1000 : Record 77;VAR SalesInvoiceHeader@1001 : Record 112;DocTxt@1002 : Text;VAR IsHandled@1003 : Boolean);
+    BEGIN
+    END;
+
+    PROCEDURE PrintRecords@1(ShowRequestPage@1000 : Boolean);
+    VAR
+      ReportSelection@1001 : Record 77;
+      _INCADEA_@1055601 : Integer;
+      ProformaPrintL@17452302 : Codeunit 5028809;
+      UserSessionUnitL@1055600 : Codeunit 5028665;
+      OrgProformaRecordIDL@17452301 : RecordID;
+      RecordRefL@1109400004 : RecordRef;
+      ReportOutputTypeL@17452300 : Option;
+    BEGIN
+      // Start PA032443
+      // Start PA035597
+      // Stop PA035597
+      // Start PA034291
+      SalesInvHeader.COPY(Rec);
+      IF NOT SalesInvHeader.FINDFIRST THEN
+      // Start EU.0174523
+        SalesInvHeader := Rec;
+      // Stop EU.0174523
+      // Start EU.0000039
+      CASE TRUE OF
+      // Start EU.0114065
+        SalesInvHeader."General Document":
+          ReportSelection.SETRANGE(Usage, ReportSelection.Usage::"Gen.S.Inv.");
+      // Stop EU.0114065
+        SalesInvHeader.Prepayment:
+          ReportSelection.SETRANGE(Usage, ReportSelection.Usage::"Prepmt. Invoice");
+      ELSE
+          ReportSelection.SETRANGE(Usage, ReportSelection.Usage::"S.Inv.");
+      END;
+      // Stop EU.0000039
+      // Start PA034532.18575
+      ReportSelection.GetReportSelection(ReportSelection,SalesInvHeader."Shortcut Dimension 2 Code",SalesInvHeader."Location Code");
+      // Stop PA034532.18575
+      // Start EU.0174523
+      ReportOutputTypeL := UserSessionUnitL.GetKeyValueAsInteger('/PRINT-IN-FILE-AS');
+      UserSessionUnitL.SetKeyValue('/PRINT-IN-FILE-AS', 0);
+      UserSessionUnitL.GetKeyValueAsRecordID('/PROFORMA-PRINT', OrgProformaRecordIDL);
+      // Stop EU.0174523
+      REPEAT
+      // Start PA035597
+      // Stop PA035597
+      // Start PA039225.51457
+        RecordRefL.GETTABLE(ReportSelection);
+        UserSessionUnitL.SetRecordRef(RecordRefL);
+      // Stop PA039225.51457
+      // Start EU.0174523
+        UserSessionUnitL.SetKeyValue('/PROFORMA-PRINT', OrgProformaRecordIDL);
+        IF ReportOutputTypeL > 0 THEN
+          ProformaPrintL.PrintReportinFilePrintInbox(ReportSelection."Report ID", SalesInvHeader.RECORDID, (ReportOutputTypeL - 1), ShowRequestPage, SalesInvHeader."Language Code")
+        ELSE
+      // Stop EU.0174523
+          REPORT.RUNMODAL(ReportSelection."Report ID",ShowRequestPage,FALSE,SalesInvHeader);
+      UNTIL ReportSelection.NEXT = 0;
+      // Stop PA032443
+      // Stop PA034291
+    END;
+
+    PROCEDURE Navigate@2();
+    VAR
+      NavigatePage@1000 : Page 344;
+    BEGIN
+      NavigatePage.SetDoc("Posting Date","No.");
+      NavigatePage.RUN;
+    END;
+
+    PROCEDURE ShowDimensions@4();
+    BEGIN
+      // Start PA035597
+      DimMgt.ShowDimensionSet("Dimension Set ID",STRSUBSTNO('%1 %2',TABLECAPTION,"No."));
+      // Stop PA035597
+    END;
+
+    PROCEDURE __INCADEA__@5025350();
+    BEGIN
+    END;
+
+    LOCAL PROCEDURE __START_EXITPOINT__@5025300();
+    BEGIN
+    END;
+
+    LOCAL PROCEDURE ExitPointCall@5025380(MakeCoddeP@1109400003 : Code[20];TriggerP@1109400002 : Integer;TypeP@1109400001 : Integer;ExitPointIDP@1109400000 : Text[50];VAR EPRecRefP@1109400005 : RecordRef) : Boolean;
+    BEGIN
+      EXIT(ExitPointUnitG.RunExitPoint(
+        ExitPointSetupG."Object Type"::Table,
+        DATABASE::"Sales Invoice Header",
+        MakeCoddeP, TriggerP, TypeP, ExitPointIDP, EPRecRefP, EPRecRef2G, ExitPointParamG));
+    END;
+
+    LOCAL PROCEDURE ExitPoint@1101992673(TriggerP@1119452001 : Integer;TypeP@1119432000 : Integer;ExitPointIDP@1119432001 : Text[50]) ReturnR : Boolean;
+    VAR
+      EPRecRefL@1109400004 : RecordRef;
+    BEGIN
+      // @ This local function works as ExitPoint wrapper function. It will control the ExitPointCheck function call.
+      // @ It passes thru all the handshake parameter values.
+      // @ It takes care to provide the processing records as RecordReference to the ExitPointCheck function.
+      // @ When possible a Make Code is also identified and passed to the called ExitPointCheck function.
+
+      // Start PA036544
+      EPRecRefL.GETTABLE(Rec);
+      EPRecRef2G.GETTABLE(xRec);
+      ExitPointParamG."Called CurrFieldNo" := CurrFieldNo;
+      ReturnR := ExitPointCall("Shortcut Dimension 2 Code", TriggerP, TypeP, ExitPointIDP, EPRecRefL);
+      EPRecRefL.SETTABLE(Rec);
+      CLEAR(EPRecRef2G);
+      // Stop PA036544
+    END;
+
+    LOCAL PROCEDURE __STOP_EXITPOINT__@5025451();
+    BEGIN
+    END;
+
+    PROCEDURE GetListPageID@17425800(OrderTypeP@17425801 : Option;GeneralDocumentP@17425802 : Boolean) PageID : Integer;
+    BEGIN
+      // Start EU.0174523
+      IF GeneralDocumentP THEN
+        EXIT(PAGE::"Posted Gen. Sales Invoices");
+      CASE OrderTypeP OF
+        "Order Type"::"Parts Sales & Purchases":
+          EXIT(PAGE::"Posted Parts Sales Invoices");
+        "Order Type"::"Vehicle Sales & Purchases":
+          EXIT(PAGE::"Posted Veh. Sales Invoices");
+        "Order Type"::Service:
+          EXIT(PAGE::"Posted Service Sales Invoices");
+      // Stop EU.0174523
+      END;
+    END;
+
+    LOCAL PROCEDURE CheckWarrantyStatus@5025354() : Boolean;
+    VAR
+      WarrantyHeader@1109400000 : Record 5025790;
+    BEGIN
+      WarrantyHeader.RESET;
+      WarrantyHeader.SETRANGE("Make Code","Shortcut Dimension 2 Code");
+      WarrantyHeader.SETRANGE("Document No.","No.");
+      IF WarrantyHeader.FINDFIRST THEN BEGIN
+        IF WarrantyHeader.Status IN [WarrantyHeader.Status::Prepared,WarrantyHeader.Status::" "] THEN
+          EXIT(TRUE);
+        ERROR(C_INC002,FIELDCAPTION("Fair Deal"),WarrantyHeader.FIELDCAPTION(Status),WarrantyHeader.Status);
+      END;
+      EXIT(TRUE);
+    END;
+
+    PROCEDURE PrintVehicleRecords@5025351(ShowRequestPage@1109400000 : Boolean);
+    VAR
+      ReportSelectionL@1109400001 : Record 5025576;
+      ProformaPrintL@17452300 : Codeunit 5028809;
+      UserSessionUnitL@17452301 : Codeunit 5028665;
+      OrgProformaRecordIDL@17452303 : RecordID;
+      RecordRefL@1109400004 : RecordRef;
+      ReportOutputTypeL@17452302 : Option;
+    BEGIN
+      // Start PA032443
+      // Start PA035597
+      // Stop PA035597
+      // Start PA034291
+      SalesInvHeader.COPY(Rec);
+      IF NOT SalesInvHeader.FINDFIRST THEN
+      // Start EU.0174523
+        SalesInvHeader := Rec;
+      // Stop EU.0174523
+      // Start EU.0000039
+      CASE TRUE OF
+        SalesInvHeader.Prepayment:
+          ReportSelectionL.SETRANGE(Usage, ReportSelectionL.Usage::"Prepmt. Invoice");
+      ELSE
+          ReportSelectionL.SETRANGE(Usage, ReportSelectionL.Usage::"Posted Invoice");
+      END;
+      // Stop EU.0000039
+      // Start PA034532.18589
+      ReportSelectionL.GetReportSelection(ReportSelectionL, SalesInvHeader."Shortcut Dimension 2 Code", SalesInvHeader."Location Code");
+      // Stop PA034532.18589
+      // Start EU.0174523
+      ReportOutputTypeL := UserSessionUnitL.GetKeyValueAsInteger('/PRINT-IN-FILE-AS');
+      UserSessionUnitL.SetKeyValue('/PRINT-IN-FILE-AS', 0);
+      UserSessionUnitL.GetKeyValueAsRecordID('/PROFORMA-PRINT', OrgProformaRecordIDL);
+      // Stop EU.0174523
+      REPEAT
+      // Start PA039225.51457
+        RecordRefL.GETTABLE(ReportSelectionL);
+        UserSessionUnitL.SetRecordRef(RecordRefL);
+      // Stop PA039225.51457
+      // Start PA035597
+      // Stop PA035597
+      // Start EU.0174523
+        UserSessionUnitL.SetKeyValue('/PROFORMA-PRINT', OrgProformaRecordIDL);
+        IF ReportOutputTypeL > 0 THEN
+          ProformaPrintL.PrintReportinFilePrintInbox(ReportSelectionL."Report ID", SalesInvHeader.RECORDID, (ReportOutputTypeL - 1), ShowRequestPage, SalesInvHeader."Language Code")
+        ELSE
+      // Stop EU.0174523
+          REPORT.RUNMODAL(ReportSelectionL."Report ID",ShowRequestPage,FALSE,SalesInvHeader);
+      UNTIL ReportSelectionL.NEXT = 0;
+      // Stop PA032443
+      // Stop PA034291
+    END;
+
+    [Internal]
+    PROCEDURE SendVehicleRecords@10136102();
+    VAR
+      ReportSelectionL@10136101 : Record 5025576;
+      DocumentSendingProfile@1001 : Record 60;
+      DummyReportSelections@1000 : Record 77;
+      IsHandled@1002 : Boolean;
+      UserSessionUnitL@10136100 : Codeunit 5028665;
+    BEGIN
+      // Start EU.0101361
+      IsHandled := FALSE;
+      OnBeforeSendVehicleRecords(DummyReportSelections,Rec,DocTxt,IsHandled);
+      IF IsHandled THEN
+        EXIT;
+      IF Prepayment THEN
+        UserSessionUnitL.SetUsage(ReportSelectionL.Usage::"Prepmt. Invoice")
+      ELSE
+        UserSessionUnitL.SetUsage(ReportSelectionL.Usage::"Posted Invoice");
+
+      DocumentSendingProfile.SendCustomerRecords(
+        DummyReportSelections.Usage::"S.Inv.",Rec,DocTxt,"Bill-to Customer No.","No.",
+        FIELDNO("Bill-to Customer No."),FIELDNO("No."), "Shortcut Dimension 2 Code", "Location Code", "Order Type");
+      // Stop EU.0101361
+    END;
+
+    [External]
+    PROCEDURE SendVehicleProfile@10136101(VAR DocumentSendingProfile@1000 : Record 60);
+    VAR
+      ReportSelectionL@10136100 : Record 5025576;
+      DummyReportSelections@1003 : Record 77;
+      UserSessionUnitL@10136101 : Codeunit 5028665;
+      IsHandled@1001 : Boolean;
+    BEGIN
+      // Start EU.0101361
+      IsHandled := FALSE;
+      OnBeforeSendVehicleProfile(DummyReportSelections,Rec,DocTxt,IsHandled,DocumentSendingProfile);
+      IF IsHandled THEN
+        EXIT;
+      IF Prepayment THEN
+        UserSessionUnitL.SetUsage(ReportSelectionL.Usage::"Prepmt. Invoice")
+      ELSE
+        UserSessionUnitL.SetUsage(ReportSelectionL.Usage::"Posted Invoice");
+      DocumentSendingProfile.Send(
+        DummyReportSelections.Usage::"S.Inv.",Rec,"No.","Bill-to Customer No.",
+        DocTxt,FIELDNO("Bill-to Customer No."),FIELDNO("No."), "Shortcut Dimension 2 Code", "Location Code", "Order Type");
+      // Stop EU.0101361
+    END;
+
+    [External]
+    PROCEDURE EmailVehicleRecords@10136100(ShowDialog@1000 : Boolean);
+    VAR
+      ReportSelectionL@10136100 : Record 5025576;
+      DocumentSendingProfile@1003 : Record 60;
+      DummyReportSelections@1001 : Record 77;
+      UserSessionUnitL@10136101 : Codeunit 5028665;
+      IsHandled@1002 : Boolean;
+    BEGIN
+      // Start EU.0101361
+      IsHandled := FALSE;
+      OnBeforeEmailVehicleRecords(DummyReportSelections,Rec,DocTxt,ShowDialog,IsHandled);
+      IF IsHandled THEN
+        EXIT;
+      IF Prepayment THEN
+        UserSessionUnitL.SetUsage(ReportSelectionL.Usage::"Prepmt. Invoice")
+      ELSE
+        UserSessionUnitL.SetUsage(ReportSelectionL.Usage::"Posted Invoice");
+      DocumentSendingProfile.TrySendToEMail(
+        DummyReportSelections.Usage::"S.Inv.",Rec,FIELDNO("No."),DocTxt,FIELDNO("Bill-to Customer No."),ShowDialog, "Shortcut Dimension 2 Code", "Location Code", "Order Type");
+      // Stop EU.0101361
+    END;
+
+    PROCEDURE RemoveFairDealFlag@5025353(SalesInvoHeaderP@1109400000 : Record 112);
+    VAR
+      SalesInvoLineL@1109400001 : Record 113;
+    BEGIN
+      IF CheckWarrantyStatus() THEN BEGIN
+      // Start INC
+        SalesInvoHeaderP.CALCFIELDS("Fair Deal");
+      // Stop INC
+        IF SalesInvoHeaderP."Fair Deal" THEN BEGIN
+          IF CONFIRM(C_INC001,FALSE) THEN BEGIN
+            SalesInvoLineL.RESET;
+            SalesInvoLineL.SETRANGE("Document No.",SalesInvoHeaderP."No.");
+            IF SalesInvoLineL.FINDSET(TRUE) THEN
+              REPEAT
+                SalesInvoLineL."Fair Deal" := FALSE;
+                SalesInvoLineL.MODIFY;
+              UNTIL SalesInvoLineL.NEXT = 0;
+          END;
+        END;
+      END;
+    END;
+
+    PROCEDURE PrintServiceRecords@5025352(ShowRequestPageP@1109400000 : Boolean);
+    VAR
+      ServiceReportSelectionL@1109400001 : Record 5045389;
+      SalesHdrL@1055602 : Record 36;
+      ProformaPrintL@17452301 : Codeunit 5028809;
+      UserSessionUnitL@1055600 : Codeunit 5028665;
+      OrgProformaRecordIDL@17452302 : RecordID;
+      RecordRefL@1055601 : RecordRef;
+      ReportOutputTypeL@17452300 : Option;
+      SkipTriggerExecutionL@19881800 : Boolean;
+    BEGIN
+      // Start PA032443
+      // Start PA035597
+      // Stop PA035597
+      // Stop PA032443
+      // Start PA032500
+      SalesInvHeader.COPY(Rec);
+      // Start EU.0000039
+      IF NOT SalesInvHeader.FINDSET THEN
+        SalesInvHeader := Rec;
+      // Start EU.0198818.199111
+       OnAfterCopySalesInvHeaderEvent(ShowRequestPageP, SalesInvHeader, SkipTriggerExecutionL);
+      IF SkipTriggerExecutionL THEN
+        EXIT;
+      // Stop EU.0198818.199111
+      // Start EU.0174523
+      ReportOutputTypeL := UserSessionUnitL.GetKeyValueAsInteger('/PRINT-IN-FILE-AS');
+      UserSessionUnitL.SetKeyValue('/PRINT-IN-FILE-AS', 0);
+      UserSessionUnitL.GetKeyValueAsRecordID('/PROFORMA-PRINT', OrgProformaRecordIDL);
+      // Stop EU.0174523
+      PrintOneServiceRecord(ShowRequestPageP, SalesInvHeader, ReportOutputTypeL);
+
+      IF CustG.IsServiceContractCustomer(SalesInvHeader."Bill-to Customer No.") THEN BEGIN
+        ServiceReportSelectionL.RESET;
+        ServiceReportSelectionL.SETRANGE(Usage, ServiceReportSelectionL.Usage::"Service Contract Inclusive");
+      // Start EU.0116400.117419
+        IF ServiceReportSelectionL.ISEMPTY THEN
+          EXIT;
+      // Stop EU.0116400.117419
+      // Start PA033336
+        ServiceReportSelectionL.GetReportSelection(ServiceReportSelectionL, SalesInvHeader."Shortcut Dimension 2 Code",
+          SalesInvHeader."Location Code");
+      // Stop PA033336
+        REPEAT
+      // Start PA035597
+      // Stop PA035597
+      // Start PA039225.51457
+          RecordRefL.GETTABLE(ServiceReportSelectionL);
+          UserSessionUnitL.SetRecordRef(RecordRefL);
+      // Stop PA039225.51457
+      // Start EU.0174523
+          UserSessionUnitL.SetKeyValue('/PROFORMA-PRINT', OrgProformaRecordIDL);
+          IF ReportOutputTypeL > 0 THEN
+            ProformaPrintL.PrintReportinFilePrintInbox(ServiceReportSelectionL."Report ID", SalesInvHeader.RECORDID, (ReportOutputTypeL - 1), ShowRequestPageP, SalesInvHeader."Language Code")
+          ELSE
+      // Stop EU.0174523
+            REPORT.RUNMODAL(ServiceReportSelectionL."Report ID", ShowRequestPageP, FALSE, SalesInvHeader);
+        UNTIL ServiceReportSelectionL.NEXT = 0;
+      END;
+      // Stop EU.0000039
+      // Stop PA032500
+    END;
+
+    [Internal]
+    PROCEDURE SendServiceRecords@10136108();
+    VAR
+      ServiceReportSelectionL@10136102 : Record 5045389;
+      SalesHdrL@10136101 : Record 36;
+      DocumentSendingProfile@1001 : Record 60;
+      DummyReportSelections@1000 : Record 77;
+      IsHandled@1002 : Boolean;
+      UserSessionUnitL@10136100 : Codeunit 5028665;
+    BEGIN
+      // Start EU.0101361
+      IsHandled := FALSE;
+      OnBeforeSendServiceRecords(DummyReportSelections,Rec,DocTxt,IsHandled);
+      IF IsHandled THEN
+        EXIT;
+      SalesInvHeader.COPY(Rec);
+      // Start EU.0000039
+      IF NOT SalesInvHeader.FINDSET THEN
+        SalesInvHeader := Rec;
+      CASE TRUE OF
+        SalesInvHeader.Prepayment:
+          UserSessionUnitL.SetUsage(ServiceReportSelectionL.Usage::"Prepmt. Invoice");
+        CustG.IsInternalCustomer(SalesInvHeader."Bill-to Customer No."):
+          UserSessionUnitL.SetUsage(ServiceReportSelectionL.Usage::"Posted Internal Invoice")
+        ELSE
+          UserSessionUnitL.SetUsage(ServiceReportSelectionL.Usage::"Posted Invoice");
+      END;
+
+      DocumentSendingProfile.SendCustomerRecords(
+        DummyReportSelections.Usage::"S.Inv.",Rec,DocTxt,"Bill-to Customer No.","No.",
+        FIELDNO("Bill-to Customer No."),FIELDNO("No."), "Shortcut Dimension 2 Code", "Location Code", "Order Type");
+      // Stop EU.0101361
+    END;
+
+    [External]
+    PROCEDURE SendServiceProfile@10136107(VAR DocumentSendingProfile@1000 : Record 60);
+    VAR
+      ServiceReportSelectionL@10136100 : Record 5045389;
+      DummyReportSelections@1003 : Record 77;
+      UserSessionUnitL@10136101 : Codeunit 5028665;
+      IsHandled@1001 : Boolean;
+    BEGIN
+      // Start EU.0101361
+      IsHandled := FALSE;
+      OnBeforeSendServiceProfile(DummyReportSelections,Rec,DocTxt,IsHandled,DocumentSendingProfile);
+      IF IsHandled THEN
+        EXIT;
+      CASE TRUE OF
+        SalesInvHeader.Prepayment:
+          UserSessionUnitL.SetUsage(ServiceReportSelectionL.Usage::"Prepmt. Invoice");
+        CustG.IsInternalCustomer(SalesInvHeader."Bill-to Customer No."):
+          UserSessionUnitL.SetUsage(ServiceReportSelectionL.Usage::"Posted Internal Invoice")
+        ELSE
+          UserSessionUnitL.SetUsage(ServiceReportSelectionL.Usage::"Posted Invoice");
+      END;
+      DocumentSendingProfile.Send(
+        DummyReportSelections.Usage::"S.Inv.",Rec,"No.","Bill-to Customer No.",
+        DocTxt,FIELDNO("Bill-to Customer No."),FIELDNO("No."), "Shortcut Dimension 2 Code", "Location Code", "Order Type");
+      // Stop EU.0101361
+    END;
+
+    [External]
+    PROCEDURE EmailServiceRecords@10136106(ShowDialog@1000 : Boolean);
+    VAR
+      ServiceReportSelectionL@10136102 : Record 5045389;
+      DocumentSendingProfile@1003 : Record 60;
+      DummyReportSelections@1001 : Record 77;
+      UserSessionUnitL@10136101 : Codeunit 5028665;
+      IsHandled@1002 : Boolean;
+    BEGIN
+      // Start EU.0101361
+      IsHandled := FALSE;
+      OnBeforeEmailServiceRecords(DummyReportSelections,Rec,DocTxt,ShowDialog,IsHandled);
+      IF IsHandled THEN
+        EXIT;
+      SalesInvHeader.COPY(Rec);
+      IF NOT SalesInvHeader.FINDSET THEN
+        SalesInvHeader := Rec;
+      CASE TRUE OF
+        SalesInvHeader.Prepayment:
+          UserSessionUnitL.SetUsage(ServiceReportSelectionL.Usage::"Prepmt. Invoice");
+        CustG.IsInternalCustomer(SalesInvHeader."Bill-to Customer No."):
+          UserSessionUnitL.SetUsage(ServiceReportSelectionL.Usage::"Posted Internal Invoice")
+        ELSE
+          UserSessionUnitL.SetUsage(ServiceReportSelectionL.Usage::"Posted Invoice");
+      END;
+      DocumentSendingProfile.TrySendToEMail(
+        DummyReportSelections.Usage::"S.Inv.",Rec,FIELDNO("No."),DocTxt,FIELDNO("Bill-to Customer No."),ShowDialog, "Shortcut Dimension 2 Code", "Location Code", "Order Type");
+      // Stop EU.0101361
+    END;
+
+    PROCEDURE PrintOneServiceRecord@1055601(ShowRequestPageP@1000 : Boolean;VAR SalesInvHdrP@1055602 : Record 112;ReportOutputTypeP@17452302 : Option);
+    VAR
+      ServiceReportSelectionL@1055604 : Record 5045389;
+      SalesHdrL@1055603 : Record 36;
+      ProformaPrintL@17452301 : Codeunit 5028809;
+      UserSessionUnitL@1055601 : Codeunit 5028665;
+      OrgProformaRecordIDL@17452300 : RecordID;
+      RecordRefL@1055600 : RecordRef;
+    BEGIN
+      // @ Print the Service Invoice for one Posted Invoice Header without printing Service Contract reports.
+      // @ currently this function is called to directly perfrom a Proforema Print for unposted Service Invoices.
+      // @ In fact, the Service Contract report should not be part of the Proforma print.
+      // Start EU.0000039
+      CASE TRUE OF
+        SalesInvHdrP.Prepayment:
+          ServiceReportSelectionL.SETRANGE(Usage, ServiceReportSelectionL.Usage::"Prepmt. Invoice");
+        CustG.IsInternalCustomer(SalesInvHdrP."Bill-to Customer No."):
+          ServiceReportSelectionL.SETRANGE(Usage, ServiceReportSelectionL.Usage::"Posted Internal Invoice")
+        ELSE
+          ServiceReportSelectionL.SETRANGE(Usage, ServiceReportSelectionL.Usage::"Posted Invoice");
+      END;
+      ServiceReportSelectionL.GetReportSelection(ServiceReportSelectionL, SalesInvHdrP."Shortcut Dimension 2 Code", SalesInvHdrP."Location Code");
+      // Start EU.0174523
+      UserSessionUnitL.GetKeyValueAsRecordID('/PROFORMA-PRINT', OrgProformaRecordIDL);
+      // Stop EU.0174523
+      REPEAT
+        RecordRefL.GETTABLE(ServiceReportSelectionL);
+        UserSessionUnitL.SetRecordRef(RecordRefL);
+      // Start EU.0174523
+        UserSessionUnitL.SetKeyValue('/PROFORMA-PRINT', OrgProformaRecordIDL);
+        IF ReportOutputTypeP > 0 THEN
+          ProformaPrintL.PrintReportinFilePrintInbox(ServiceReportSelectionL."Report ID", SalesInvHdrP.RECORDID, (ReportOutputTypeP - 1), ShowRequestPageP, SalesInvHdrP."Language Code")
+        ELSE
+      // Stop EU.0174523
+          REPORT.RUNMODAL(ServiceReportSelectionL."Report ID", ShowRequestPageP, FALSE, SalesInvHdrP);
+      UNTIL ServiceReportSelectionL.NEXT = 0;
+      // Stop EU.0000039
+    END;
+
+    LOCAL PROCEDURE __START_EVENTS__@19881801();
+    BEGIN
+    END;
+
+    [Integration]
+    LOCAL PROCEDURE OnBeforeEmailVehicleRecords@10136105(VAR ReportSelections@1003 : Record 77;VAR SalesInvoiceHeader@1002 : Record 112;DocTxt@1004 : Text;ShowDialog@1001 : Boolean;VAR IsHandled@1000 : Boolean);
+    BEGIN
+    END;
+
+    [Integration]
+    LOCAL PROCEDURE OnBeforeSendVehicleProfile@10136104(VAR ReportSelections@1003 : Record 77;VAR SalesInvoiceHeader@1002 : Record 112;DocTxt@1001 : Text;VAR IsHandled@1000 : Boolean;VAR DocumentSendingProfile@1004 : Record 60);
+    BEGIN
+    END;
+
+    [Integration]
+    LOCAL PROCEDURE OnBeforeSendVehicleRecords@10136103(VAR ReportSelections@1000 : Record 77;VAR SalesInvoiceHeader@1001 : Record 112;DocTxt@1002 : Text;VAR IsHandled@1003 : Boolean);
+    BEGIN
+    END;
+
+    [Integration]
+    LOCAL PROCEDURE OnBeforeEmailServiceRecords@10136111(VAR ReportSelections@1003 : Record 77;VAR SalesInvoiceHeader@1002 : Record 112;DocTxt@1004 : Text;ShowDialog@1001 : Boolean;VAR IsHandled@1000 : Boolean);
+    BEGIN
+    END;
+
+    [Integration]
+    LOCAL PROCEDURE OnBeforeSendServiceProfile@10136110(VAR ReportSelections@1003 : Record 77;VAR SalesInvoiceHeader@1002 : Record 112;DocTxt@1001 : Text;VAR IsHandled@1000 : Boolean;VAR DocumentSendingProfile@1004 : Record 60);
+    BEGIN
+    END;
+
+    [Integration]
+    LOCAL PROCEDURE OnBeforeSendServiceRecords@10136109(VAR ReportSelections@1000 : Record 77;VAR SalesInvoiceHeader@1001 : Record 112;DocTxt@1002 : Text;VAR IsHandled@1003 : Boolean);
+    BEGIN
+    END;
+
+    [Integration]
+    PROCEDURE OnAfterCopySalesInvHeaderEvent@19881803(ShowRequestP@19881800 : Boolean;VAR SalesInvHeaderP@19881801 : Record 112;VAR SkipTriggerExecutionP@19881802 : Boolean);
+    BEGIN
+    END;
+
+    LOCAL PROCEDURE __STOP_EVENTS__@19881800();
+    BEGIN
+    END;
+
+    PROCEDURE ShowDocument@1101224019(VAR DocNoP@1101224019 : Code[20]);
+    VAR
+      SalesInvoiceHeaderL@11406500 : Record 112;
+    BEGIN
+      // Start EU.0114065
+      SalesInvoiceHeaderL.GET(DocNoP);
+      PAGE.RUNMODAL(SalesInvoiceHeaderL.GetDocumentPageID, SalesInvoiceHeaderL);
+      // Stop EU.0114065
+    END;
+
+    PROCEDURE GetDocumentPageID@2542303() : Integer;
+    BEGIN
+      // @ This function returns Page Id depending on the record "Order Type".
+      // Start EU.0114065
+      CASE "Order Type" OF
+        "Order Type"::"Parts Sales & Purchases":
+          BEGIN
+           IF "General Document" THEN
+             EXIT(PAGE::"Posted Gen. Sales Invoice")
+           ELSE
+             EXIT(PAGE::"Posted Sales Invoice");
+          END;
+        "Order Type"::"Vehicle Sales & Purchases":
+          EXIT(PAGE::"Posted Vehicle Sales Invoice");
+        "Order Type"::Service:
+          EXIT(PAGE::"Posted Service Sales Invoice");
+      END;
+      EXIT(0);
+      // Stop EU.0114065
+    END;
+
+    PROCEDURE ShowPostedInvoices@16606200(OrderNoP@16606200 : Code[20];OrderTypeP@16975501 : Option);
+    VAR
+      SalesInvoiceHeaderL@16606201 : Record 112;
+    BEGIN
+      // @ This function will open the page of the Sales Invoices related to the provided "Order No." and "Order Type" checking the link in the document line level.
+      // @ OrderNoP Code [20]
+      // @ OrderTypeP Option for the Area. Currently unused and added in the signature for further functionality extension if needed to specify the PageRun action.
+      // @ Pages Per area are: Posted Parts Sales Invoices (5205317), Posted Veh. Sales Invoices (5205822), Posted Service Sales Invoices (5206307)
+
+      // Start EU.0169755.169537
+      // Start EU.0174523
+      FilterPostedInvoices(SalesInvoiceHeaderL, OrderNoP, OrderTypeP);
+      // Stop EU.0174523
+      IF NOT SalesInvoiceHeaderL.ISEMPTY THEN
+        SalesInvoiceHeaderL.FINDFIRST;
+      // Start EU.0174523
+      PAGE.RUN(GetListPageID(OrderTypeP, SalesInvoiceHeaderL."General Document"), SalesInvoiceHeaderL);
+      // Stop EU.0174523
+      // Stop EU.0169755.169537
+    END;
+
+    PROCEDURE FilterPostedInvoices@17452300(VAR RecP@17452300 : Record 112;OrderNoP@17452301 : Code[20];OrderTypeP@17452302 : Option);
+    VAR
+      LineL@17452303 : Record 113;
+    BEGIN
+      // @ This function will filter the Sales Invoices related to the provided "Order No." and "Order Type" checking the link in the document line level.
+      // Start EU.0174523
+      // Prepayment Invoices are being checked in header level
+      RecP.RESET;
+      RecP.SETRANGE("Prepayment Order No.", OrderNoP);
+      RecP.SETRANGE(Prepayment, TRUE);
+      IF RecP.FINDSET THEN
+        REPEAT
+          RecP.MARK(TRUE);
+        UNTIL RecP.NEXT = 0;
+      RecP.SETRANGE(Prepayment);
+      RecP.SETRANGE("Prepayment Order No.");
+      // Regular Invoices are being checked in line level
+      LineL.RESET;
+      LineL.FILTERGROUP(-1);
+      LineL.SETRANGE("Service Order No.", OrderNoP);
+      LineL.SETRANGE("Order No.", OrderNoP);
+      LineL.FILTERGROUP(0);
+      LineL.SETRANGE("Order Type", OrderTypeP);
+      IF LineL.FINDSET THEN
+        REPEAT
+          RecP.MARK(RecP.GET(LineL."Document No."));
+          LineL.SETFILTER("Document No.", '>%1', LineL."Document No.");
+        UNTIL LineL.NEXT = 0;
+      RecP.SETCURRENTKEY("No.");
+      RecP.MARKEDONLY(TRUE);
+      // Stop EU.0174523
+    END;
+
+    PROCEDURE SetMessageNotification@20300301();
+    VAR
+      CustL@20300305 : Record 18;
+      MessageL@20300304 : Record 5047002;
+      ContactThroughL@20300303 : Codeunit 5053;
+      TypeL@20300302 : Option;
+      SelectedNotificationL@20300301 : Text[80];
+    BEGIN
+      // Start EU.0203003
+      ContactThroughL.SetParams(FALSE, "Message Notification");
+      CustL.GET("Sell-to Customer No.");
+      SelectedNotificationL := ContactThroughL.ShowCustomerPhoneNumbers("Sell-to Customer No.",CustL."Address No.", TypeL, "Messaging App Type", MessageL."Document Type"::Invoice, "No.", FindArea());
+      "Message Notification" := '';
+      IF SelectedNotificationL <> '' THEN BEGIN
+        "Message Notification" := SelectedNotificationL;
+        "Message Type" := TypeL;
+      END;
+      // Stop EU.0203003
+    END;
+
+    PROCEDURE FindArea@20300300() : Integer;
+    VAR
+      MessageListL@20300301 : Record 5047002;
+      MessageMgtL@20300300 : Codeunit 5047001;
+    BEGIN
+      // Start EU.0203003
+      CASE "Order Type" OF
+        "Order Type"::"Vehicle Sales & Purchases":
+          EXIT(MessageListL.Area::"Vehicle Sales");
+        "Order Type"::"Parts Sales & Purchases":
+          EXIT(MessageListL.Area::"Parts Sales");
+        "Order Type"::Service:
+          EXIT(MessageListL.Area::Service);
+      END;
+      // Stop EU.0203003
+    END;
+
+    BEGIN
+    {
+      // @ Area PartsSales, VehicleSales, Service
+      // @ TRANSFERFIELDS 36|110|112|114|6660|5028930|5046905|5025624|5025631|5025636
+
+      ** ATTENTION! TRANSFERFIELDS ******************************
+      * Fields are exchanged with following tables:             *
+      *         36   Sales Header                               *
+      *        110   Sales Shipment Header                      *
+      *        114   Sales Credit Memo Header                   *
+      *       6660   Return Receipt Header                      *
+      *    5028930   Sales Inquiry Header                       *
+      *    5046905   Archived Sales Header                      *
+      ***********************************************************
+
+      PA-Number  Date
+      ------------------------------------------------
+      PA031882   07.06.10    Deactivation of field Job No.
+      PA031550   07.09.10 SS Added two new fields "Service Advisor No." & "Service Advisor No./Pick-Up".
+      PA032178   12.10.10 GL 730455: Changed Tablerelation from User to User Setup in field Pick User ID
+      PA032178   04.02.11 AA 2505809: Added New field 5045661 - Bill-to Contact No.
+      PA032589   15.02.11 YI Call of function CheckIntCustomer removed from OnValidate Bill-To Cust.No. because has become obsolete
+      PA032438   22.04.11 GD Modified length of fields : Bill-to Name, Bill-to Name 2, Bill-to Address, Bill-to Address 2,
+                             Sell-to Customer Name, Sell-to Customer Name 2, Sell-to Address, Sell-to Address 2,Ship-to Name,
+                             Ship-to Name 2, Ship-to Address, Ship-to Address 2,Sell-To Contact,Ship-To Contact,Bill-To Contact
+      PA032441   01.07.11 GC NAV 2009 SP1 W1 General Ledger Integration
+      PA032821   04.08.11 DR 4609511: Automatic DropDown fields added in "Field Groups
+      PA032500   26.08.11 DR 4686079: New code added in function PrintServiceRecords in order to print "Service Contract Inclusive" documents, whenever a Service Inclusive customer was used.
+      PA032665   19.10.11 SS SMS Enhancements Added 2 new fields "SMS Sent Parts" & "SMS Sent Vehicles" to sync with Table 36.
+      PA032443   11.11.11 SS Print PDF Document
+                             - Changed PrintRecords(), PrintVehicleRecords(), PrintServiceRecords() fns to print PDF document
+      PA033005   26.03.12 DR 6855272: Handover "County" field to PostCode and City validation functions
+      PA033067   12.04.12 DR DE Captions implemented
+      PA032651   25.04.12 DR 6012646: DEU and ENU Captions corrected
+      PA033343   31.07.12 DR POS removed: Field 5025554 deleted
+                             WITH removed
+      PA033259   08.08.12 AI Deletion of Start/Stop History in Code, update copyright and Version List
+      PA033259   18.09.12 DR Variable names changed according to incadea styleguide
+      PA033336   17.10.12 SS 8746211 Modified functions PrintRecords(), PrintVehicleRecords(), PrintServiceRecords()
+      PA032876   25.10.12 WZ 9065026 - Renamed caption of Service Advisor No. to "Service Advisor No./Appointment" and removed German Translation
+      PA033733   10.12.12 DR DE Captions added for version: N.6.1.2
+      PA033897   11.03.13 DR Table TRANSFERFIELDS Box added to the Doku Header
+      PA034402   18.09.13 LR Create Opportunity No. field
+      PA034291   02.09.13 SM New fields added:5205403 Prepayment Boolean,5205404 "Prepayment Order No." Code20,
+                             5205405 "Prepayment Assignment" Boolean.
+                             In functions PrintRecords,PrintVehicleRecords and PrintServiceRecords added new code which filters "Prepmt. invoice" option in Usage field in case the posted invoice is a prepayment invoice.
+      PA034402   15.10.13 LR I002002 Field Opportunity No. non editable
+      PA034291   16.10.13 SM I002094: Added printout for Prepayment invoice.
+      PA033985   30.10.13 CH New field 5025400 "No. of Sales Incentives".
+      PA034532   27.11.13 GD 18589 Modified PrintVehicleRecords() in order for GetReportSelection to function correctly.
+      PA034532   05.12.13 GF 18575 Modified PrintRecords() for GetReportSelection() to function correctly.
+      PA035597   10.02.14 GC NAV 2013 R2 Technical Upgrade
+                             Field 5045660 "Sell-to Contact No." renumbered to 5052
+                             Field 5045661 "Bill-to Contact No." renumbered to 5053
+                             Field 5028654 "Opportunity No." renumbered to 5055
+      PA036008   20.05.14 DR TRANSFERFIELDS incaDoc and dummy fields added for field type error prevention in TRANSFERFIELDS
+      PA035597   04.07.14 GL Removed Bullzip Pdf functionality from PrintRecords, PrintVehicleRecords, PrintServiceRecords
+      PA035597   16.07.14 DR 25914: - Table Relation of field Dimension Set ID changed to "Dimension Set Entry".
+                             - MaintainSIFTIndex=No removed
+      PA035597   23.07.14 GL 26024 Changed Tablerelation of field User ID to User."User Name"
+      PA035597   07.08.14 CH 26043 Table relation for the field "Dealer Confirmed User Code" added.
+      PA035901   10.10.14 SM NAV 2013 R2 General Ledger Integration.
+      PA036727   28.08.14 ZZ Exit Points added in OnInsert, OnModify, OnDelete
+                             New function ExitPoint() added.
+      PA035901   13.11.14 CH NAV 2013 R2 General Ledger Integration.
+                 07.11.14 TS Length of Field External Document No. increased to Code 35.
+      PA036966   25.11.14 TS NAV 2013 R2 General Ledger Integration - SEPA Credit Transfer, Direct Debit.
+                             New Field Direct Debit Mandate ID.
+      PA036547   21.10.14 GF Merge N.6.1.4 to N.7.1.0 - PA036727.
+      PA036728   19.09.14 SW Added new field "Salesperson Code 2"
+      PA036548   17.12.14 GL Merge of PA036728
+      PA036544   21.10.14 DR New ExitPoint added.
+                             - All ExitPoint functions are defined as LOCAL functions.
+                             - All FIND('-') and FIND('+') changed to FINDSET, FINDFIRST and FINDLAST.
+                             - Use the new Types "Inside x" and "Condition x" when necessary.
+      PA036549   20.01.15 TS 32895 Rename disabled fields used to accommodate TRANSFERFIELDS without braces.
+      PA036549   28.01.15 DR 32799 FlowField Definition of the Comment field corrected
+      PA037220   06.03.15 AN 33590 New key added: Order Type,Sell-to Customer No.,Posting Date
+      PA037968   07.05.15 AN Merge of PA037220.33590
+      PA038224   09.09.15 WZ Repointed the CalcFormula to "Message List" Table. New fields added 5205407..5205410
+      PA038226   05.10.15 VG TRANSFERFIELDS incaDoc and dummy fields added for field type error prevention in TRANSFERFIELDS
+      PA038224   08.10.15 DR 46899 Bugfix
+      PA038224   23.10.15 WZ 47723 Extended field length of "Message Notification" to 80
+      PA038224   26.10.15 WZ 47832 Removed field "Message App Id". Updated TableReference of field related to "Message App Type"
+      PA037938   08.12.15 UX 50855 Missing caption added for field 5025380.
+      PA039225   15.02.16 KR 51457 Passing Report Selection to reports through User Session Unit.
+      PA039226   01.08.16 JS Merge of PA039225.51457.
+      PA042167   13.12.16 UX New field "Document Chain No." added.
+      PA041023   27.12.16 SV Created new fields "Supply VIN" and "Reference License No."
+      PA041187   08.04.17 AK 93102 inserted Missing Caption
+      --- 7.2.0 ---
+      EU.0000039 15.09.17 DR New FlowFilter field 5025388 "Special Control Parameters" crated.
+                             The field can be used to transport information into an objects without using Set Functions.
+                             Currently it is used to control the normal Service Invoice print reports to print a Proforma invoice instead
+                             of a normal Invoice.
+                             - New function PrintOneServiceRecord created. It is called from function PrintServiceRecords and also from the
+                               Service Invoice pages whenever a Proforma Print is requested.
+                             - Different Report Selection filter conditions changed to work with CASE TRUE
+                             - When an invoice is deleted then delete the header and footer texts too.
+                             - use function IsInternalCustomer from the customer table to find is a customer is internal.
+                             - use function IsServiceContractCustomer from the customer table to find is a customer is a Service Inclusive customer.
+                             - Several useless variables removed.
+      EU.0000048 21.07.17 AN New field added: External Purch. Order Date
+      EU.0005464 19.10.17 AJ 7564 Missing docu trigger
+      EU.0001175 19.10.17 AJ 8305 Missing docu trigger for EU.0005464.7564
+      EU.0095631 15.04.20 DR New FlowFilter "Document Line No. Filter" added.
+      --- 7.3.0 --- downmerge
+      EU.0056707          GE 56709 Field blocker with id 5208501 added
+      EU.0005640 13.03.18 CH New field (blocker) 5208430 "FIELD ID 5208430 BLOCKED".
+      EU.0032453 01.08.18 DR New field blockers added
+      --- 7.2.1---
+      EU.0090125 21.02.20 JV Downmerge of EU.0056707
+      EU.0098776 22.05.20 GI 98820 Downmerge of EU.0032453
+      EU.0101361 09.07.20 KR Added new functions SendVehicleRecords , SendVehicleProfile, EmailVehicleRecordsSendServiceRecords ,
+                             SendServiceProfile, EmailServiceRecords and publishers OnBeforeSendVehicleRecords , OnBeforeSendVehicleProfile,
+                             OnBeforeEmailVehicleRecords, OnBeforeSendServiceRecords , OnBeforeSendServiceProfile, OnBeforeEmailServiceRecords
+      EU.0104620 30.10.20 DR 108887 downmerge of EU.0005640
+      EU.0104306 17.09.20 DR New option field "VAT Calculation Logic" added. It is taken from the Bill to Customer card.
+      EU.0114065 18.03.21 AD Added new field "General Document".
+      EU.0114065 26.03.21 PS Added new field "Doc. Unique Id"
+      EU.0114065 30.03.21 DS Added code for No Series Updation in function PrintRecords.
+      EU.0114065 20.04.21 PS Added code in functions "SendRecords", "SendProfile", "EmailRecords" & "PrintRecords" to include General Documents
+      EU.0116400 07.05.21 GV 117419 Modification in PrintServiceRecords function to avoid error when Service Contract Inclusive is not set in Report Selection.
+      EU.0114065 22.07.21 DS New functions "ShowDocument" & "GetDocumentPageID" added.
+      EU.0129713 02.02.22 JN 133263 Removed field id of "5045150" due to conflicts in local version
+      EU.0166062 20.10.23 EF 167048 New key "Prepayment Order No." and function "ShowPostedInvoices" added.
+      EU.0168711 06.11.23 BS 168994 Added code function ShowPostedInvoices() to display Posted Service Sales Invoice from Navigate.
+      EU.0169755 24.11.23 EG 169537 Reworked function ShowPostedInvoices() to display all related Posted Sales Invoices in all areas using the Document Line Link
+                             & Prepayment Invoices using Document Header Link.
+      EU.0174523 29.02.24 DR Proforma Print: Fields "FIELD ID 5025372 BLOCKED", "Delete Proforma After", "Created for Proforma Print" and FIELD ID 5025373 BLOCKED added
+                             - In OnDelete take care of all related sub records and delete them together with the "Sales Invoice Header"
+                             - New functions GetListPageID and UpdateStatusHistory added.
+                             - Introduce /PRINT-IN-FILE-AS option to automatically print reports as PDF/Word/Excel into a BLOB.
+                             - New Functions FilterPostedInvoices
+                             - Function PrintOneServiceRecord changed to LOCAL
+                             - Use function GetListPageID to get the perfect Lookup Page ID in function ShowPostedInvoices.
+      EU.0188840 15.11.24 DR Merge of EU.0174523
+      EU.0191766 28.01.25 DR Field FIELD ID 7001 BLOCKED added
+      EU.0194249 04.03.25 JN 194644 Function PrintOneServiceRecord() changed from LOCAL to Global.
+      EU.0198818 22.05.25 JN 199111 Event OnAfterCopySalesInvHeaderEvent() has been added to purpose of Commercial Vehicle.
+      EU.0199372 11.06.25 DR New placeholder field "FIELD ID 5085551 BLOCKED" added.
+      EU.0203003 28.07.25 HT Added new function SetMessageNotification(),FindArea() & add the code in Onvalidate trigger of "Sell-to Customer No."
+                             -For inserting the multiple messaging apps.
+      EU.0204967 08.09.25 HT Merge the Feature 203003 Codes here For testing the send message parts.
+      AP2308     08.09.25 RL Change captions of 'Your Reference' to 'Customer Order No.' and 'External Doc. No.' to 'Merchant No.'.
+      CU26Q1     10.06.26 RL CU upgrade.
+    }
+    END.
+  }
+}
+

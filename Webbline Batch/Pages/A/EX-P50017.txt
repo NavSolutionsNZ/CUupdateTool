@@ -1,0 +1,172 @@
+OBJECT Page 50017 Sales Hist. Bill-to FactBox3
+{
+  OBJECT-PROPERTIES
+  {
+    Date=04/15/26;
+    Time=[ 5:47:35 PM];
+    Modified=Yes;
+    Version List=NAVW16.00.01,N.7.1.5,AP-2362;
+  }
+  PROPERTIES
+  {
+    CaptionML=ENU=Sales History - Bill-to Customer - Quotes & Others;
+    SourceTable=Table18;
+    PageType=CardPart;
+  }
+  CONTROLS
+  {
+    { 1900000001;0;Container;
+                ContainerType=ContentArea }
+
+    { 21  ;1   ;Field     ;
+                CaptionML=ENU=Customer No.;
+                SourceExpr="No.";
+                Visible=FALSE;
+                OnDrillDown=BEGIN
+                              ShowDetails;
+                            END;
+                             }
+
+    { 10  ;1   ;Field     ;
+                Description=PA042025;
+                SourceExpr="Parts Quotes Bill-to";
+                Visible=FALSE;
+                OnDrillDown=BEGIN
+                              // Start PA042025
+                              SalesHistoryDrilldown(FIELDNO("Parts Quotes Bill-to"));
+                              // Stop PA042025
+                            END;
+                             }
+
+    { 9   ;1   ;Field     ;
+                Description=PA042025;
+                SourceExpr="Vehicle Quotes Bill-to";
+                Visible=FALSE;
+                OnDrillDown=BEGIN
+                              // Start PA042025
+                              SalesHistoryDrilldown(FIELDNO("Vehicle Quotes Bill-to"));
+                              // Stop PA042025
+                            END;
+                             }
+
+    { 8   ;1   ;Field     ;
+                Description=PA042025;
+                SourceExpr="Service Quotes Bill-to";
+                Visible=FALSE;
+                OnDrillDown=BEGIN
+                              // Start PA042025
+                              SalesHistoryDrilldown(FIELDNO("Service Quotes Bill-to"));
+                              // Stop PA042025
+                            END;
+                             }
+
+    { 7   ;1   ;Field     ;
+                Description=PA032668;
+                SourceExpr="Archived Parts Quotes Bill-to";
+                Visible=FALSE;
+                OnDrillDown=BEGIN
+                              // Start PA032668
+                              SalesHistoryDrilldown(FIELDNO("Archived Parts Quotes Bill-to"));
+                              // Stop PA032668
+                            END;
+                             }
+
+    { 6   ;1   ;Field     ;
+                Description=PA032668;
+                SourceExpr="Archived Veh. Quotes Bill-to";
+                Visible=FALSE;
+                OnDrillDown=BEGIN
+                              // Start PA032668
+                              SalesHistoryDrilldown(FIELDNO("Archived Veh. Quotes Bill-to"));
+                              // Stop PA032668
+                            END;
+                             }
+
+    { 5   ;1   ;Field     ;
+                Description=PA032668;
+                SourceExpr="Archived Serv. Quotes Bill-to";
+                Visible=FALSE;
+                OnDrillDown=BEGIN
+                              // Start PA032668
+                              SalesHistoryDrilldown(FIELDNO("Archived Serv. Quotes Bill-to"));
+                              // Stop PA032668
+                            END;
+                             }
+
+    { 4   ;1   ;Field     ;
+                Description=PA032668;
+                SourceExpr=Reminders;
+                OnDrillDown=BEGIN
+                              // Start PA032668
+                              SalesHistoryDrilldown(FIELDNO(Reminders));
+                              // Stop PA032668
+                            END;
+                             }
+
+    { 3   ;1   ;Field     ;
+                Description=PA032668;
+                SourceExpr="Issued Reminders";
+                OnDrillDown=BEGIN
+                              // Start PA032668
+                              SalesHistoryDrilldown(FIELDNO("Issued Reminders"));
+                              // Stop PA032668
+                            END;
+                             }
+
+    { 2   ;1   ;Field     ;
+                Description=PA032668;
+                SourceExpr="Finance Charge Memos";
+                Visible=FALSE;
+                OnDrillDown=BEGIN
+                              // Start PA032668
+                              SalesHistoryDrilldown(FIELDNO("Finance Charge Memos"));
+                              // Stop PA032668
+                            END;
+                             }
+
+    { 1   ;1   ;Field     ;
+                Description=PA032668;
+                SourceExpr="Issued Finance Charge Memos";
+                Visible=FALSE;
+                OnDrillDown=BEGIN
+                              // Start PA032668
+                              SalesHistoryDrilldown(FIELDNO("Issued Finance Charge Memos"));
+                              // Stop PA032668
+                            END;
+                             }
+
+  }
+  CODE
+  {
+
+    PROCEDURE ShowDetails@1102601000();
+    BEGIN
+      PAGE.RUN(PAGE::"Customer Card",Rec);
+    END;
+
+    BEGIN
+    {
+      // @ Area PartsSales
+      // @ Area VehicleSales
+      // @ Area ServiceManagement
+      // @ Area General
+      PA-Number  Date
+      ------------------------------------------------
+      PA031550   25.01.10 SS New Object from NAVW16.00.01
+      PA032473   08.06.11 SS #3553587
+                             - OnDrillDown Trigger for all the fields modified to open the correct Pages in RTC.
+      PA032668   01.09.11 GL New fields "Archived Parts Quotes", "Archived Vehicle Quotes", "Archived Service Quotes", "Reminders",
+                             "Issued Reminders", "Finance Charge Memos" and "Issued Finance Charge Memos"
+      PA033067   12.04.12 DR DE Captions implemented
+      PA033019   07.08.12 DR 8319026: Change Names and ENU Caption for fields changed where "Posted" appeared as second word after
+                             "Vehicle", "Part" or "Service". The correct witing is "Posted Vehicle.." Posted Part.." or "Posted Service.."
+      PA033259   18.09.12 DR Variable names changed according to incadea styleguide
+      PA042025   21.10.16 MS Display new fields "Parts Quotes Bill-to", "Vehicle Quotes Bill-to" and "Service Quotes Bill-to" not visible by default
+      PA042027   29.11.16 DR Merge of PA042025
+      AP-2362    09.04.26 LU Created and Added the FactBox "Sales Hist. Sell-to FactBox2", "Sales Hist. Sell-to FactBox3", "Sales Hist. Bill-to FactBox2" and "Sales Hist. Bill-to FactBox3"
+                             - Divided the fields from "Sales Hist. Sell-to FactBox" and "Sales Hist. Bill-to FactBox" into "Sales Hist. Sell-to FactBox2", "Sales Hist. Sell-to FactBox3", "Sales Hist. Bill-to FactBox2" and "Sales Hist. Bill-to FactBox3"
+    }
+    END.
+  }
+}
+

@@ -1,0 +1,213 @@
+OBJECT Page 425 Vendor Bank Account Card
+{
+  OBJECT-PROPERTIES
+  {
+    Date=07/25/25;
+    Time=[ 2:08:15 PM];
+    Version List=NAVW1.x,N.7.2.1;
+  }
+  PROPERTIES
+  {
+    CaptionML=ENU=Vendor Bank Account Card;
+    SourceTable=Table288;
+    PageType=Card;
+    OnModifyRecord=VAR
+                     LastNamePageL@1109400000 : Page 5025369;
+                   BEGIN
+                     // Start INC
+                     IF "Last Name" = '' THEN BEGIN
+                       LastNamePageL.VendorBank(Rec);
+                       LastNamePageL.LOOKUPMODE(TRUE);
+                     // Start PA043931
+                       IF LastNamePageL.RUNMODAL = ACTION::LookupOK THEN BEGIN
+                         VALIDATE("First Name", LastNamePageL.GetFirstName());
+                         VALIDATE("Last Name", LastNamePageL.GetLastName());
+                       END;
+                     // Stop PA043931
+                     END;
+                     // Start EU.0004648
+                     AddressSetupG.GET;
+                     IF ("Address No." = 0) AND (NOT AddressSetupG."Exclude Bank Acc. from Address") THEN
+                     // Stop EU.0004648
+                       AddressMgntG.CheckVendorBankAccountAddress(Rec, TRUE);
+                     EXIT (TRUE);
+                     // Stop INC
+                   END;
+
+    OnAfterGetCurrRecord=VAR
+                           SearchNameL@1109400000 : Code[50];
+                         BEGIN
+                           // Start PA041187.89458
+                           // Start EU.0200720.203027
+                           FirstNameEditableG := AddressMgntG.EditFirstName(AddressMgntG.IsBusiness("Address Salutation Code"), "First Name", "Last Name", SearchNameL);
+                           // Stop EU.0200720.203027
+                           // Stop PA041187.89458
+                         END;
+
+  }
+  CONTROLS
+  {
+    { 1900000001;0;Container;
+                ContainerType=ContentArea }
+
+    { 1   ;1   ;Group     ;
+                CaptionML=ENU=General }
+
+    { 2   ;2   ;Field     ;
+                SourceExpr=Code }
+
+    { 46  ;2   ;Field     ;
+                SourceExpr="Address Salutation Code";
+                AutoFormatExpr='JMD';
+                OnValidate=VAR
+                             SearchNameL@1109400000 : Code[50];
+                           BEGIN
+                             // Start PA041187.89458
+                             // Start EU.0200720.203027
+                             FirstNameEditableG := AddressMgntG.EditFirstName(AddressMgntG.IsBusiness("Address Salutation Code"), "First Name", "Last Name", SearchNameL);
+                             // Stop EU.0200720.203027
+                             // Stop PA041187.89458
+                           END;
+                            }
+
+    { 48  ;2   ;Field     ;
+                SourceExpr="Title Code";
+                AutoFormatExpr='JMD' }
+
+    { 44  ;2   ;Field     ;
+                Description=PA041187.89458;
+                SourceExpr="First Name";
+                Editable=FirstNameEditableG }
+
+    { 42  ;2   ;Field     ;
+                SourceExpr="Last Name" }
+
+    { 6   ;2   ;Field     ;
+                SourceExpr=Address }
+
+    { 8   ;2   ;Field     ;
+                SourceExpr="Address 2" }
+
+    { 11  ;2   ;Field     ;
+                SourceExpr="Post Code";
+                AutoFormatExpr='JMD' }
+
+    { 12  ;2   ;Field     ;
+                SourceExpr="Country/Region Code";
+                AutoFormatExpr='JMD' }
+
+    { 1119432001;2;Field  ;
+                SourceExpr="Phone No." }
+
+    { 4   ;2   ;Field     ;
+                SourceExpr="Letter Salutation Code";
+                AutoFormatExpr='JMD' }
+
+    { 18  ;2   ;Field     ;
+                SourceExpr=Contact }
+
+    { 10  ;2   ;Field     ;
+                SourceExpr=City }
+
+    { 34  ;2   ;Field     ;
+                SourceExpr="Currency Code";
+                AutoFormatExpr='JMD' }
+
+    { 1902768601;1;Group  ;
+                CaptionML=ENU=Communication }
+
+    { 24  ;2   ;Field     ;
+                Name=PhoneNoControl;
+                SourceExpr="Phone No." }
+
+    { 22  ;2   ;Field     ;
+                SourceExpr="Fax No." }
+
+    { 52  ;2   ;Field     ;
+                SourceExpr="Mobile Phone No." }
+
+    { 26  ;2   ;Field     ;
+                SourceExpr="E-Mail" }
+
+    { 28  ;2   ;Field     ;
+                SourceExpr="Home Page" }
+
+    { 1905090301;1;Group  ;
+                CaptionML=ENU=Transfer }
+
+    { 64  ;2   ;Field     ;
+                Description=PA033041;
+                SourceExpr="Bank Branch No." }
+
+    { 36  ;2   ;Field     ;
+                Description=PA033041;
+                SourceExpr="Bank Account No." }
+
+    { 50  ;2   ;Field     ;
+                Description=PA033041;
+                SourceExpr="Transit No." }
+
+    { 1119433000;2;Field  ;
+                ToolTipML=ENU=Society for Worldwide Interbank Financial Telecommunication Æ Bank Identifier Code;
+                Description=PA033041,PA032651;
+                SourceExpr="SWIFT-BIC" }
+
+    { 1119432302;2;Field  ;
+                CaptionML=ENU=IBAN;
+                ToolTipML=ENU=International Bank Account Number;
+                Description=PA033041,PA032651;
+                SourceExpr=IBAN }
+
+    { 1900000007;0;Container;
+                ContainerType=FactBoxArea }
+
+    { 1900383207;1;Part   ;
+                Visible=FALSE;
+                PartType=System;
+                SystemPartID=RecordLinks }
+
+    { 1905767507;1;Part   ;
+                Visible=FALSE;
+                PartType=System;
+                SystemPartID=Notes }
+
+  }
+  CODE
+  {
+    VAR
+      Mail@1109400000 : Codeunit 397;
+      _INCADEA_@1109400001 : Boolean;
+      AddressSetupG@456900 : Record 5029113;
+      AddressMgntG@1109400002 : Codeunit 5029101;
+      FirstNameEditableG@1109400003 : Boolean;
+
+    BEGIN
+    {
+      // @ Area GeneralLedger
+      PA-Number  Date
+      ------------------------------------------------
+      PA033041   02.03.11 PR Added new Tab 'Transfer'.
+      PA032473   29.04.11 GM 3043723: Changed Parent Control Property for PostCode/City caption
+                                            to avoid redundant captions in the RTC
+      PA032651   06.07.11 PR 4246383: Added ToolTip for 'SWIFT Address' and 'IBAN No.'
+      PA032441   01.07.11 GC NAV 2009 SP1 W1 General Ledger Integration
+      PA033041   13.12.11 PR 5910096: Field 'SWIFT Address' is renamed to 'SWIFT-BIC'.
+      PA033067   12.04.12 DR DE Captions implemented
+      PA032651   25.04.12 DR 6012646: DEU and ENU Captions corrected
+      PA033259   09.08.12 AI Deletion of Start/Stop History in Code, update copyright and Version List
+      PA033259   18.09.12 DR Variable names changed according to incadea styleguide
+      PA035597   10.02.14 GC NAV 2013 R2 Technical Upgrade
+      PA041187   21.03.17 MS 89458 Control "First Name" editable based on business type.
+      PA043931   29.05.17 LL Changed code on OnModifyRecord() trigger to validate also value for "First Name"
+      --- 7.1.6 ---
+      EU.0002138 23.06.17 LL 2097 Merge of PA043931
+      --- 7.2.0 ---
+      EU.0004648 17.08.17 JM Added code to remove Vendor bank accounts from Address concept witch depens of flag "Exclude Bank Acc. from Address" in table: Address setup
+      EU.0000039 18.10.17 UX 6348 Docu trigger correction and code cleaning.
+      EU.0001175 18.10.17 UX 8305 Missing docu trigger for EU.0000039.6348
+      EU.0200720 25.07.25 DR 203027 Include the "Last Name" field into the EditFirstName check.
+    }
+    END.
+  }
+}
+

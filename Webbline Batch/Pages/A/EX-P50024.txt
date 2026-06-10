@@ -1,0 +1,265 @@
+OBJECT Page 50024 import costing line
+{
+  OBJECT-PROPERTIES
+  {
+    Date=07/01/25;
+    Time=10:23:48 AM;
+    Modified=Yes;
+    Version List=;
+  }
+  PROPERTIES
+  {
+    Permissions=TableData 5087001=rimd;
+    SourceTable=Table5087001;
+    PageType=List;
+  }
+  CONTROLS
+  {
+    { 1000000000;0;Container;
+                ContainerType=ContentArea }
+
+    { 1000000001;1;Group  ;
+                Name=Group;
+                GroupType=Repeater }
+
+    { 1000000002;2;Field  ;
+                SourceExpr="Costing No." }
+
+    { 1000000003;2;Field  ;
+                SourceExpr="Document Type" }
+
+    { 1000000004;2;Field  ;
+                SourceExpr="Document No." }
+
+    { 1000000005;2;Field  ;
+                SourceExpr="Purchase Line No." }
+
+    { 1000000006;2;Field  ;
+                SourceExpr="Item No." }
+
+    { 1000000007;2;Field  ;
+                SourceExpr="Line No." }
+
+    { 1000000008;2;Field  ;
+                SourceExpr="Quantity to Invoice" }
+
+    { 1000000009;2;Field  ;
+                SourceExpr="Quantity Invoiced" }
+
+    { 1000000010;2;Field  ;
+                SourceExpr="Quantity Ordered" }
+
+    { 1000000011;2;Field  ;
+                SourceExpr="Quantity to Receive" }
+
+    { 1000000012;2;Field  ;
+                SourceExpr="Quantity Received" }
+
+    { 1000000013;2;Field  ;
+                SourceExpr="Unit Cost" }
+
+    { 1000000014;2;Field  ;
+                SourceExpr="Unit Gross Weight" }
+
+    { 1000000015;2;Field  ;
+                SourceExpr="Unit Volume" }
+
+    { 1000000016;2;Field  ;
+                SourceExpr=Description }
+
+    { 1000000017;2;Field  ;
+                SourceExpr="Description 2" }
+
+    { 1000000018;2;Field  ;
+                SourceExpr="Unit Tariff" }
+
+    { 1000000019;2;Field  ;
+                SourceExpr="Costing Method" }
+
+    { 1000000020;2;Field  ;
+                SourceExpr=Value }
+
+    { 1000000021;2;Field  ;
+                SourceExpr=Amount }
+
+    { 1000000022;2;Field  ;
+                SourceExpr="Landed Item Cost" }
+
+    { 1000000023;2;Field  ;
+                SourceExpr="Landed Unit Cost" }
+
+    { 1000000024;2;Field  ;
+                SourceExpr="Landed Cost Amount" }
+
+    { 1000000025;2;Field  ;
+                SourceExpr="Received Landed Unit Cost" }
+
+    { 1000000026;2;Field  ;
+                SourceExpr="Invoiced Landed Unit Cost" }
+
+    { 1000000027;2;Field  ;
+                SourceExpr="Vendors Unit Cost" }
+
+    { 1000000028;2;Field  ;
+                SourceExpr="Currency Code" }
+
+    { 1000000029;2;Field  ;
+                SourceExpr="Duty Due %" }
+
+    { 1000000030;2;Field  ;
+                SourceExpr="Duty Due Amount" }
+
+    { 1000000031;2;Field  ;
+                SourceExpr="Freight %" }
+
+    { 1000000032;2;Field  ;
+                SourceExpr="Freight Amount" }
+
+    { 1000000033;2;Field  ;
+                SourceExpr="Total Duty Amount" }
+
+    { 1000000034;2;Field  ;
+                SourceExpr="Total Freight Amount" }
+
+    { 1000000035;2;Field  ;
+                SourceExpr="Location Code" }
+
+    { 1000000036;2;Field  ;
+                SourceExpr="Department Code" }
+
+    { 1000000037;2;Field  ;
+                SourceExpr="Make Code" }
+
+    { 1000000038;2;Field  ;
+                SourceExpr="Receipt Alert" }
+
+    { 1000000039;2;Field  ;
+                SourceExpr="Units per Parcel" }
+
+    { 1000000040;2;Field  ;
+                SourceExpr="Carton No." }
+
+    { 1000000041;2;Field  ;
+                SourceExpr="Order Type" }
+
+    { 1000000042;2;Field  ;
+                SourceExpr="Item Type" }
+
+    { 1000000043;2;Field  ;
+                SourceExpr=VIN }
+
+    { 1000000044;2;Field  ;
+                SourceExpr="Prod. Year" }
+
+    { 1000000045;2;Field  ;
+                SourceExpr="Factory No." }
+
+    { 1000000046;2;Field  ;
+                SourceExpr="Supply VIN" }
+
+    { 1000000047;2;Field  ;
+                SourceExpr="Engine No." }
+
+    { 1000000048;2;Field  ;
+                SourceExpr="Transmission Type Code" }
+
+    { 1000000049;2;Field  ;
+                SourceExpr="Key No." }
+
+    { 1000000050;2;Field  ;
+                SourceExpr="Vendor Receipt No." }
+
+    { 1000000051;2;Field  ;
+                SourceExpr="Vendor Receipt Line No." }
+
+    { 1000000052;2;Field  ;
+                SourceExpr="Vendor Invoice No." }
+
+    { 1000000053;2;Field  ;
+                SourceExpr="Vendor Invoice Line No." }
+
+    { 1000000054;2;Field  ;
+                SourceExpr="Invoice No.";
+                Editable=True }
+
+    { 1000000055;2;Field  ;
+                SourceExpr="Invoice Line No." }
+
+    { 1000000056;2;Field  ;
+                SourceExpr="Delivery Note No." }
+
+    { 1000000057;2;Field  ;
+                SourceExpr="Zone Code" }
+
+    { 1000000058;2;Field  ;
+                SourceExpr=Receipted }
+
+    { 1000000059;2;Field  ;
+                SourceExpr="Import Costing Qty. Received" }
+
+    { 1000000060;2;Field  ;
+                SourceExpr="Vendors Item No." }
+
+    { 1000000061;2;Field  ;
+                SourceExpr="Receipt Cockpit Entry No." }
+
+    { 1000000062;2;Field  ;
+                SourceExpr="Receipt Cockpit Line No." }
+
+    { 1000000063;2;Field  ;
+                SourceExpr="Expected Receipt Date" }
+
+    { 1000000064;2;Field  ;
+                SourceExpr="Invoice Cockpit Entry No." }
+
+    { 1000000065;2;Field  ;
+                SourceExpr="Invoice Cockpit Line No." }
+
+    { 1000000066;2;Field  ;
+                SourceExpr="Reserved Qty." }
+
+    { 1000000067;2;Field  ;
+                SourceExpr="Dealer Request Status" }
+
+    { 1000000068;2;Field  ;
+                SourceExpr="Dealer Request Code" }
+
+    { 1000000069;2;Field  ;
+                SourceExpr="Pre Registration Status" }
+
+    { 1000000070;2;Field  ;
+                SourceExpr="Serial No." }
+
+    { 1000000071;2;Field  ;
+                SourceExpr="Dimension Set ID" }
+
+    { 1000000072;2;Field  ;
+                SourceExpr="Variant Code" }
+
+    { 1000000073;2;Field  ;
+                SourceExpr="Bin Code" }
+
+    { 1000000074;2;Field  ;
+                SourceExpr="Unit of Measure Code" }
+
+    { 1000000075;2;Field  ;
+                SourceExpr="Core Charges Amount" }
+
+    { 1000000076;2;Field  ;
+                SourceExpr="Rush Order Surcharges Amount" }
+
+    { 1000000077;2;Field  ;
+                SourceExpr="Insurance Amount" }
+
+    { 1000000078;2;Field  ;
+                SourceExpr="Other Charges Amount" }
+
+  }
+  CODE
+  {
+
+    BEGIN
+    END.
+  }
+}
+

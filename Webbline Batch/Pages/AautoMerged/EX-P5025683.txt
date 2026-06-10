@@ -1,0 +1,893 @@
+OBJECT Page 5025683 Service Invoice
+{
+  OBJECT-PROPERTIES
+  {
+    Date=08/20/23;
+    Time=[ 9:33:25 PM];
+    Modified=Yes;
+    Version List=N.7.2.1;
+  }
+  PROPERTIES
+  {
+    CaptionML=ENU=Service Invoice;
+    Description=PA032651;
+    InsertAllowed=No;
+    SourceTable=Table36;
+    SourceTableView=WHERE(Document Type=FILTER(Invoice),
+                          Order Type=FILTER(Service));
+    PageType=Document;
+    RefreshOnActivate=Yes;
+    OnInit=BEGIN
+             // Start EU.0104306
+             ShowEnhancedVATCalcLogicFieldG := GeneralLedgerSetupG.EnhancedVATCalculationLogicActive() AND
+               (GeneralLedgerSetupG."Display VAT Calculation Logic" = GeneralLedgerSetupG."Display VAT Calculation Logic"::"Show Field in Documents");
+             // Stop EU.0104306
+             // Start EU.0032453
+             UserSetupG.GET(USERID);
+             ShoppingCartActionsVisibleG := UserSetupG."Allow Shopping Carts";
+             ShowShoppingCartFactBoxG := UserSetupG."Last Shopping Cart No." <> '';
+             // Stop EU.0032453
+           END;
+
+    OnOpenPage=BEGIN
+                 // Start EU.0032453
+                 IF ShoppingCartMgtG.GetCurrentCartHeader(UserSetupG, ShoppingCartHdrG) THEN
+                   CurrPage.SalesShoppingCart.PAGE.SetCart(ShoppingCartHdrG);
+                 // Stop EU.0032453
+               END;
+
+    OnNewRecord=BEGIN
+                  "Order Type" := "Order Type"::Service;
+                END;
+
+    OnInsertRecord=BEGIN
+                     ERROR(C_INC002);
+                   END;
+
+    OnDeleteRecord=BEGIN
+                     CurrPage.SAVERECORD;
+                     EXIT(ConfirmDeletion);
+                   END;
+
+    ActionList=ACTIONS
+    {
+      { 1900000003;0 ;ActionContainer;
+                      ActionContainerType=RelatedInformation }
+      { 57      ;1   ;ActionGroup;
+                      CaptionML=ENU=&Invoice }
+      { 128     ;2   ;Action    ;
+                      CaptionML=ENU=Service &Order;
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=Document;
+                      PromotedCategory=Process;
+                      OnAction=BEGIN
+                                 ShowServOrderG.SalesHeader(Rec);
+                                 CLEAR(ShowServOrderG);
+                               END;
+                                }
+      { 59      ;2   ;Action    ;
+                      ShortCutKey=F7;
+                      CaptionML=ENU=&Statistics;
+                      RunObject=Page 160;
+                      RunPageLink=Document Type=FIELD(Document Type),
+                                  No.=FIELD(No.);
+                      Promoted=Yes;
+                      Image=Statistics;
+                      PromotedCategory=Process;
+                      OnAction=BEGIN
+                                 SalesSetupG.GET;
+                                 IF SalesSetupG."Calc. Inv. Discount" THEN
+                                   CurrPage.ServiceInvoiceLines.PAGE.CalcInvDisc;
+                               END;
+                                }
+      { 60      ;2   ;Action    ;
+                      ShortCutKey=Shift+F7;
+                      CaptionML=ENU=&Card;
+                      RunObject=Page 21;
+                      RunPageLink=No.=FIELD(Sell-to Customer No.);
+                      Visible=FALSE;
+                      Image=EditLines }
+      { 61      ;2   ;Action    ;
+                      CaptionML=ENU=Co&mments;
+                      RunObject=Page 67;
+                      RunPageLink=Document Type=FIELD(Document Type),
+                                  No.=FIELD(No.),
+                                  Document Line No.=CONST(0);
+                      Visible=FALSE;
+                      Image=ViewComments }
+      { 1109400000;2 ;Action    ;
+                      ShortCutKey=Shift+Ctrl+D;
+                      CaptionML=ENU=Dimensions;
+                      Description=PA035597;
+                      Visible=FALSE;
+                      Image=Dimensions;
+                      OnAction=BEGIN
+                                 // Start PA035597
+                                 ShowDocDim;
+                                 CurrPage.SAVERECORD;
+                                 // Stop PA035597
+                               END;
+                                }
+      { 18      ;2   ;Action    ;
+                      CaptionML=ENU=&Price Calculations;
+                      RunObject=Page 5025825;
+                      RunPageLink=Order Type=CONST(Sales Order),
+                                  Document Type=FIELD(Document Type),
+                                  Document No.=FIELD(No.);
+                      Visible=FALSE;
+                      Image=Calculate }
+      { 3245302 ;1   ;ActionGroup;
+                      CaptionML=ENU=Shopping Cart;
+                      Description=EU.0032453;
+                      Visible=ShoppingCartActionsVisibleG;
+                      Image=Bin }
+      { 3245303 ;2   ;Action    ;
+                      Name=AddItemtoShoppingCart;
+                      CaptionML=ENU=Add Line to Cart;
+                      Description=EU.0032453;
+                      Promoted=Yes;
+                      Visible=ShoppingCartActionsVisibleG;
+                      Enabled=ShowShoppingCartFactBoxG;
+                      PromotedIsBig=Yes;
+                      Image=SuggestBin;
+                      PromotedCategory=Process;
+                      OnAction=BEGIN
+                                 // Start EU.0032453
+                                 AddItemToCurrentShoppingCartOnAction();
+                                 // Stop EU.0032453
+                               END;
+                                }
+      { 3245300 ;2   ;Action    ;
+                      Name=OpenNewShoppingCart;
+                      CaptionML=ENU=Create New Cart;
+                      Description=EU.0032453;
+                      Visible=ShoppingCartActionsVisibleG;
+                      Image=CreateBins;
+                      OnAction=BEGIN
+                                 CreateNewShoppingCartOnAction();
+                               END;
+                                }
+      { 1109400001;1 ;ActionGroup;
+                      CaptionML=ENU=Text }
+      { 1109400004;2 ;Action    ;
+                      CaptionML=ENU=&Header Text;
+                      RunObject=Page 5028691;
+                      RunPageLink=Document Type=FIELD(Document Type),
+                                  Document No.=FIELD(No.),
+                                  Header/Footer=CONST(Header);
+                      Image=Note }
+      { 1109400003;2 ;Action    ;
+                      CaptionML=ENU=&Footer Text;
+                      RunObject=Page 5028691;
+                      RunPageLink=Document Type=FIELD(Document Type),
+                                  Document No.=FIELD(No.),
+                                  Header/Footer=CONST(Footer);
+                      Image=Note }
+      { 1109400005;1 ;ActionGroup;
+                      CaptionML=ENU=Installment }
+      { 1109400006;2 ;Action    ;
+                      CaptionML=ENU=&Installment Agreement;
+                      RunObject=Page 5025350;
+                      RunPageLink=Document Type=FIELD(Document Type),
+                                  Document No.=FIELD(No.);
+                      Image=AmountByPeriod }
+      { 1109400007;1 ;ActionGroup;
+                      CaptionML=ENU=General }
+      { 1109400008;2 ;Action    ;
+                      CaptionML=ENU=Customer Card;
+                      RunObject=Page 21;
+                      RunPageLink=No.=FIELD(Sell-to Customer No.);
+                      Promoted=Yes;
+                      PromotedIsBig=No;
+                      Image=TeamSales;
+                      PromotedCategory=Process }
+      { 1109400009;2 ;Action    ;
+                      CaptionML=ENU=Contact Card;
+                      RunObject=Page 5050;
+                      RunPageLink=No.=FIELD(Sell-to Contact No.);
+                      Promoted=Yes;
+                      PromotedIsBig=No;
+                      Image=ExportSalesPerson;
+                      PromotedCategory=Process }
+      { 1109400010;1 ;ActionGroup;
+                      CaptionML=ENU=&Other }
+      { 1109400011;2 ;Action    ;
+                      CaptionML=ENU=To-Dos;
+                      RunObject=Page 5096;
+                      RunPageLink=Source Type=CONST(S. Invoice),
+                                  Source Doc. Type=CONST(Service),
+                                  Source Doc. No.=FIELD(No.),
+                                  System To-do Type=CONST(Contact Attendee),
+                                  Contact No.=FIELD(Sell-to Contact No.);
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=TaskList;
+                      PromotedCategory=Process }
+      { 1900000004;0 ;ActionContainer;
+                      ActionContainerType=ActionItems }
+      { 62      ;1   ;ActionGroup;
+                      CaptionML=ENU=F&unctions;
+                      Visible=FALSE }
+      { 118     ;2   ;Separator  }
+      { 119     ;2   ;Action    ;
+                      CaptionML=ENU=Calculate &Subtotals;
+                      Promoted=Yes;
+                      Image=CalculateLines;
+                      PromotedCategory=Process;
+                      OnAction=BEGIN
+                                 SubtotalsG.CalculateSalesLine(Rec);
+                               END;
+                                }
+      { 69      ;1   ;ActionGroup;
+                      CaptionML=ENU=P&osting }
+      { 70      ;2   ;Action    ;
+                      Name=Test Report;
+                      Ellipsis=Yes;
+                      CaptionML=ENU=&Test Report;
+                      Description=EU.0000039;
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=TestReport;
+                      PromotedCategory=Process;
+                      OnAction=BEGIN
+                                 ReportPrintG.PrintSalesHeader(Rec);
+                               END;
+                                }
+      { 71      ;2   ;Action    ;
+                      Name=Post;
+                      ShortCutKey=F9;
+                      CaptionML=ENU=P&ost;
+                      Description=EU.0000039;
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=Post;
+                      PromotedCategory=Process;
+                      OnAction=BEGIN
+                                 CurrPage.UPDATE(FALSE);
+                                 CODEUNIT.RUN(CODEUNIT::"Sales-Post (Yes/No)",Rec);
+                               END;
+                                }
+      { 72      ;2   ;Action    ;
+                      Name=Post and Print;
+                      ShortCutKey=Shift+F9;
+                      CaptionML=ENU=Post and &Print;
+                      Description=EU.0000039;
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=PostPrint;
+                      PromotedCategory=Process;
+                      OnAction=BEGIN
+                                 CurrPage.UPDATE(FALSE);
+                                 CODEUNIT.RUN(CODEUNIT::"Sales-Post + Print",Rec);
+                               END;
+                                }
+      { 3       ;2   ;Action    ;
+                      Name=PostAndSend;
+                      Ellipsis=Yes;
+                      CaptionML=ENU=Post and Send;
+                      ToolTipML=ENU=Finalize and prepare to send the document according to the customer's sending profile, such as attached to an email. The Send document to window opens first so you can confirm or select a sending profile.;
+                      ApplicationArea=#Basic,#Suite;
+                      Description=EU.0111610.112728;
+                      Image=PostMail;
+                      OnAction=VAR
+                                 ErrorL@10136100 : Text;
+                               BEGIN
+                                 // Start EU.0111610.112728
+                                 CurrPage.UPDATE(FALSE);
+                                 UserSessionG.SetLock(TRUE);
+                                 CLEARLASTERROR;
+                                 IF NOT CODEUNIT.RUN(CODEUNIT::"Sales-Post and Send", Rec) THEN
+                                   ErrorL := GETLASTERRORTEXT;
+                                 UserSessionG.SetLock(FALSE);
+                                 IF ErrorL <> '' THEN
+                                   ERROR(ErrorL);
+                                 IF NOT GET("Document Type", "No.") THEN
+                                   CurrPage.CLOSE;
+                                 // Stop EU.0111610.112728
+                               END;
+                                }
+      { 73      ;2   ;Action    ;
+                      Name=Post Batch;
+                      Ellipsis=Yes;
+                      CaptionML=ENU=Post &Batch;
+                      Description=EU.0000039;
+                      Visible=FALSE;
+                      Image=PostBatch;
+                      OnAction=BEGIN
+                                 REPORT.RUNMODAL(REPORT::"Batch Post Sales Invoices",TRUE,TRUE,Rec);
+                                 CurrPage.UPDATE(FALSE);
+                               END;
+                                }
+      { 3900    ;2   ;Action    ;
+                      Name=Proforma;
+                      CaptionML=ENU=Proforma;
+                      Description=EU.0000039;
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=Print;
+                      PromotedCategory=Process;
+                      OnAction=VAR
+                                 SalesInvHdrL@3900 : Record 112;
+                               BEGIN
+                                 // Start EU.0000039
+                                 SalesInvHdrL.TRANSFERFIELDS(Rec);
+                                 SalesInvHdrL.SETRANGE("Special Control Parameters", '/PROFORMA-INVOICE-FOR:' + GETPOSITION(FALSE));
+                                 SalesInvHdrL.PrintOneServiceRecord(TRUE, SalesInvHdrL);
+                                 // Stop EU.0000039
+                               END;
+                                }
+    }
+  }
+  CONTROLS
+  {
+    { 1900000001;0;Container;
+                ContainerType=ContentArea }
+
+    { 1   ;1   ;Group     ;
+                CaptionML=ENU=General }
+
+    { 2   ;2   ;Field     ;
+                SourceExpr="No.";
+                Importance=Promoted;
+                OnAssistEdit=BEGIN
+                               IF AssistEdit(xRec) THEN
+                                 CurrPage.UPDATE;
+                             END;
+                              }
+
+    { 4   ;2   ;Field     ;
+                SourceExpr="Sell-to Customer No.";
+                Editable=FALSE }
+
+    { 121 ;2   ;Field     ;
+                SourceExpr="Sell-to Customer Name";
+                QuickEntry=FALSE }
+
+    { 6   ;2   ;Field     ;
+                SourceExpr="Sell-to Customer Name 2";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 80  ;2   ;Field     ;
+                CaptionML=ENU=Sell-to Post Code/City;
+                SourceExpr="Sell-to Post Code";
+                AutoFormatExpr='JMD';
+                QuickEntry=FALSE }
+
+    { 79  ;2   ;Field     ;
+                SourceExpr="Sell-to City";
+                QuickEntry=FALSE }
+
+    { 49701;2  ;Field     ;
+                Description=EU.0000497;
+                SourceExpr="Supply VIN";
+                Editable=FALSE }
+
+    { 49700;2  ;Field     ;
+                Description=EU.0000497;
+                SourceExpr="Reference License No.";
+                Editable=FALSE }
+
+    { 12  ;2   ;Field     ;
+                SourceExpr="Posting Date";
+                Importance=Promoted;
+                Editable=FALSE }
+
+    { 43  ;2   ;Field     ;
+                SourceExpr="Document Date";
+                Importance=Additional;
+                Editable=FALSE;
+                QuickEntry=FALSE }
+
+    { 10  ;2   ;Field     ;
+                SourceExpr="Salesperson Code";
+                AutoFormatExpr='JMD';
+                Importance=Promoted;
+                QuickEntry=FALSE }
+
+    { 1119432002;2;Field  ;
+                SourceExpr="Service Advisor No.";
+                Importance=Promoted;
+                QuickEntry=FALSE }
+
+    { 21  ;2   ;Field     ;
+                SourceExpr="Status Code";
+                AutoFormatExpr='JMD';
+                OnValidate=BEGIN
+                             // Start PA039250.51663
+                             // Start EU.0041404
+                             // Stop EU.0041404
+                             SkipDocumentStatusCodeCheck();
+                             CurrPage.SAVERECORD;
+                             // Stop PA039250.51663
+                           END;
+
+                QuickEntry=FALSE }
+
+    { 140 ;2   ;Field     ;
+                CaptionML=ENU=No. of Remarks;
+                SourceExpr=SalRemarksTextG.CountRemarks(Rec);
+                Style=Strong;
+                StyleExpr=TRUE;
+                OnDrillDown=BEGIN
+                              // Start PA032651.7110045
+                              DisplayRemarksWindow;
+                              // Stop PA032651.7110045
+                            END;
+
+                QuickEntry=FALSE }
+
+    { 75  ;2   ;Field     ;
+                SourceExpr="Sell-to Address";
+                Visible=FALSE }
+
+    { 77  ;2   ;Field     ;
+                SourceExpr="Sell-to Address 2";
+                Visible=FALSE }
+
+    { 8   ;2   ;Field     ;
+                SourceExpr="Sell-to Contact";
+                Visible=FALSE }
+
+    { 1119432004;2;Field  ;
+                SourceExpr="Service Advisor No./Pick-Up";
+                Visible=FALSE }
+
+    { 132 ;2   ;Field     ;
+                SourceExpr="Item Sales Price Group";
+                Visible=FALSE;
+                Editable=FALSE }
+
+    { 28  ;2   ;Field     ;
+                SourceExpr="Mobile Service";
+                Visible=FALSE }
+
+    { 1055601;2;Field     ;
+                Description=PA038140;
+                SourceExpr="Your Reference";
+                Visible=FALSE }
+
+    { 1109400013;2;Field  ;
+                Description=PA038441;
+                SourceExpr="External Document No.";
+                Visible=true }
+
+    { 1109400014;2;Field  ;
+                Description=PA042520,EU.0012448.13245;
+                SourceExpr="Service Order No." }
+
+    { 1905885101;1;Group  ;
+                CaptionML=ENU=Invoicing }
+
+    { 171 ;2   ;Field     ;
+                SourceExpr="Bill-to Customer No.";
+                Importance=Promoted;
+                Editable=FALSE }
+
+    { 172 ;2   ;Field     ;
+                SourceExpr="Bill-to Name";
+                Importance=Promoted;
+                QuickEntry=FALSE }
+
+    { 177 ;2   ;Field     ;
+                SourceExpr="Bill-to Name 2";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 173 ;2   ;Field     ;
+                SourceExpr="Bill-to Address";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 174 ;2   ;Field     ;
+                SourceExpr="Bill-to Address 2";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 176 ;2   ;Field     ;
+                CaptionML=ENU=Bill-to Post Code/City;
+                SourceExpr="Bill-to Post Code";
+                AutoFormatExpr='JMD';
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 178 ;2   ;Field     ;
+                SourceExpr="Bill-to City";
+                Importance=Promoted;
+                QuickEntry=FALSE }
+
+    { 175 ;2   ;Field     ;
+                SourceExpr="Bill-to Contact";
+                QuickEntry=FALSE }
+
+    { 1119432006;2;Field  ;
+                Description=PA032462,PA032651,PA043728;
+                SourceExpr="VAT Registration No." }
+
+    { 186 ;2   ;Field     ;
+                SourceExpr="Payment Terms Code";
+                AutoFormatExpr='JMD';
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 192 ;2   ;Field     ;
+                SourceExpr="Payment Method Code";
+                AutoFormatExpr='JMD';
+                Importance=Promoted }
+
+    { 1109400012;2;Field  ;
+                SourceExpr="Direct Debit Mandate ID";
+                Importance=Additional }
+
+    { 187 ;2   ;Field     ;
+                SourceExpr="Due Date";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 1109400002;2;Field  ;
+                SourceExpr="Proposal for Alternative Part";
+                Visible=FALSE }
+
+    { 16  ;2   ;Field     ;
+                SourceExpr="Fair Deal";
+                Visible=FALSE }
+
+    { 190 ;2   ;Field     ;
+                SourceExpr="Shortcut Dimension 1 Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE;
+                Editable=FALSE }
+
+    { 191 ;2   ;Field     ;
+                SourceExpr="Shortcut Dimension 2 Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE;
+                Editable=FALSE }
+
+    { 188 ;2   ;Field     ;
+                SourceExpr="Payment Discount %";
+                Visible=FALSE }
+
+    { 189 ;2   ;Field     ;
+                SourceExpr="Pmt. Discount Date";
+                Visible=FALSE }
+
+    { 14  ;2   ;Field     ;
+                SourceExpr="Gen. Bus. Posting Group";
+                Visible=FALSE;
+                Editable=FALSE }
+
+    { 1119432000;2;Field  ;
+                SourceExpr="VAT Bus. Posting Group";
+                Visible=FALSE;
+                Editable=FALSE }
+
+    { 10430600;2;Field    ;
+                Description=EU.0104306;
+                SourceExpr="VAT Calculation Logic";
+                Importance=Additional;
+                Visible=ShowEnhancedVATCalcLogicFieldG;
+                Editable=FALSE;
+                OnValidate=BEGIN
+                             CurrPage.ServiceInvoiceLines.PAGE.ResetHdrRec();
+                             CurrPage.UPDATE(TRUE);
+                           END;
+                            }
+
+    { 56  ;1   ;Part      ;
+                Name=ServiceInvoiceLines;
+                SubPageLink=Document No.=FIELD(No.);
+                PagePartID=Page5025684 }
+
+    { 1906801201;1;Group  ;
+                CaptionML=ENU=Shipping;
+                Visible=FALSE }
+
+    { 160 ;2   ;Field     ;
+                SourceExpr="Ship-to Code";
+                AutoFormatExpr='JMD' }
+
+    { 145 ;2   ;Field     ;
+                SourceExpr="Ship-to Name";
+                Importance=Promoted }
+
+    { 150 ;2   ;Field     ;
+                SourceExpr="Ship-to Name 2" }
+
+    { 146 ;2   ;Field     ;
+                SourceExpr="Ship-to Address" }
+
+    { 147 ;2   ;Field     ;
+                SourceExpr="Ship-to Address 2" }
+
+    { 149 ;2   ;Field     ;
+                CaptionML=ENU=Ship-to Post Code/City;
+                SourceExpr="Ship-to Post Code";
+                AutoFormatExpr='JMD' }
+
+    { 151 ;2   ;Field     ;
+                SourceExpr="Ship-to City";
+                Importance=Promoted }
+
+    { 148 ;2   ;Field     ;
+                SourceExpr="Ship-to Contact" }
+
+    { 162 ;2   ;Field     ;
+                SourceExpr="Location Code";
+                AutoFormatExpr='JMD';
+                Editable=FALSE;
+                OnLookup=BEGIN
+                           EXIT(LocationCodeLookup(Text));
+                         END;
+                          }
+
+    { 156 ;2   ;Field     ;
+                SourceExpr="Shipment Method Code";
+                AutoFormatExpr='JMD' }
+
+    { 158 ;2   ;Field     ;
+                SourceExpr="Shipping Agent Code";
+                AutoFormatExpr='JMD' }
+
+    { 159 ;2   ;Field     ;
+                SourceExpr="Package Tracking No." }
+
+    { 157 ;2   ;Field     ;
+                SourceExpr="Shipment Date";
+                Importance=Promoted }
+
+    { 24  ;2   ;Field     ;
+                SourceExpr="Disable for Requisition";
+                Editable=FALSE }
+
+    { 1907468901;1;Group  ;
+                CaptionML=ENU=Foreign Trade;
+                Visible=FALSE }
+
+    { 50  ;2   ;Field     ;
+                SourceExpr="Currency Code";
+                AutoFormatExpr='JMD';
+                Importance=Promoted;
+                OnAssistEdit=BEGIN
+                               ChangeExchRateG.SetParameter("Currency Code","Currency Factor","Posting Date");
+                               IF ChangeExchRateG.RUNMODAL = ACTION::OK THEN BEGIN
+                                 VALIDATE("Currency Factor",ChangeExchRateG.GetParameter);
+                                 CurrPage.UPDATE;
+                               END;
+                               CLEAR(ChangeExchRateG);
+                             END;
+                              }
+
+    { 52  ;2   ;Field     ;
+                SourceExpr="EU 3-Party Trade" }
+
+    { 54  ;2   ;Field     ;
+                SourceExpr="Transaction Type" }
+
+    { 95  ;2   ;Field     ;
+                SourceExpr="Transaction Specification" }
+
+    { 97  ;2   ;Field     ;
+                SourceExpr="Transport Method" }
+
+    { 99  ;2   ;Field     ;
+                SourceExpr="Exit Point" }
+
+    { 107 ;2   ;Field     ;
+                SourceExpr=Area }
+
+    { 1900000007;0;Container;
+                ContainerType=FactBoxArea }
+
+    { 1000000000;1;Part   ;
+                Name=SpecialFunctionPage;
+                CaptionML=ENU=Special &Functions;
+                Description=EU.0066719;
+                SubPageLink=Source Table ID=CONST(36),
+                            Source Page=CONST(5025683),
+                            Int 1=FIELD(Document Type),
+                            Code 1=FIELD(No.);
+                PagePartID=Page5206800;
+                PartType=Page }
+
+    { 3245301;1;Part      ;
+                Name=SalesShoppingCart;
+                CaptionML=ENU=Shopping Cart;
+                Description=EU.0032453;
+                SubPageLink=Document Type=CONST(Service Inquiry);
+                PagePartID=Page5028936;
+                ProviderID=58;
+                Visible=ShowShoppingCartFactBoxG AND ShoppingCartActionsVisibleG;
+                PartType=Page;
+                ShowFilter=No }
+
+    { 1900316107;1;Part   ;
+                SubPageLink=No.=FIELD(Sell-to Customer No.),
+                            Global Dimension 1 Filter=FIELD(FILTER(Shortcut Dimension 1 Code)),
+                            Global Dimension 2 Filter=FIELD(FILTER(Shortcut Dimension 2 Code)),
+                            Currency Filter=FIELD(FILTER(Currency Code)),
+                            Location Filter=FIELD(FILTER(Location Code));
+                PagePartID=Page9084;
+                PartType=Page }
+
+    { 1902018507;1;Part   ;
+                Description=PA041881;
+                SubPageLink=No.=FIELD(Bill-to Customer No.);
+                PagePartID=Page9082;
+                PartType=Page }
+
+    { 1902259507;1;Part   ;
+                Description=PA042761;
+                SubPageLink=Document Type=FIELD(Document Type),
+                            No.=FIELD(Document No.);
+                PagePartID=Page5207288;
+                ProviderID=56;
+                PartType=Page }
+
+    { 1907106307;1;Part   ;
+                SubPageLink=Document Type=FIELD(Document Type),
+                            No.=FIELD(Document No.);
+                PagePartID=Page5207264;
+                ProviderID=56;
+                Visible=FALSE;
+                PartType=Page }
+
+    { 1903223507;1;Part   ;
+                Description=PA041881;
+                SubPageLink=No.=FIELD(Sell-to Customer No.);
+                PagePartID=Page5207260;
+                Visible=FALSE;
+                PartType=Page }
+
+    { 1904237407;1;Part   ;
+                SubPageLink=Customer No.=FIELD(Sell-to Customer No.),
+                            Salesperson Filter=FIELD(FILTER(Salesperson Code)),
+                            Campaign Filter=FIELD(FILTER(Campaign No.)),
+                            Department Filter=FIELD(FILTER(Shortcut Dimension 1 Code)),
+                            Make Filter=FIELD(FILTER(Shortcut Dimension 2 Code)),
+                            Currency Filter=FIELD(FILTER(Currency Code));
+                PagePartID=Page5207281;
+                Visible=FALSE;
+                PartType=Page }
+
+    { 1905767507;1;Part   ;
+                Visible=TRUE;
+                PartType=System;
+                SystemPartID=Notes }
+
+    { 1900383207;1;Part   ;
+                Visible=FALSE;
+                PartType=System;
+                SystemPartID=RecordLinks }
+
+  }
+  CODE
+  {
+    VAR
+      GeneralLedgerSetupG@10430601 : Record 98;
+      UserSetupG@3245304 : Record 91;
+      SalesSetupG@3245305 : Record 311;
+      ShoppingCartHdrG@3245303 : Record 5028930;
+      ChangeExchRateG@1109400003 : Page 511;
+      SalRemarksTextG@1109400004 : Page 5025541;
+      ReportPrintG@1109400006 : Codeunit 228;
+      SubtotalsG@1109400007 : Codeunit 5028659;
+      ShowServOrderG@1109400008 : Codeunit 5025635;
+      C_INC001@1109400009 : TextConst 'ENU=Service order %1 is already archived. Do you really want to re-activate the service order from the archive?';
+      C_INC002@1109400010 : TextConst 'ENU=New Service Invoices can only be created by using ''Create Invoice'' fom Service Orders!';
+      ShoppingCartMgtG@3245302 : Codeunit 5028930;
+      UserSessionG@1000 : Codeunit 5028665;
+      ShoppingCartActionsVisibleG@3245301 : Boolean;
+      ShowShoppingCartFactBoxG@3245300 : Boolean;
+      ShowEnhancedVATCalcLogicFieldG@10430600 : Boolean;
+
+    LOCAL PROCEDURE AddItemToCurrentShoppingCartOnAction@3245301();
+    VAR
+      RecL@3245302 : TEMPORARY Record 37;
+    BEGIN
+      // Start EU.0032453
+      CurrPage.ServiceInvoiceLines.PAGE.GetSelectedRecords(RecL);
+      ShoppingCartMgtG.AddSalesLinesToShoppingCart(RecL, UserSetupG, ShoppingCartHdrG, "Bill-to Customer No.");
+      CurrPage.SalesShoppingCart.PAGE.SetCart(ShoppingCartHdrG);
+      CurrPage.UPDATE;
+      // Stop EU.0032453
+    END;
+
+    LOCAL PROCEDURE CreateNewShoppingCartOnAction@3245302();
+    VAR
+      ShoppingCartHdrL@3245301 : Record 5028930;
+    BEGIN
+      // Start EU.0032453
+      IF NOT ShowShoppingCartFactBoxG THEN
+        ShowShoppingCartFactBoxG := TRUE;
+      ShoppingCartMgtG.CreateNewShoppingCartHdr(UserSetupG, ShoppingCartHdrG, "Bill-to Customer No.", "Supply VIN");
+      CurrPage.SalesShoppingCart.PAGE.SetCart(ShoppingCartHdrG);
+      CurrPage.UPDATE;
+      // Stop EU.0032453
+    END;
+
+    BEGIN
+    {
+      // @ Area Service
+
+      +----------------------------------------------+
+      | Copyright (c) incadea                        |
+      +----------------------------------------------+
+      PA-Number  Date
+      ------------------------------------------------
+      PA031882   19.04.10 GL Removal of menuitems Get Job Usage, Get Phase/Task/Step
+      PA032144   31.08.10 MA Merge of 3.2.3.0
+      PA031550   07.09.10 SS Added two new fields "Service Advisor No." & "Service Advisor No./Pick-Up" in the General tab.
+      PA032178   22.09.10 SS 1446608: Reset of Currform.Update/Curform.Saverecord commands;
+      PA032519   22.03.11 SS Field Customer Contact Program removed.
+      PA032462   04.04.11 PR Added new control 'VAT Registration No.' in 'Foreign Trade' tab.
+      PA032651   05.07.11 PR 4250149: Modified the width of the 'VAT Registration No.' control.
+      PA032651   22.12.11 MA 2635365 Set InsertAllowed Property to No to disable New functionality
+      PA032651   20.12.11 SS 1808921
+                             - Variant MenuItem made Invisible in Item-->"Item Availability by" MenuButton.
+      PA033067   12.04.12 DR DE Captions implemented
+      PA032651   24.04.12 GC #7110045: Document Remark report.RUNMODAL issue when using specific codeunits
+      PA032877   04.06.12 KC R-E-T Order Status Sync:
+                             Deleted reference to procedure SetSalesStatusFilter() from OnOpenForm trigger due to removal of the
+                             Show field in table Document Status Line
+      PA033328   19.06.12 KC Merge of RET to Ongoing 612 objects
+      PA033259   09.08.12 AI Deletion of Start/Stop History in Code, update copyright and Version List
+      PA033259   18.09.12 DR Variable names changed according to incadea styleguide
+      PA033082   30.03.12 DR 12:54:32 All available FlowFilter fields from the SourceTable added to the SubFormLink of attached FactBox Pages
+      PA034402   12.09.13 LR 11:12:20 Display the Customer Card in the Processes
+      PA034402   18.09.13 GM 18:31:07 New Action "Todo's" added
+      PA034402   10.10.13 LR I002037 10:49:00 To-Do just filtered by the document information
+      PA034402   10.10.13 LR I001999 21:00:03 Display Contact Card as well
+      PA034402   22.10.13 LR I002024 09:15:01 Include the filter over salesperson and system to do entry again
+      PA033519   15.11.13 CH 18645 00:13:01 "Order Type"=Vehicle Sales & Purchases link removed for Sales Totals FactBox.
+      PA035326   26.11.13 DR 19284 11:41:52 Link to the "Sales Statistic FactBox" checked and corrected
+      PA035597   10.02.14 GC NAV 2013 R2 Technical Upgrade
+      PA035903   30.07.14 WZ NAV 2013 UI Enhancement
+      PA035903   25.08.14 CH NAV 2013 UI Enhancement
+      PA035901   14.11.14 CH NAV 2013 R2 General Ledger Integration.
+      PA036773   24.09.14 LR Set propperty IsFilter to TRUE in filters of the FactBoxes
+      PA036548   24.09.14 LR Merge PA036373
+      PA036966   25.11.14 TS NAV 2013 R2 General Ledger Integration - SEPA Credit Transfer, Direct Debit.
+                             New Field Direct Debit Mandate ID.
+      PA037341   19.01.15 DR Changes for Labor WIP posting
+      PA038140   30.07.15 UX "Your Reference" added.
+      PA039250   16.02.16 VJ 51663 Code added in OnValidate trigger of "Status Code" to skip the validation of "Status Code" check.
+      PA039690   23.02.16 VJ Merge of PA039250.51663
+      PA042520   14.12.16 GI Service Order No. 2 is now part of the page.
+      PA042522   14.12.16 GI Merge of PA042520
+      PA042761   09.03.17 JS FactBox Link to the "Sales Line Totals FactBox" changed to "Sales Totals FactBox" because the Source Table in the FactBox has changed.
+      PA042763   28.03.17 JS Merge of PA042761
+      PA043728   08.05.17 JV Moved the "VAT Registration No." to invoicing group
+      --- 7.1.4 ---
+      PA041881   29.09.16 UX Change of SubPageLink in "Customer Stat. Sell-to FactBox" and "Customer Stat. Bill-to FactBox"
+      PA041882   04.10.16 UX Merge of PA041881
+      --- 7.1.5 ---
+      PA038441   25.07.16 GS Field "External Document No." added according to design
+      PA043732   11.05.17 JV Merge of PA043728
+      --- 7.1.6 ---
+      EU.0000497 22.06.17 MS Display fields "Reference License No." and "Supply VIN" on General FastTab
+      EU.0002138 27.06.17 PT 1977 Merge of PA043728
+      --- 7.2.0 ---
+      EU.0000039 15.09.17 UX Create Proforma Invoice action created.
+      EU.0005464 19.10.17 AJ 7564 Missing docu trigger
+      EU.0001175 19.10.17 AJ 8305 Missing docu trigger for EU.0005464.7564
+      EU.0012448 18.12.17 DR 13245 Renamed in the "Sales Header" table field "Service Order No. 2" to "Service Order No."
+      EU.0041404 03.01.19 JS Removed double validation code on OnValidate trigger of Field "Status Code"
+      EU.0053728 22.02.19 GV Action button "Copy Document" removed.
+      EU.0066719 20.06.19 SN Special Function added to the Service Invoice Page
+      --- 7.3.0 --- downmerge
+      EU.0032453 01.08.18 DR Shopping Cart factbox and Adding Items functionality added to this page.
+                             The Shopping Cart FactBox visibility is controlled over a Setup in the "User Setup" table.
+                             - All "&" removed in the Page Action Captions
+      --- 7.2.1 ---
+      EU.0098776 22.05.20 GI 98820 Downmerge of EU.0032453
+      EU.0111610 03.02.21 KR 112728 Added new action PostAndSend
+      EU.0104306 17.09.20 DR New option field "VAT Calculation Logic" added.
+      EU.0104306 17.09.20 DR In "VAT Calculation Logic" OnValidate call ResetHdrRec function to trigger a fresh read of the header variable in the Sub Page.
+      WBL 20.08.23 RL Make "External Doc. No." Visible.
+    }
+    END.
+  }
+}
+

@@ -1,0 +1,2025 @@
+OBJECT Page 5025650 Service Order Subform
+{
+  OBJECT-PROPERTIES
+  {
+    Date=03/19/25;
+    Time=[ 5:39:22 PM];
+    Modified=Yes;
+    Version List=N.7.2.1,AP002036,AP002247;
+  }
+  PROPERTIES
+  {
+    CaptionML=ENU=Lines;
+    MultipleNewLines=Yes;
+    SourceTable=Table5025625;
+    DelayedInsert=Yes;
+    SourceTableView=WHERE(Document Type=FILTER(Order));
+    PageType=ListPart;
+    AutoSplitKey=Yes;
+    OnInit=BEGIN
+             AmountIncludingVATEditableG := TRUE;
+             AmountEditableG := TRUE;
+             UnitPriceEditableG := TRUE;
+             // Start EU.0104306
+             AmountVisibleG := NOT GeneralLedgerSetupG.EnhancedVATCalculationLogicActive();
+             BothAmountFieldsVisibleG := GeneralLedgerSetupG."Display One or Both Amounts" = GeneralLedgerSetupG."Display One or Both Amounts"::"Both Fields ('Amount' and 'Amount incl. VAT')";
+             // Stop EU.0104306
+           END;
+
+    OnOpenPage=BEGIN
+                 // Start PA032440
+                 UserSetupG.GET(USERID);
+                 // Stop PA032440
+                 // Start PA033765
+                 SalesReceivablesSetupG.GET();
+                 // Start PA034527.19632
+                 EUTireDataCodeVisibleG := SalesReceivablesSetupG."EU Tire Label Regulation";
+                 // Stop PA034527.19632
+                 // Start PA035597
+                 // Stop PA035597
+                 // Stop PA033765
+                 "Find No." := TRUE;
+                 // Start EU.0089938
+                 UserSessionUnitG.SetKeyValue('IsCalledFromServOrdPage', TRUE);
+                 // Stop EU.0089938
+                 // Start EU.0115012
+                 EnableWSAG := UserSessionUnitG.GetWSAProfileEnable;
+                 // Stop EU.0115012
+               END;
+
+    OnClosePage=BEGIN
+                  // Start EU.0089938
+                  UserSessionUnitG.SetKeyValue('IsCalledFromServOrdPage', FALSE);
+                  // Stop EU.0089938
+                END;
+
+    OnAfterGetRecord=VAR
+                       RecRefL@1119427000 : RecordRef;
+                     BEGIN
+                       // Start EU.0104306
+                       // Start EU.0124901.125228
+                       IF ("Document No." <> ServHdrG."No.") OR ("Line No." = 10000) THEN
+                       // Stop EU.0124901.125228
+                         IF ServHdrG.GET("Document Type","Document No.") THEN
+                           AmountVisibleG := NOT GeneralLedgerSetupG.EnhancedVATCalculationLogicInDocActive(ServHdrG."VAT Calculation Logic");
+                       // Stop EU.0104306
+                       // Start PA041510
+                       // Start EU.0044955.50192
+                       IF "No." <> '' THEN BEGIN
+                       // Stop EU.0044955.50192
+                         RecRefL.GETTABLE(Rec);
+                         ReservationSetupG.ApplyAvailabilityStatus(RecRefL);
+                         RecRefL.SETTABLE(Rec);
+                       // Start EU.0044955.50192
+                       END;
+                       // Stop EU.0044955.50192
+                       // Stop PA041510
+                       LookUpNoG := '';
+                       "Find No." := TRUE;
+                       // Start PA042806
+                       // Stop PA036313
+                       // Stop PA032440
+                       // Start PA032820
+                       // Stop PA032820
+                       // Start PA036002.26208
+                       ShowShortcutDimCode(ShortcutDimCodeG);
+                       // Stop PA036002.26208
+                       // Start PA042806
+                       PageOnAfterGetCurrRecord;
+                       // Stop PA042806
+                     END;
+
+    OnNewRecord=BEGIN
+                  CLEAR(InvtAvailableG);
+                  // Start EU.0111610.113539
+                  ExpectedQtyOnHandG := 0;
+                  // Stop EU.0111610.113539
+                  // Start PA041510
+                  // Stop PA041510
+
+                  LookUpNoG := '';
+                  "Find No." := TRUE;
+                  Type := xRec.Type;
+                  IF xRec."Document No." = '' THEN
+                    Type := Type::Item;
+                  IF NOT xRec.ISEMPTY THEN
+                    "Service Job No." := xRec."Service Job No.";
+                  // Start PA033019.9267011
+                  // Start EU.0052165
+                  IF "Service Job No." > 0 THEN
+                    "Fair Deal" := xRec."Fair Deal";
+                  // Stop EU.0052165
+                  // Stop PA033019.9267011
+                  // Start PA032820
+                  // Start PA042806
+                  // Stop PA042806
+                  // Stop PA032820
+                  // Start PA036002.26208
+                  CLEAR(ShortcutDimCodeG);
+                  // Stop PA036002.26208
+                  // Start PA038447
+                  CASE UserSetupG."Service Line Type" OF
+                    UserSetupG."Service Line Type"::" ":
+                      Type := Type::" ";
+                    UserSetupG."Service Line Type"::"G/L Account":
+                      Type := Type::"G/L Account";
+                    UserSetupG."Service Line Type"::Item:
+                      Type := Type::Item;
+                    UserSetupG."Service Line Type"::Labor:
+                      Type := Type::Labor;
+                    UserSetupG."Service Line Type"::"Ext. Service":
+                      Type := Type::"Ext. Service";
+                  END;
+                  // Stop PA038447
+                  // Start PA042806
+                  PageOnAfterGetCurrRecord;
+                  // Stop PA042806
+                END;
+
+    OnInsertRecord=BEGIN
+                     // Start PA042806
+                     // Start PA034007.I000152
+                     // Stop PA034007.I000152
+                     // Start PA032440
+                     // Stop PA032440
+                     // Start PA032820
+                     PageOnAfterGetCurrRecord();
+                     // Stop PA042806
+                     // Stop PA032820
+                     // Start PA041326
+                     CurrPage.UPDATE(FALSE);
+                     // Stop PA041326
+                   END;
+
+    OnModifyRecord=BEGIN
+                     // Start PA042806
+                     // Stop PA042806
+                     IF ("Serv. Contract Type" = xRec."Serv. Contract Type") AND ("Bill-to Customer No." <> xRec."Bill-to Customer No.") THEN
+                     // Start PA034007.I000152
+                       IF NOT GetServContractFromServJobLine() THEN
+                     // Stop PA034007.I000152
+                         ShowServContract();
+
+                     // @ QuickWins - Colors on Document Line
+                     // Start PA035597
+                     CurrPage.UPDATE(FALSE);
+                     // Stop PA035597
+                   END;
+
+    OnDeleteRecord=BEGIN
+                     // Start EU.0027741
+                     ServMgtG.ServLineDeleteDialog(Rec);
+                     // Stop EU.0027741
+                   END;
+
+    OnAfterGetCurrRecord=BEGIN
+                           // Start PA042806
+                           PageOnAfterGetCurrRecord;
+                           // Stop PA042806
+                         END;
+
+    ActionList=ACTIONS
+    {
+      { 1900000004;0 ;ActionContainer;
+                      ActionContainerType=ActionItems }
+      { 1906587504;1 ;ActionGroup;
+                      CaptionML=ENU=Functions }
+      { 1904119004;2 ;Action    ;
+                      CaptionML=ENU=Explode BOM;
+                      Description=EU.0115012;
+                      Visible=NOT EnableWSAG;
+                      Image=ExplodeBOM;
+                      OnAction=BEGIN
+                                 // Start PA022374
+                                 CODEUNIT.RUN(CODEUNIT::"Service-Explode BOM",Rec);;
+                                 // Stop PA022374
+                               END;
+                                }
+      { 1900186704;2 ;Action    ;
+                      CaptionML=ENU=Insert Ext. Texts;
+                      Image=Note;
+                      OnAction=BEGIN
+                                 InsertExtendedText(TRUE);
+                               END;
+                                }
+      { 1901937704;2 ;Action    ;
+                      CaptionML=ENU=Create Dealer Package;
+                      Description=EU.0115012;
+                      Visible=NOT EnableWSAG;
+                      Image=NewItem;
+                      OnAction=BEGIN
+                                 // Start PA022374
+                                 CreateDealerPackage;
+                                 // Stop PA022374
+                               END;
+                                }
+      { 1906760504;2 ;Action    ;
+                      CaptionML=ENU=Reserve...;
+                      Description=EU.0090125;
+                      Visible=FALSE;
+                      OnAction=BEGIN
+                                 FIND;
+                                 ShowReservation;
+                               END;
+                                }
+      { 1903384104;2 ;Action    ;
+                      CaptionML=ENU=Shipped Lines;
+                      Description=EU.0115012;
+                      Promoted=Yes;
+                      Visible=NOT EnableWSAG;
+                      Image=CalculateLines;
+                      PromotedCategory=Process;
+                      OnAction=BEGIN
+                                 // Start PA033978.I000905
+                                 ShowShippedLines();
+                                 // Stop PA033978.I000905
+                               END;
+                                }
+      { 1906015704;2 ;Action    ;
+                      ShortCutKey=Shift+Ctrl+F8;
+                      CaptionML=ENU=Assign Multiple Job Nos.;
+                      Image=ApplyTemplate;
+                      OnAction=BEGIN
+                                 // @ Assign a selected Job No. to all selected Service Lines
+                                 // Start PA034057
+                                 MultipleJobAssignment();
+                                 // Stop PA034057
+                               END;
+                                }
+      { 1904908504;2 ;Action    ;
+                      CaptionML=ENU=Assign Multiple Res. (Show All);
+                      Image=AddContacts;
+                      OnAction=BEGIN
+                                 // @ Assign a Resource No. selected from the complete Resource List to all selected Service Lines
+                                 // Start PA034057
+                                 MultipleResAssignment(FALSE);
+                                 // Stop PA034057
+                               END;
+                                }
+      { 1907462104;2 ;Action    ;
+                      CaptionML=ENU=Assign Multiple Res. (Show Fav.);
+                      Image=AddToHome;
+                      OnAction=BEGIN
+                                 // @ Assign a Resource No. selected from the Fovorite Resource List to all selected Service Lines
+                                 // Start PA034057
+                                 MultipleResAssignment(TRUE);
+                                 // Stop PA034057
+                               END;
+                                }
+      { 1907935204;1 ;ActionGroup;
+                      CaptionML=ENU=Line }
+      { 1904206904;2 ;ActionGroup;
+                      CaptionML=ENU=Item Availability by }
+      { 1903812804;3 ;Action    ;
+                      CaptionML=ENU=Period;
+                      Image=CloseYear;
+                      OnAction=BEGIN
+                                 ItemAvailability(0);
+                               END;
+                                }
+      { 1903418704;3 ;Action    ;
+                      CaptionML=ENU=Variant;
+                      Description=PA032651;
+                      Visible=FALSE;
+                      Image=NewSparkle;
+                      OnAction=BEGIN
+                                 ItemAvailability(1);
+                               END;
+                                }
+      { 1907754204;3 ;Action    ;
+                      CaptionML=ENU=Location;
+                      Image=NewBranch;
+                      OnAction=BEGIN
+                                 ItemAvailability(2);
+                               END;
+                                }
+      { 1901288104;3 ;Action    ;
+                      CaptionML=ENU=Bin;
+                      Image=Bins;
+                      OnAction=BEGIN
+                                 ItemAvailability(3);
+                               END;
+                                }
+      { 1903192904;2 ;Action    ;
+                      CaptionML=ENU=Availability - All Companies;
+                      Image=SwitchCompanies;
+                      OnAction=BEGIN
+                                 AvailabilityAllCompanies();
+                               END;
+                                }
+      { 1900546304;2 ;Action    ;
+                      CaptionML=ENU=Customers;
+                      Description=EU.0115012;
+                      Visible=NOT EnableWSAG;
+                      Image=TeamSales;
+                      OnAction=BEGIN
+                                 ShowCustomers;
+                               END;
+                                }
+      { 1904974904;2 ;Action    ;
+                      CaptionML=ENU=Price Calculation;
+                      Image=Calculate;
+                      OnAction=BEGIN
+                                 ShowPriceCalculation;
+                               END;
+                                }
+      { 1905565404;2 ;Action    ;
+                      CaptionML=ENU=Alternative Parts;
+                      Image=Components;
+                      OnAction=BEGIN
+                                 // Start PA022409
+                                 ShowAlternativeParts;
+                                 // Stop PA022409
+                               END;
+                                }
+      { 1109400003;2 ;Action    ;
+                      ShortCutKey=Shift+Ctrl+D;
+                      CaptionML=ENU=Dimensions;
+                      Description=EU.0115012;
+                      Visible=NOT EnableWSAG;
+                      Image=Dimensions;
+                      OnAction=BEGIN
+                                 // Start PA035597
+                                 ShowDimensions;
+                                 // Stop PA035597
+                               END;
+                                }
+      { 1902734504;2 ;ActionGroup;
+                      CaptionML=ENU=Ext. Service;
+                      Description=EU.0115012;
+                      Visible=NOT EnableWSAG }
+      { 1902760704;3 ;Action    ;
+                      CaptionML=ENU=Make Purch. Order;
+                      Image=MakeOrder;
+                      OnAction=BEGIN
+                                 OrderExtServ;
+                               END;
+                                }
+      { 1902740304;3 ;Action    ;
+                      CaptionML=ENU=Purchase Order;
+                      Image=Document;
+                      OnAction=BEGIN
+                                 OpenPurchOrder;
+                               END;
+                                }
+      { 1902425004;2 ;Action    ;
+                      CaptionML=ENU=Document Line Tracking;
+                      Description=EU.0115012;
+                      Visible=NOT EnableWSAG;
+                      Image=Trace;
+                      OnAction=BEGIN
+                                 ShowDocumentLineTracking;
+                               END;
+                                }
+      { 1902366404;2 ;Action    ;
+                      CaptionML=ENU=Reservation Entries;
+                      Description=EU.0115012;
+                      Visible=NOT EnableWSAG;
+                      Image=ReservationLedger;
+                      OnAction=BEGIN
+                                 ShowReservationEntries(TRUE);
+                               END;
+                                }
+      { 1900121404;2 ;Action    ;
+                      CaptionML=ENU=Special Functions;
+                      Description=PA033895.I000854;
+                      Image=ImportExport;
+                      OnAction=BEGIN
+                                 // Start PA033895.I000854
+                                 SpecialFunctionCall;
+                                 // Stop PA033895.I000854
+                               END;
+                                }
+      { 1109400018;2 ;Action    ;
+                      CaptionML=ENU=Coded Part Type Parameters;
+                      Description=PA040976, EU.0115012;
+                      RunObject=Page 5205352;
+                      RunPageLink=Item No.=FIELD(No.),
+                                  Coded Part Serial No.=FIELD(Serial No.),
+                                  Edit Allowed=CONST(Yes);
+                      Visible=NOT EnableWSAG;
+                      Enabled=CodedPartValuesEnabledG;
+                      Image=InsertFromCheckJournal }
+    }
+  }
+  CONTROLS
+  {
+    { 1900000001;0;Container;
+                ContainerType=ContentArea }
+
+    { 1   ;1   ;Group     ;
+                GroupType=Repeater;
+                FreezeColumnID=Description }
+
+    { 9016700;2;Field     ;
+                Description=EU.0090167;
+                SourceExpr=Availability }
+
+    { 2   ;2   ;Field     ;
+                SourceExpr=Type;
+                Style=Attention;
+                StyleExpr=LineWarningG }
+
+    { 4   ;2   ;Field     ;
+                SourceExpr="No.";
+                Style=Attention;
+                StyleExpr=LineWarningG;
+                OnValidate=BEGIN
+                             // Start EU.0156444.155083
+                             // Stop EU.0156444.155083
+                             InsertLine();
+                             UpdateQtytoInv();
+                           END;
+
+                OnLookup=VAR
+                           SelectedL@1109400002 : Boolean;
+                         BEGIN
+                           LookUpNoG := '';
+                           SelectedL := NoOnLookup(Text, "Data Make Code");
+                           IF SelectedL THEN BEGIN
+                             "Find No." := FALSE;
+                             LookUpNoG := Text;
+                           END;
+                           EXIT(SelectedL);
+                         END;
+
+                OnAssistEdit=BEGIN
+                               // Start PA032651
+                               IF NoOnAssistEdit() THEN
+                                 InsertLine();
+                               // Stop PA032651
+                             END;
+                              }
+
+    { 1109400012;2;Field  ;
+                Description=PA032795,PA041146;
+                SourceExpr="Line No.";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG }
+
+    { 6   ;2   ;Field     ;
+                SourceExpr=Description;
+                Style=Attention;
+                StyleExpr=LineWarningG;
+                OnValidate=BEGIN
+                             IF (Type = Type::" ") AND ("No." = '') THEN
+                               InsertLine();
+                           END;
+                            }
+
+    { 34  ;2   ;Field     ;
+                SourceExpr="Unit of Measure Code";
+                AutoFormatExpr='JMD';
+                Style=Attention;
+                StyleExpr=LineWarningG;
+                OnLookup=BEGIN
+                           EXIT(UnitOfMeasureCodeLookup(Text));
+                         END;
+                          }
+
+    { 1109400016;2;Field  ;
+                SourceExpr="Location Code";
+                AutoFormatExpr='JMD';
+                Style=Attention;
+                StyleExpr=LineWarningG;
+                OnLookup=BEGIN
+                           EXIT(LocationCodeLookup(Text));
+                         END;
+
+                OnAssistEdit=BEGIN
+                               LocationCodeAssist;
+                             END;
+                              }
+
+    { 1109400015;2;Field  ;
+                Description=PA041146;
+                SourceExpr="Bin Code";
+                AutoFormatExpr='JMD';
+                Style=Attention;
+                StyleExpr=LineWarningG;
+                OnValidate=BEGIN
+                             // Start PA041146.68559
+                             CurrPage.UPDATE(TRUE);
+                             // Stop PA041146.68559
+                           END;
+
+                OnLookup=BEGIN
+                           // Start PA041146.68559
+                           EXIT(BinCodeOnLookup(Text));
+                           // Stop PA041146.68559
+                         END;
+
+                OnAssistEdit=BEGIN
+                               BinCodeAssist;
+                               // Start PA041146.68559
+                               CurrPage.UPDATE(TRUE);
+                               // Stop PA041146.68559
+                             END;
+                              }
+
+    { 44  ;2   ;Field     ;
+                SourceExpr="Description 2";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG }
+
+    { 1119432000;2;Field  ;
+                Description=PA032450,PA041146;
+                SourceExpr="Req. Worksheet Name";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG;
+                OnLookup=BEGIN
+                           // Start PA032450
+                           EXIT(SelectReqWorksheetName(Text));
+                           // Stop PA032450
+                         END;
+                          }
+
+    { 8   ;2   ;Field     ;
+                BlankZero=Yes;
+                SourceExpr=Quantity;
+                Style=Attention;
+                StyleExpr=LineWarningG;
+                OnValidate=BEGIN
+                             QuantityOnAfterValidate;
+                           END;
+                            }
+
+    { 1100769812;2;Field  ;
+                Description=PA034057,PA041146;
+                SourceExpr="Resource Name";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG }
+
+    { 1100769814;2;Field  ;
+                Description=PA034057,PA041146;
+                SourceExpr="No. of Resources";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG;
+                OnAssistEdit=BEGIN
+                               // Start PA034057
+                               IF Type = Type::" " THEN
+                               // Start PA036549.33607
+                                 FIELDERROR(Type);
+                               // Stop PA036549.33607
+                               // Start EU.0034986
+                               IF UserSessionUnitG.TimeManLicensePermissionCheck(TRUE) THEN
+                                 IF ServResourceMgtG.EditServLineResAssTmp(Rec) THEN BEGIN
+                                   ServResourceMgtG.AlignServLine2ServResAssign(Rec);
+                                   CurrPage.UPDATE(TRUE);
+                                 END;
+                               // Stop EU.0034986
+                               // Stop PA034057
+                             END;
+                              }
+
+    { 26  ;2   ;Field     ;
+                SourceExpr="Package No.";
+                AutoFormatExpr='JMD';
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG;
+                OnLookup=VAR
+                           VersionL@1109400003 : Integer;
+                         BEGIN
+                           // Start EU.0052165
+                           IF NOT PackageNoOnLookup(Text, VersionL) THEN
+                             EXIT(FALSE);
+                           "Find No." := FALSE;
+                           "Package No." := Text;
+                           VALIDATE("Package Version No.",VersionL);
+                           EXIT(TRUE);
+                           // Stop EU.0052165
+                         END;
+                          }
+
+    { 84  ;2   ;Field     ;
+                SourceExpr="Sending Required";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG }
+
+    { 12  ;2   ;Field     ;
+                Numeric=No;
+                BlankZero=Yes;
+                Description=EU.0104306;
+                SourceExpr="Unit Price";
+                Editable=UnitPriceEditableG AND (Quantity <> "Quantity Invoiced");
+                Style=Attention;
+                StyleExpr=LineWarningG;
+                OnValidate=BEGIN
+                             // Start PA041495
+                             UpdateServiceTotalFactbox();
+                             // Stop PA041495
+                           END;
+                            }
+
+    { 40  ;2   ;Field     ;
+                Description=EU.0052165;
+                SourceExpr="Bill-to Customer No.";
+                Visible=FALSE;
+                Enabled=NOT FieldIsControlledByJobLineG;
+                Editable=NOT FieldIsControlledByJobLineG;
+                StyleExpr=StyleExprWhenFieldIsControlledByJobLineG;
+                OnValidate=BEGIN
+                             // Start EU.0056954
+                             IF GetCurrFieldNo = FIELDNO("Bill-to Customer No.") THEN
+                               IF xRec."Bill-to Customer No." <> "Bill-to Customer No." THEN
+                                 CurrPage.UPDATE(TRUE);
+                             // Stop EU.0056954
+                           END;
+
+                OnAssistEdit=VAR
+                               BillToCustL@1109400002 : Code[20];
+                               ServContractTypeL@1055600 : Code[20];
+                             BEGIN
+                               // Start EU.0052165
+                               BillToCustL := "Bill-to Customer No.";
+                               // Start EU.0064128
+                               ServContractTypeL := "Serv. Contract Type";
+                               IF NOT BillToAssist(BillToCustL, ServContractTypeL) OR FieldIsControlledByJobLineG THEN
+                               // Stop EU.0064128
+                                 ERROR('');
+                               // Start EU.0024419
+                               SetCurrFieldNo(FIELDNO("Bill-to Customer No."));
+                               // Stop EU.0024419
+                               // Start EU.0111610.112936
+                               SkipServLineCustUpdate(FALSE);
+                               // Stop EU.0111610.112936
+                               VALIDATE("Bill-to Customer No.", BillToCustL);
+                               // Start EU.0064128
+                               VALIDATE("Serv. Contract Type", ServContractTypeL);
+                               // Stop EU.0064128
+                               // Start EU.0065661
+                               CurrPage.UPDATE;
+                               // Stop EU.0065661
+                               // Stop EU.0052165
+                             END;
+                              }
+
+    { 16  ;2   ;Field     ;
+                BlankZero=Yes;
+                Description=EU.0104306;
+                SourceExpr="Line Discount %";
+                Editable=(Quantity <> "Quantity Invoiced");
+                Style=Attention;
+                StyleExpr=LineWarningG;
+                OnValidate=BEGIN
+                             // Start PA041495
+                             UpdateServiceTotalFactbox();
+                             // Stop PA041495
+                           END;
+                            }
+
+    { 64  ;2   ;Field     ;
+                BlankZero=Yes;
+                Description=EU.0104306,EU.0138596;
+                SourceExpr="Line Discount Amount";
+                Visible=FALSE;
+                Editable=(Quantity <> "Quantity Invoiced");
+                Style=Attention;
+                StyleExpr=LineWarningG;
+                OnValidate=BEGIN
+                             // Start PA042761.92213
+                             UpdateServiceTotalFactbox();
+                             // Stop PA042761.92213
+                           END;
+                            }
+
+    { 5   ;2   ;Field     ;
+                Description=EU.0138596;
+                SourceExpr="Autom. Rounding Disc. %";
+                Visible=FALSE }
+
+    { 3   ;2   ;Field     ;
+                Description=EU.0138596;
+                SourceExpr="Autom. Rounding Disc. Amount";
+                Visible=FALSE }
+
+    { 14  ;2   ;Field     ;
+                BlankZero=Yes;
+                Description=EU.0104306,EU.0135165.126936;
+                SourceExpr=Amount;
+                Visible=BothAmountFieldsVisibleG OR AmountVisibleG;
+                Editable=AmountEditableG AND (Quantity <> "Quantity Invoiced");
+                Style=Attention;
+                StyleExpr=LineWarningG;
+                OnValidate=BEGIN
+                             // Start PA041495
+                             UpdateServiceTotalFactbox();
+                             // Stop PA041495
+                           END;
+                            }
+
+    { 78  ;2   ;Field     ;
+                BlankZero=Yes;
+                Description=EU.0104306,EU.0135165.126936;
+                SourceExpr="Amount Including VAT";
+                Visible=BothAmountFieldsVisibleG OR NOT AmountVisibleG;
+                Editable=AmountIncludingVATEditableG AND (Quantity <> "Quantity Invoiced");
+                Style=Attention;
+                StyleExpr=LineWarningG;
+                OnValidate=BEGIN
+                             // Start PA044205
+                             UpdateServiceTotalFactbox();
+                             // Stop PA044205
+                           END;
+                            }
+
+    { 10430600;2;Field    ;
+                Description=EU.0104306;
+                SourceExpr="VAT %";
+                Visible=FALSE;
+                Editable=FALSE }
+
+    { 1000000003;2;Field  ;
+                Description=PA042968;
+                SourceExpr="Exch. Parts Tax Base";
+                Visible=FALSE;
+                Editable=FALSE }
+
+    { 1000000002;2;Field  ;
+                Description=PA042968;
+                SourceExpr="Exch. Parts Tax %";
+                Visible=FALSE;
+                Editable=FALSE }
+
+    { 1000000001;2;Field  ;
+                Description=PA042968;
+                SourceExpr="Exch. Parts Tax Amount";
+                Visible=FALSE;
+                Editable=FALSE }
+
+    { 1000000000;2;Field  ;
+                Description=PA042968;
+                SourceExpr="Exch. Parts VAT %";
+                Visible=FALSE;
+                Editable=FALSE }
+
+    { 38  ;2   ;Field     ;
+                SourceExpr="Service Job No.";
+                Style=Attention;
+                StyleExpr=LineWarningG;
+                OnValidate=BEGIN
+                             // Start EU.0052165
+                             PageOnAfterGetCurrRecord();
+                             // Stop EU.0052165
+                             // Start EU.0024670
+                             UpdateServiceTotalFactbox();
+                             // Stop EU.0024670
+                           END;
+                            }
+
+    { 1100769810;2;Field  ;
+                Description=PA034057,PA041146;
+                SourceExpr="Resource No.";
+                Style=Attention;
+                StyleExpr=LineWarningG;
+                OnValidate=BEGIN
+                             // Start PA034057
+                             CurrPage.UPDATE(TRUE);
+                             // Stop PA034057
+                           END;
+
+                OnAssistEdit=VAR
+                               FavoriteResourceL@1100769811 : Record 5208430;
+                             BEGIN
+                               // Start PA036950
+                               UserSessionUnitG.TimeManLicensePermissionCheck(TRUE);
+                               // Stop PA036950
+                               // Start PA034057
+                               IF PAGE.RUNMODAL(0,FavoriteResourceL) <> ACTION::LookupOK THEN
+                                 EXIT;
+                               "Resource No." := FavoriteResourceL."Resource No.";
+                               IF ServResourceMgtG.UpdServResAssign_ServLine(Rec,TRUE) THEN
+                                 VALIDATE("Resource No.",FavoriteResourceL."Resource No.")
+                               ELSE
+                                 "Resource No." := xRec."Resource No.";
+                               CurrPage.UPDATE(TRUE);
+                               // Stop PA034057
+                             END;
+                              }
+
+    { 1109400000;2;Field  ;
+                SourceExpr="Number of Alternative Part";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG }
+
+    { 42  ;2   ;Field     ;
+                BlankZero=Yes;
+                SourceExpr="Standard Time";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG }
+
+    { 1109400008;2;Field  ;
+                SourceExpr="Labor Standard Time Type";
+                Visible=FALSE;
+                Editable=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG }
+
+    { 62  ;2   ;Field     ;
+                SourceExpr="Gen. Prod. Posting Group";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG }
+
+    { 60  ;2   ;Field     ;
+                SourceExpr="Gen. Bus. Posting Group";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG }
+
+    { 1100409000;2;Field  ;
+                Description=PA041146;
+                SourceExpr="VAT Bus. Posting Group";
+                Visible=FALSE;
+                Editable=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG }
+
+    { 1100409002;2;Field  ;
+                Description=PA041146;
+                SourceExpr="VAT Prod. Posting Group";
+                Visible=FALSE;
+                Editable=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG }
+
+    { 48  ;2   ;Field     ;
+                BlankZero=Yes;
+                SourceExpr="Qty. to Ship";
+                Style=Attention;
+                StyleExpr=LineWarningG }
+
+    { 46  ;2   ;Field     ;
+                BlankZero=Yes;
+                SourceExpr="Qty. to Invoice";
+                Style=Attention;
+                StyleExpr=LineWarningG }
+
+    { 50  ;2   ;Field     ;
+                SourceExpr="No. of Bill-to Customers";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG;
+                OnDrillDown=BEGIN
+                              ShowCustomers();
+                            END;
+                             }
+
+    { 28  ;2   ;Field     ;
+                SourceExpr="Fair Deal";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG }
+
+    { 30  ;2   ;Field     ;
+                SourceExpr="Variant Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG }
+
+    { 80  ;2   ;Field     ;
+                SourceExpr="Disable for Requisition";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG }
+
+    { 20  ;2   ;Field     ;
+                SourceExpr="Department Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG }
+
+    { 54  ;2   ;Field     ;
+                Description=EU.0052165;
+                SourceExpr="Sales Department Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE;
+                Enabled=NOT FieldIsControlledByJobLineG;
+                Editable=NOT FieldIsControlledByJobLineG;
+                StyleExpr=StyleExprWhenFieldIsControlledByJobLineG }
+
+    { 1109400004;2;Field  ;
+                SourceExpr="Sales Branch Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG }
+
+    { 22  ;2   ;Field     ;
+                SourceExpr="Make Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG }
+
+    { 1109400002;2;Field  ;
+                SourceExpr=Inventory;
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG }
+
+    { 1119418000;2;Field  ;
+                CaptionML=ENU=Available Inventory;
+                DecimalPlaces=0:5;
+                Description=PA041146;
+                SourceExpr=InvtAvailableG;
+                Visible=FALSE;
+                Editable=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG;
+                OnAssistEdit=BEGIN
+                               AvailableAssist();
+                             END;
+                              }
+
+    { 10  ;2   ;Field     ;
+                SourceExpr="Unit of Measure";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG }
+
+    { 18  ;2   ;Field     ;
+                SourceExpr="Unit Cost (LCY)";
+                Visible=FALSE;
+                Editable=EditUnitCostG;
+                HideValue=HideItemCostG;
+                Style=Attention;
+                StyleExpr=LineWarningG }
+
+    { 58  ;2   ;Field     ;
+                SourceExpr="Serial No.";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG }
+
+    { 56  ;2   ;Field     ;
+                SourceExpr="Appl.-to Item Entry";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG }
+
+    { 1109400006;2;Field  ;
+                SourceExpr="Appl.-from Item Entry";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG }
+
+    { 66  ;2   ;Field     ;
+                Description=EU.0052165;
+                SourceExpr="Service Posting Group";
+                Visible=FALSE;
+                Enabled=NOT FieldIsControlledByJobLineG;
+                Editable=NOT FieldIsControlledByJobLineG;
+                StyleExpr=StyleExprWhenFieldIsControlledByJobLineG;
+                OnLookup=VAR
+                           ServPstgGrpL@1109400002 : Record 5025634;
+                           ServLineL@1109400003 : Record 5025625;
+                         BEGIN
+                           ServHdrG.GET("Document Type","Document No.");
+                           ServLineL := Rec;
+                           // Start EU.0052165
+                           ServLineL."Service Posting Group" := Text;
+                           IF NOT ServPstgGrpL.LookupServPostingGrp("Bill-to Customer No.",ServHdrG,ServLineL."Service Posting Group") OR FieldIsControlledByJobLineG THEN
+                             EXIT(FALSE);
+                           Text := ServLineL."Service Posting Group";
+                           EXIT(TRUE);
+                           // Stop EU.0052165
+                         END;
+                          }
+
+    { 74  ;2   ;Field     ;
+                SourceExpr="Fixed Price";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG }
+
+    { 1117700000;2;Field  ;
+                SourceExpr=Blocked;
+                Visible=FALSE;
+                Editable=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG }
+
+    { 70  ;2   ;Field     ;
+                SourceExpr=Reserve;
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG }
+
+    { 72  ;2   ;Field     ;
+                SourceExpr="Reserved Quantity";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG;
+                OnDrillDown=BEGIN
+                              CurrPage.SAVERECORD;
+                              COMMIT;
+                              ShowReservationEntries(TRUE);
+                              CurrPage.UPDATE;
+                            END;
+                             }
+
+    { 76  ;2   ;Field     ;
+                SourceExpr="Post with Book No.";
+                AutoFormatExpr='JMD';
+                Visible=FALSE;
+                Editable=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG }
+
+    { 90  ;2   ;Field     ;
+                SourceExpr="Option Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG;
+                OnLookup=BEGIN
+                           EXIT(OptionCodeOnLookup(Text));
+                         END;
+                          }
+
+    { 82  ;2   ;Field     ;
+                SourceExpr="Shelf/Bin No.";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG;
+                OnValidate=BEGIN
+                             // Start PA037938.50694
+                             // Stop PA037938.50694
+                           END;
+                            }
+
+    { 86  ;2   ;Field     ;
+                Description=PA042884;
+                SourceExpr="Quantity Shipped";
+                Style=Attention;
+                StyleExpr=LineWarningG }
+
+    { 88  ;2   ;Field     ;
+                SourceExpr="Quantity Invoiced";
+                Style=Attention;
+                StyleExpr=LineWarningG }
+
+    { 1109400010;2;Field  ;
+                Description=EU.0052165;
+                SourceExpr="Serv. Contract Type";
+                Visible=FALSE;
+                Enabled=NOT FieldIsControlledByJobLineG;
+                Editable=NOT FieldIsControlledByJobLineG;
+                StyleExpr=StyleExprWhenFieldIsControlledByJobLineG }
+
+    { 1101221267;2;Field  ;
+                Description=PA041146;
+                SourceExpr="EU Tire Data Code";
+                Visible=EUTireDataCodeVisibleG;
+                Editable=EUTireDataCodeEditableG;
+                Style=Attention;
+                StyleExpr=LineWarningG }
+
+    { 1109400013;2;Field  ;
+                Description=PA041146;
+                SourceExpr=ShortcutDimCodeG[3];
+                CaptionClass='1,2,3';
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG;
+                OnValidate=BEGIN
+                             // Start PA036002.26208
+                             ValidateShortcutDimCode(3,ShortcutDimCodeG[3]);
+                             // Stop PA036002.26208
+                           END;
+
+                OnLookup=BEGIN
+                           // Start PA036002.26208
+                           LookupShortcutDimCode(3,ShortcutDimCodeG[3]);
+                           // Stop PA036002.26208
+                         END;
+                          }
+
+    { 1109400011;2;Field  ;
+                Description=PA041146;
+                SourceExpr=ShortcutDimCodeG[4];
+                CaptionClass='1,2,4';
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG;
+                OnValidate=BEGIN
+                             // Start PA036002.26208
+                             ValidateShortcutDimCode(4,ShortcutDimCodeG[4]);
+                             // Stop PA036002.26208
+                           END;
+
+                OnLookup=BEGIN
+                           // Start PA036002.26208
+                           LookupShortcutDimCode(4,ShortcutDimCodeG[4]);
+                           // Stop PA036002.26208
+                         END;
+                          }
+
+    { 1109400007;2;Field  ;
+                Description=PA041146;
+                SourceExpr=ShortcutDimCodeG[5];
+                CaptionClass='1,2,5';
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG;
+                OnValidate=BEGIN
+                             // Start PA036002.26208
+                             ValidateShortcutDimCode(5,ShortcutDimCodeG[5]);
+                             // Stop PA036002.26208
+                           END;
+
+                OnLookup=BEGIN
+                           // Start PA036002.26208
+                           LookupShortcutDimCode(5,ShortcutDimCodeG[5]);
+                           // Stop PA036002.26208
+                         END;
+                          }
+
+    { 1109400009;2;Field  ;
+                Description=PA041146;
+                SourceExpr=ShortcutDimCodeG[6];
+                CaptionClass='1,2,6';
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG;
+                OnValidate=BEGIN
+                             // Start PA036002.26208
+                             ValidateShortcutDimCode(6,ShortcutDimCodeG[6]);
+                             // Stop PA036002.26208
+                           END;
+
+                OnLookup=BEGIN
+                           // Start PA036002.26208
+                           LookupShortcutDimCode(6,ShortcutDimCodeG[6]);
+                           // Stop PA036002.26208
+                         END;
+                          }
+
+    { 1109400001;2;Field  ;
+                Description=PA041146;
+                SourceExpr=ShortcutDimCodeG[7];
+                CaptionClass='1,2,7';
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG;
+                OnValidate=BEGIN
+                             // Start PA036002.26208
+                             ValidateShortcutDimCode(7,ShortcutDimCodeG[7]);
+                             // Stop PA036002.26208
+                           END;
+
+                OnLookup=BEGIN
+                           // Start PA036002.26208
+                           LookupShortcutDimCode(7,ShortcutDimCodeG[7]);
+                           // Stop PA036002.26208
+                         END;
+                          }
+
+    { 1109400005;2;Field  ;
+                Description=PA041146;
+                SourceExpr=ShortcutDimCodeG[8];
+                CaptionClass='1,2,8';
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG;
+                OnValidate=BEGIN
+                             // Start PA036002.26208
+                             ValidateShortcutDimCode(8,ShortcutDimCodeG[8]);
+                             // Stop PA036002.26208
+                           END;
+
+                OnLookup=BEGIN
+                           // Start PA036002.26208
+                           LookupShortcutDimCode(8,ShortcutDimCodeG[8]);
+                           // Stop PA036002.26208
+                         END;
+                          }
+
+    { 1109400017;2;Field  ;
+                Description=PA040667;
+                SourceExpr="Coded Part Type";
+                Visible=FALSE }
+
+    { 11161000;2;Field    ;
+                Name=Expected Qty. on Hand;
+                CaptionML=ENU=Expected Qty. on Hand;
+                Description=EU.0111610.113539;
+                SourceExpr=ExpectedQtyOnHandG;
+                Editable=false }
+
+    { 7   ;2   ;Field     ;
+                SourceExpr="Profit %" }
+
+    { 9   ;2   ;Field     ;
+                SourceExpr="Data Make Code" }
+
+  }
+  CODE
+  {
+    VAR
+      GeneralLedgerSetupG@10430601 : Record 98;
+      UserSetupG@1119432002 : Record 91;
+      ReservationSetupG@8524400 : Record 336;
+      SalesReceivablesSetupG@1101221267 : Record 311;
+      PurchLineG@1109400000 : Record 39;
+      ServHdrG@1109400001 : Record 5025624;
+      ServCustLineG@1109400002 : Record 5025639;
+      ServJobLineG@72000 : Record 5025627;
+      CustLibG@1119432000 : Record 18;
+      ItemG@1119418001 : Record 27;
+      TransfExtTextG@1109400004 : Codeunit 5028653;
+      SelectServPkgG@1109400005 : Codeunit 5025634;
+      ExtServOrderG@1109400006 : Codeunit 5025614;
+      RTCMgtG@1109400003 : Codeunit 5206801;
+      ServMgtG@1100769811 : Codeunit 5025614;
+      ServResourceMgtG@1100769810 : Codeunit 5208412;
+      AvailabilityMgtG@1119427012 : Codeunit 5400;
+      SrvCustSplitMgtG@1109400009 : Codeunit 5206324;
+      UserSessionUnitG@1109400015 : Codeunit 5028665;
+      CurrOrderExtServG@1109400007 : Report 5025652;
+      C_INC001@1109400008 : TextConst 'ENU="You cannot split up %1 because ''%4'' was assigned to field ''%2''=%3!"';
+      C_INC003@1109400010 : TextConst 'ENU=" Please note that the total sum in a service invoice must not be negative !"';
+      DocLineTrackingG@1109400011 : Page 5206913;
+      LookUpNoG@1109400013 : Code[20];
+      ShortcutDimCodeG@1109400014 : ARRAY [8] OF Code[20];
+      InvtAvailableG@1119427010 : Decimal;
+      InvExpectedG@1119427001 : Decimal;
+      FormUpdateG@1109400012 : Boolean;
+      ServPkgProceedG@1109400018 : Boolean;
+      LineWarningG@1119427000 : Boolean INDATASET;
+      FieldIsControlledByJobLineG@1055600 : Boolean INDATASET;
+      StyleExprWhenFieldIsControlledByJobLineG@1055601 : Text[20];
+      HideItemCostG@1119432001 : Boolean INDATASET;
+      EditUnitCostG@1119432003 : Boolean INDATASET;
+      CodedPartValuesEnabledG@1109400016 : Boolean;
+      EUTireDataCodeVisibleG@1101221268 : Boolean INDATASET;
+      EUTireDataCodeEditableG@1101221269 : Boolean INDATASET;
+      C_ResAssignNotAllowed@1100769812 : TextConst 'ENU="Service Resource Assignment not allowed for %1 %2 = ''%3''!"';
+      UnitPriceEditableG@19072822 : Boolean INDATASET;
+      AmountEditableG@19000309 : Boolean INDATASET;
+      AmountIncludingVATEditableG@19025550 : Boolean INDATASET;
+      ExpectedQtyOnHandG@11161000 : Decimal;
+      AmountVisibleG@10430600 : Boolean;
+      BothAmountFieldsVisibleG@10430602 : Boolean;
+      EnableWSAG@11501200 : Boolean;
+
+    PROCEDURE ResetHdrRec@10430600();
+    BEGIN
+      // Start EU.0104306
+      // Start EU.0124901.125228
+      IF ServHdrG.GET("Document Type","Document No.") THEN
+        AmountVisibleG := NOT GeneralLedgerSetupG.EnhancedVATCalculationLogicInDocActive(ServHdrG."VAT Calculation Logic");
+      // Stop EU.0124901.125228
+      // Stop EU.0104306
+    END;
+
+    PROCEDURE CheckPricingControl@1109400006();
+    BEGIN
+      // @ Checks the fields in the 'Pricing Control' tab in the User Setup. If the user has insufficient rights some fields are set to
+      // @ 'EDITABLE' = FALSE;
+      // Start EU.0135165.126936
+      // Start EU.0104306
+      CASE TRUE OF
+        Type = Type::Item:
+          UnitPriceEditableG := UserSetupG."Change Item Unit Price";
+        Type = Type::Labor:
+          UnitPriceEditableG := UserSetupG."Change Labor Unit Price";
+        Type = Type::"Ext. Service":
+          UnitPriceEditableG := UserSetupG."Change Ext. Service Unit Price";
+        ELSE
+          UnitPriceEditableG := TRUE;
+      // Stop EU.0135165.126936
+      END;
+      AmountEditableG := UnitPriceEditableG;
+      AmountIncludingVATEditableG := UnitPriceEditableG;
+      // Start EU.0135165.126936
+      IF UnitPriceEditableG THEN
+        IF GeneralLedgerSetupG.EnhancedVATCalculationLogicActive() THEN
+          IF ServHdrG."VAT Calculation Logic" = ServHdrG."VAT Calculation Logic"::"Amount + VAT" THEN
+            AmountIncludingVATEditableG := FALSE
+          ELSE
+            AmountEditableG := FALSE;
+      // Stop EU.0135165.126936
+      // Stop EU.0104306
+    END;
+
+    PROCEDURE InsertExtendedText@4(UnconditionallyP@1109400000 : Boolean);
+    BEGIN
+      IF TransfExtTextG.ServCheckIfExtText(Rec,UnconditionallyP) THEN BEGIN
+        CurrPage.SAVERECORD;
+        TransfExtTextG.ServInsertExtText(Rec);
+      END;
+      IF TransfExtTextG.Update THEN
+        CurrPage.UPDATE := TRUE;
+    END;
+
+    PROCEDURE ShowCustomers@10();
+    VAR
+      ServHdrL@1109400001 : Record 5025624;
+    BEGIN
+      // Start PA034249
+      // Start EU.0052165
+      // Stop EU.0052165
+      ServHdrL.GET("Document Type","Document No.");
+      SrvCustSplitMgtG.EditServLineCust_User(ServHdrL,Rec);
+      CurrPage.UPDATE(FALSE);  //<- must!; otherwise OnModify trigger of Page runs again -> big issue in case of own price!
+      // Stop PA034249
+    END;
+
+    PROCEDURE ShowPriceCalculation@11();
+    VAR
+      ShowPriceCalcL@1109400001 : Page 5025826;
+    BEGIN
+      CLEAR(ShowPriceCalcL);
+      ShowPriceCalcL.SetServLine(Rec);
+      ShowPriceCalcL.RUNMODAL;
+    END;
+
+    PROCEDURE OrderExtServ@6();
+    BEGIN
+      CurrOrderExtServG.Def(Rec);
+      CurrOrderExtServG.RUN;
+      CLEAR(CurrOrderExtServG);
+    END;
+
+    PROCEDURE OpenPurchOrder@8();
+    BEGIN
+      PurchLineG.SETCURRENTKEY("Document Type","Service Order No.","Service Order Line No.");
+      PurchLineG.SETRANGE("Document Type",PurchLineG."Document Type"::Order);
+      PurchLineG.SETRANGE("Service Order No.","Document No.");
+      PurchLineG.SETRANGE("Service Order Line No.","Line No.");
+      PAGE.RUNMODAL(0, PurchLineG);
+    END;
+
+    PROCEDURE SelectAssocPackage@9();
+    BEGIN
+      IF SelectServPkgG.ValidPkgVersExist(Rec) THEN BEGIN
+      // This CurrForm.SAVERECORD is avoided in RTC because this is already done in CreateServiceLine() fn which is always executed.
+      // Start PA035597
+      // Stop PA035597
+        IF SelectServPkgG.SelectPackageVers(Rec) THEN BEGIN
+          FormUpdateG := TRUE;
+          ServPkgProceedG := TRUE;
+        END;
+      END;
+    END;
+
+    PROCEDURE CreateServiceLine@1();
+    BEGIN
+      // This function creates the service line with the number pulled from the AssisEdit.
+      // It is necessary in order to also create the service customer line.
+      CurrPage.SAVERECORD;
+      IF (Type = Type::" ") AND ("No." <> '') THEN BEGIN
+        VALIDATE("Service Job No.");
+        FormUpdateG := TRUE;
+      END;
+
+      IF CreatedRelatedLines(Rec) THEN
+        FormUpdateG := TRUE;
+      IF Type = Type::Labor THEN
+        SelectAssocPackage();
+    END;
+
+    PROCEDURE ShowDocumentLineTracking@3();
+    BEGIN
+      CLEAR(DocLineTrackingG);
+      DocLineTrackingG.SetDoc(2, "Document No.", "Line No.");
+      DocLineTrackingG.RUNMODAL;
+    END;
+
+    PROCEDURE AvailabilityAllCompanies@13();
+    VAR
+      ItemAvailabilityL@1109400000 : Codeunit 5028701;
+    BEGIN
+      ItemAvailabilityL.DisplayByServiceLine('',Rec);
+    END;
+
+    PROCEDURE StartDisplayInLine@5025351(NewDocNumberP@1109400000 : Code[20];NewLineNumberP@1109400001 : Integer);
+    BEGIN
+      IF FINDSET THEN
+        ;
+      IF GET("Document Type"::Order,NewDocNumberP,NewLineNumberP) THEN
+        xRec.GET("Document Type"::Order,NewDocNumberP,NewLineNumberP);
+    END;
+
+    PROCEDURE InsertLine@14();
+    BEGIN
+      // Start EU.0156444.155083
+      IF "No." > '' THEN
+        CheckForLineDuplicates();
+      // Stop EU.0156444.155083
+      // Start PA032178.1446608
+      // Start PA041146.68559
+      CLEAR(InvtAvailableG);
+      // Stop PA041146.68559
+      FormUpdateG := FALSE;
+      ServPkgProceedG := FALSE;
+      CreateServiceLine();
+      // Start PA034057
+      // Start EU.0090167.97078
+      // Stop EU.0090167.97078
+      // Start PA036950
+      IF UserSessionUnitG.TimeManLicensePermissionCheck(FALSE) AND ("Resource No." <> '') THEN
+      // Stop PA036950
+      // Start EU.0090167.97078
+        CALCFIELDS("No. of Resources");
+      // Stop EU.0090167.97078
+        IF "No. of Resources" > 0 THEN
+          ServResourceMgtG.AlignServLine2ServResAssign(Rec);
+      // Set default Resource No. from Job Line or Clocking Entries
+      IF (Type <> Type::" ") AND ("Line No." <> 0) THEN
+        SetDefaultResourceNo();
+      // Stop PA034057
+      IF (Quantity = 0) OR (Quantity = 1) THEN
+        IF Type IN [Type::Item, Type::"G/L Account", Type::"Ext. Service"] THEN BEGIN
+      // Start PA041776.70856
+      // Stop PA041776.70856
+          VALIDATE(Quantity,1);
+      // Start EU.0104306
+        END;
+      // Start PA042806
+      IF "Service Job No." > 0 THEN BEGIN
+        MODIFY;
+        FormUpdateG := TRUE;
+        ServiceJobNoOnValidate(TRUE);
+      END;
+      // Stop EU.0104306
+      // Stop PA042806
+      IF Type = Type::Labor THEN
+        FormUpdateG := TRUE;
+      // Start PA035597
+      IF Reserve = Reserve::Always THEN BEGIN
+      // Stop PA035597
+        AutoReserve(TRUE);
+        FormUpdateG := TRUE;
+      END;
+
+      // @ The behaviour in Classic Client is different from RTC so handled differently.
+      // @ Currform.Update throws an error message together with Currform.Saverecord in RTC.
+      // @ Modify - To save the values eg. Quantity, Qty. to Ship. etc
+      // @ Currform.Update(false) - For Autorefresh of lines eg. Deposit items, Extended texts
+
+      // Start PA035597
+      IF FormUpdateG THEN BEGIN
+        MODIFY;
+      END;
+      // Stop PA035597
+      // Stop PA032178.1446608
+      // Start PA041495.69914
+      UpdateServiceTotalFactbox();
+      // Stop PA041495.69914
+    END;
+
+    PROCEDURE OpenPurchOrderForm@15(ServHdrP@1109400000 : Record 5025624);
+    VAR
+      PurchLinesL@1109400001 : Record 39;
+      PurchOrderVehL@1109400002 : Page 518;
+    BEGIN
+      PurchLinesL.SETRANGE("Document Type",ServHdrP."Purch. Document Type");
+      PurchLinesL.SETRANGE("Document No.",ServHdrP."Purch. Document No.");
+      PurchLinesL.SETRANGE("Line No.",ServHdrP."Purch. Document Line No.");
+      PurchOrderVehL.SETTABLEVIEW(PurchLinesL);
+      PurchOrderVehL.EDITABLE := FALSE;
+      PurchOrderVehL.RUN;
+    END;
+
+    PROCEDURE MarkLine@1109400010(DocTypeP@1109400002 : Integer;DocNoP@1109400001 : Code[20];LineNoP@1109400000 : Integer);
+    BEGIN
+      IF GET(DocTypeP,DocNoP,LineNoP) THEN BEGIN
+        MARK := TRUE;
+        CurrPage.UPDATE(FALSE);
+      END;
+    END;
+
+    PROCEDURE Refresh@1109400002(SaveP@1115000000 : Boolean);
+    BEGIN
+      // Start PA032473
+      CurrPage.UPDATE(SaveP);
+      // Stop PA032473
+    END;
+
+    PROCEDURE ShowServContract@1117900000();
+    VAR
+      VehServContractL@1117900002 : Record 5061005;
+      VehicleL@1117900001 : Record 5025400;
+      ServHdrL@1117900000 : Record 5025624;
+    BEGIN
+      ServHdrL.GET("Document Type", "Document No.");
+      // Start EU.0079233
+      VehServContractL.RESET;
+      VehServContractL.SETRANGE(VIN, ServHdrL.VIN);
+      VehServContractL.SETRANGE("Serv. Contract Cust. No.", "Bill-to Customer No.");
+      VehServContractL.SETFILTER("Beginning of Contract", '=%1|<=%2' , 0D, "Order Date");
+      VehServContractL.SETFILTER("Expiration of Contract", '=%1|>=%2' , 0D, "Order Date");
+      IF VehicleL.GET(ServHdrL.VIN) THEN BEGIN
+        VehServContractL.SETFILTER("Max. Mileage", '=%1|>=%2' , 0, VehicleL.Mileage);
+        VehServContractL.SETFILTER("Distance Kilometer", '=%1|>=%2' , 0, VehicleL.Mileage);
+      END ELSE BEGIN
+        VehServContractL.SETFILTER("Max. Mileage", '=%1|>=%2' , 0, ServHdrL.Mileage);
+        VehServContractL.SETFILTER("Distance Kilometer", '=%1|>=%2' , 0, ServHdrL.Mileage);
+      END;
+      // Start PA033019
+      IF VehServContractL.FINDFIRST THEN BEGIN
+        IF VehServContractL.COUNT > 1 THEN BEGIN
+      // Start PA042806
+          COMMIT;
+      // Stop PA042806
+          IF PAGE.RUNMODAL(0, VehServContractL) <> ACTION::LookupOK THEN
+            VALIDATE("Serv. Contract Type", '')
+          ELSE
+            VALIDATE("Serv. Contract Type", VehServContractL."Contract Type");
+        END ELSE
+          VALIDATE("Serv. Contract Type", VehServContractL."Contract Type");
+      END ELSE
+        VALIDATE("Serv. Contract Type", '');
+      // Stop PA033019
+      // Stop EU.0079233
+    END;
+
+    PROCEDURE GetServContractFromServJobLine@1101368191() OK : Boolean;
+    BEGIN
+      // @ If Service Line is associated with a Service Job Line that has filled Service Contract Type
+      // @ then it's fetched from the Service Job Line.
+      // @ OK : If the Service Contract Type Is Filled in the service job line
+
+      // Start EU.0079233
+      IF "Service Job No." > 0 THEN
+      // Start EU.0052165
+        IF ServJobLineG.GET("Document Type", "Document No.", "Service Job No.") THEN
+          IF ServJobLineG."Serv. Contract Type" > '' THEN
+            IF "Bill-to Customer No." =  ServJobLineG."Bill-to Customer No." THEN BEGIN
+              IF "Serv. Contract Type" <> ServJobLineG."Serv. Contract Type" THEN
+                VALIDATE("Serv. Contract Type", ServJobLineG."Serv. Contract Type");
+      // Stop EU.0052165
+              EXIT(TRUE);
+            END ELSE
+              IF "Serv. Contract Type" > '' THEN
+                VALIDATE("Serv. Contract Type", '');
+      EXIT(FALSE);
+      // Stop EU.0079233
+    END;
+
+    PROCEDURE SpecialFunctionCall@1101287075();
+    VAR
+      RecordReferenceL@1101287076 : RecordRef;
+      PageSpecialFunctionsL@1101287075 : Page 5206814;
+    BEGIN
+      // @ Sets the parameters to the special function page
+      // Start PA033895.I000854
+      CLEAR(RecordReferenceL);
+      RecordReferenceL.GETTABLE(Rec);
+      CLEAR(PageSpecialFunctionsL);
+      PageSpecialFunctionsL.SetParameters(PAGE::"Service Order Subform",RecordReferenceL,"Make Code",'');
+      PageSpecialFunctionsL.RUNMODAL;
+      // Stop PA033895.I000854
+    END;
+
+    PROCEDURE ShowShippedLines@1101422630();
+    VAR
+      FormShippedLinesL@1101422631 : Page 5029020;
+    BEGIN
+      // @ Use the function to show the open shipment in the Line Level
+      // Start PA033978
+      // Start PA033978.I000905
+      // Start PA035187
+      FormShippedLinesL.InitializeForm(DATABASE::"Service Header", "Document No.", "Line No.");
+      // Stop PA035187
+      // Stop PA033978.I000905
+      FormShippedLinesL.RUNMODAL;
+      // Stop PA033978
+    END;
+
+    PROCEDURE MultipleResAssignment@1100769810(FavoriteResSelectionP@1100769810 : Boolean);
+    VAR
+      ServLineL@1100769811 : Record 5025625;
+    BEGIN
+      // @ Assigns a selected Resource to all selected Service Lines
+      // @ param: FavoriteResSelectionP - If True then Resource selection in 'My Favorite Resources List',
+      // @        else selection in complete 'Resources List'
+
+      // Start PA034057
+      // Start PA036950
+      // Start PA039784.57933
+      IF UserSessionUnitG.TimeManLicensePermissionCheck(FALSE) THEN BEGIN
+      // Stop PA039784.57933
+        ServLineL.COPYFILTERS(Rec);
+        CurrPage.SETSELECTIONFILTER(ServLineL);
+
+        ServLineL.SETRANGE("Document Type","Document Type");
+        ServLineL.SETRANGE("Document No.","Document No.");
+        ServResourceMgtG.MultipleResAssign4ServLines(ServLineL,FavoriteResSelectionP);
+      END;
+      // Stop PA036950
+      // Stop PA034057
+    END;
+
+    PROCEDURE MultipleJobAssignment@1100769811();
+    VAR
+      ServLineL@1100769811 : Record 5025625;
+    BEGIN
+      // @ Assigns a selected Service Job No. to all selected Service Lines
+
+      // Start PA034057
+      ServLineL.COPYFILTERS(Rec);
+      CurrPage.SETSELECTIONFILTER(ServLineL);
+
+      ServLineL.SETRANGE("Document Type","Document Type");
+      ServLineL.SETRANGE("Document No.","Document No.");
+      ServMgtG.MultipleJobAssign4ServLines(ServLineL);
+      // Stop PA034057
+    END;
+
+    PROCEDURE EditResAssignment@1100769813();
+    BEGIN
+      // @ Edit Resource Assignments for the current Service Line
+
+      // Start PA034057
+      // Start PA036950
+      IF UserSessionUnitG.TimeManLicensePermissionCheck(FALSE) AND ("Resource No." <> '') THEN BEGIN
+        IF Type = Type::" " THEN
+          ERROR(C_ResAssignNotAllowed,TABLECAPTION,FIELDCAPTION(Type),Type);
+
+        IF ServResourceMgtG.EditServLineResAssTmp(Rec) THEN BEGIN
+          ServResourceMgtG.AlignServLine2ServResAssign(Rec);
+          CurrPage.UPDATE(TRUE);
+        END;
+      END;
+      // Stop PA036950
+      // Stop PA034057
+    END;
+
+    PROCEDURE CreateDealerPackage@1101422631();
+    VAR
+      PackageL@1101422630 : Record 5025610;
+      ServiceLineL@1101422631 : Record 5025625;
+      RecRefL@1101422632 : RecordRef;
+    BEGIN
+      // @ function to process the creation of Dealer Package, Package Version and Package BOM.
+      // Start PA035258
+      ServiceLineL.RESET;
+      ServiceLineL.COPYFILTERS(Rec);
+      CurrPage.SETSELECTIONFILTER(ServiceLineL);
+
+      RecRefL.GETTABLE(ServiceLineL);
+      PackageL.CreateDealerPackage("Make Code",RecRefL);
+      // Stop PA035258
+    END;
+
+    LOCAL PROCEDURE QuantityOnAfterValidate@19032465();
+    BEGIN
+      // If a negative quantity was entered, then issue a remark
+      IF Quantity < 0 THEN
+        MESSAGE(C_INC003);
+      IF Reserve = Reserve::Always THEN BEGIN
+        CurrPage.SAVERECORD;
+        AutoReserve(TRUE);
+      // Start PA033986.I000800
+      // Stop PA033986.I000800
+      END;
+      // Start PA033986.I000800
+      // Start PA042806
+      // Stop PA042806
+      // Stop PA033986.I000800
+      // Start PA041495.69914
+      UpdateServiceTotalFactbox();
+      // Stop PA041495.69914
+    END;
+
+    LOCAL PROCEDURE PageOnAfterGetCurrRecord@19077479();
+    VAR
+      RecRefL@1109400000 : RecordRef;
+    BEGIN
+      // Start PA042806
+      CLEAR(InvtAvailableG);
+      // Start EU.0111610.113539
+      CLEAR(ExpectedQtyOnHandG);
+      // Stop EU.0111610.113539
+      IF (Type = Type::Item) AND ("No." <> '') THEN BEGIN
+        ItemG.RESET;
+        ItemG.GET("No.");
+        ItemG.SETFILTER("Date Filter",'..%1',12319999D);
+        ItemG.SETFILTER("Location Filter","Location Code");
+        InvExpectedG := AvailabilityMgtG.ExpectedQtyOnHand(ItemG,TRUE,TRUE,0,InvtAvailableG,12319999D);
+
+      // Start EU.0111610.113539
+        ItemG.SETRANGE("Bin Filter","Bin Code");
+        ItemG.CALCFIELDS(
+          "Qty. on Purch. Order",
+          "Qty. on Order/Invoice",
+          "Net Change",
+          "Scheduled Receipt (Qty.)",
+          "Scheduled Need (Qty.)");
+        ItemG.CALCFIELDS("Qty. on Service Order", "Qty. on Branch Order");
+        ExpectedQtyOnHandG := AvailabilityMgtG.ExpectedQtyOnHand(ItemG,TRUE,TRUE,0,InvtAvailableG,12319999D);
+      // Stop EU.0111610.113539
+      // AP002247
+      //  "Make Code" := ItemG."Make Code";
+      //  MODIFY;
+      // Stop AP002247
+        ItemG.RESET;
+      END;
+
+      // Start PA041510
+      // Stop PA041510
+      // Start EU.0052165
+      FieldIsControlledByJobLineG := ("Service Job No." <> 0) AND ServJobLineG.GET("Document Type", "Document No.", "Service Job No.") AND
+        (ServJobLineG."Includes Fixed Price" OR CustLibG.IsInternalCustomer(ServJobLineG."Bill-to Customer No."));
+      CASE TRUE OF
+        LineWarningG:
+          StyleExprWhenFieldIsControlledByJobLineG := 'Attention';
+        FieldIsControlledByJobLineG:
+          StyleExprWhenFieldIsControlledByJobLineG := 'Subordinate';
+        ELSE
+          StyleExprWhenFieldIsControlledByJobLineG := 'None';
+      END;
+      // Stop EU.0052165
+      // Start PA032440
+      // Start PA040256.59037
+      EditUnitCostG := (Type = Type::"Ext. Service") OR (Type = Type::"G/L Account");
+      // Stop PA040256.59037
+      // Start PA036313
+      HideItemCostG := (UserSetupG."Hide Item Cost" AND (Type = Type::Item)) OR
+        ((UserSetupG."Hide Labor Cost") AND (Type = Type::Labor));
+      // Stop PA042806
+      // Start PA033765
+      EUTireDataCodeEditableG := FALSE;
+      // Start PA034527.19632
+      IF SalesReceivablesSetupG."EU Tire Label Regulation" THEN
+      // Stop PA034527.19632
+        IF Type = Type::Item THEN
+          EUTireDataCodeEditableG := ItemG.GET("No.") AND ItemG."Tire Item";
+      // Start PA035597
+      // Stop PA035597
+      // Stop PA033765
+      // Start PA040667
+      // Start PA041187.89475
+      CodedPartValuesEnabledG := ItemG.GET("No.") AND (Type = Type::Item) AND (ItemG."Coded Part Type" <> '');
+      // Stop PA041187.89475
+      // Stop PA040667
+      // Start EU.0104306
+      CheckPricingControl();
+      // Stop EU.0104306
+    END;
+
+    LOCAL PROCEDURE NoOnAfterInput@19032305(VAR Text@19032306 : Text[1024]);
+    BEGIN
+      IF LookUpNoG <> Text THEN
+        "Find No." := TRUE;
+    END;
+
+    PROCEDURE UpdateServiceTotalFactbox@1000000002();
+    VAR
+      ExValueL@10430600 : Boolean;
+    BEGIN
+      // @ This function refreshes the Service Total Factbox.
+      // Start PA041495
+      // Start EU.0104306
+      ExValueL := SkipServLineCustUpdate(TRUE);
+      CurrPage.UPDATE; // <-- Refresh of Service Line for line based fact box
+      SkipServLineCustUpdate(ExValueL);
+      // Stop EU.0104306
+      // Start EU.0065317
+      // Stop EU.0065317
+      //Stop PA041495
+    END;
+
+    PROCEDURE GetSelectedRecords@1109400000(VAR TempRecP@1000 : TEMPORARY Record 5025625);
+    VAR
+      RecL@1001 : Record 5025625;
+    BEGIN
+      // @ This function provides a temporal set of records based on the selected records on the page
+      // @ param TempRecP : temporary record based on Service Line
+      // Start PA041510
+      CurrPage.SETSELECTIONFILTER(RecL);
+      IF RecL.FINDSET THEN
+        REPEAT
+          TempRecP := RecL;
+          TempRecP.INSERT;
+        UNTIL RecL.NEXT = 0;
+      // Stop PA041510
+    END;
+
+    BEGIN
+    {
+      // @ Area ServiceManagement
+      +----------------------------------------------+
+      | Copyright (c) incadea                        |
+      +----------------------------------------------+
+      PA-Number  Date
+      ------------------------------------------------
+      PA031550   26.05.10 SS QuickWins
+      PA032111   12.08.10 SS (BRL): Object renumbering changes due to Microsoft Agreement.
+      PA032144   31.08.10 MA Merge of 3.2.3.0
+      PA032178   22.09.10 YI 1446608: Currform.Update/Curform.Saverecord commands reset and rearranged
+      PA032589   15.02.11 YI Replacement of internal customer-check to CustomerLibG.IsInternalCustomer() in function
+                             ShowCustomer()/OnAssistEdit Bill-To Customer No.
+      PA032600   19.04.11 SS - Field Charging Price deleted
+                             - Deletion of unused variables
+      PA032440   27.04.11 AA OnOpenPage, OnAfterGetRecord and OnInsertRecord triggers modified to read Hide Item Cost permission for the user
+                             Make "Unit Cost(LCY)" editable for Ext. Services only
+      PA032473   11.05.11 SS 2156692 - Code Review Errors fixed.
+      PA032473   21.05.11 YI 3498592 - Parameter added to function Refresh() to control CurrForm.update(True/False)
+      PA032651   19.07.11 MA 3749961 Modified OnAssistEdit Trigger to take Status of Page Lookup call into consideration.
+      PA032758   26.07.11 GL Change for RTC compliance. Use saverecord only if classic client
+      PA032651   15.09.11 PR 4366974: Change for RTC compliance. Use saverecord only if classic client
+      PA032442   27.09.11 SS Merge of 3.2.4.0
+      PA032820   05.10.11 GM New Function 'Check Pricing Control' added to set price fields to not editable when the permissions are not sufficient
+      PA032651   19.09.11 PR 4366974: Added code to avoid the 'Service Line Already Exist' error in RTC.
+      PA032450   13.10.11 BL New field 5025849, Req. Worksheet Name, Code10 to select Req. worksheet Journal Name for reordering.
+      PA032795   26.10.11 PR Added 'Line No.' control with Visible = FALSE by default.
+      PA032651   13.01.12 SS 6224608 - Service Line already exists
+                             - Rolled backed all the changes which were done in functions SelectAssocPackage(), CreateServiceLine(),InsertLine()
+                             - Realignment of statements in InsertLine() function.
+      PA033011   18.01.12 GD 5866232: Added Quantity Validation in 'No.'-OnAfterValidate trigger when run in RTC mode.
+      PA032651   08.02.12 GC 6438437: The fields VAT Product posting group and VAT Business posting group are missing
+      PA032651   24.02.12 GB 6626266: Added code to avoid error when validate "No." only on RTC.
+      PA033136   01.03.12 TS Merge of 3.2.5.0 | PA032887
+      PA033011   29.03.12 GD 6984078: Rolled back Defect5866232, Defect6626266
+      PA033067   12.04.12 DR DE Captions implemented
+      PA032651   19.04.12 SM 7178403: Captions ML are removed in cases when they are not need on the page. Caption ML is retrieved
+                             page a caption ML in the table on which a specific page lies. Changes are done by specifications in a case.
+      PA033228   02.05.12 GE DeleteServiceLedgerEntries() function modified to correctly check the service ledger entries.
+      PA032861   15.12.11 KC R-E-T Time Control Core:
+                              Updated procedure DeleteServiceLedgerEntries() after removal of "Task Acquisition Ledger Entry" table
+      PA032861   02.03.12 KC 6725409: changes due to change of DataPerCompany property of Tables 5208401 "Time Clock Entry" and
+                              5208402 "Time Clock Statistics Entry"
+      PA033187   26.03.12 GL Merge of RET to Ongoing 611 objects
+      PA033328   19.06.12 KC Merge of RET to Ongoing 612 objects
+      PA033019   29.06.12 GD 7900938: Modified ShowServContract() to validate "Serv. Contract Type" correctly when there is only one Vehicle Service Contract.
+      PA033259   09.08.12 AI Deletion of Start/Stop History in Code, update copyright and Version List
+      PA033334   04.09.12 DR DEU Captions added N.6.1.2
+      PA033019   10.09.12 GD 8226510: Fixed C_INC006.
+      PA033019   12.11.12 DT 9267011: Setting of FairDeal flag from Service Job Line in OnNewRecord-Trigger
+      PA033259   22.11.12 DR Change the variable names according to incadea style guide
+      PA033733   10.12.12 DR DE Captions added for version: N.6.1.2
+      PA033765   19.12.12 GC "EU Tire Data Code" field added
+      PA034007   18.01.13 GB I000152 Modification in OnInsert() and OnModify() triggers in order to fetch "Service Contract Type" from Associated "Service Job Line".
+      PA034007   23.01.13 GE I000152 Rollback Changes
+      PA033986   11.04.13 GD I000800 Update Page Controls in Quantity-OnAfterValide()
+      PA033895   22.04.13 GE I000854 Function SpecialFunctionCall() added
+      PA033895   22.04.13 GE I000854 Special Functions button added
+      PA033978   23.04.13 WZ Added new function ShowShippedLines
+      PA033978   30.04.13 WZ I000905: Enhancement according to the recommended standards
+      PA034249   24.05.13 JB Clean up editing of service line customer (see function ShowCustomers)
+      PA034249   24.05.13 JB Validate on Qty moved from function InsertLine down to OnValidate No. on table level
+      PA034249   24.05.13 JB old update of service customer removed from OnValidate of BillToCustNo
+      PA034580   27.08.13 SM New rules when deleting Service line with active Time Clock Entries on it.
+      PA034057   27.05.13 NB R-E-T Assignment of Resources
+                             Field removed: Assigned Qty.
+                             New fields:
+                             - 5208400 Resource No.
+                             - 5208401 Resource Name
+                             - 5208402 No. of Resources
+                             New functions 'MultipleResAssignment', 'MultipleJobAssignment', 'EditResAssignment'
+                             Take over Resource No. from Service Job Line
+                             OnDelete: Remove Service Resource Assignments
+      PA035187   15.10.13 WZ Updated ShowShippedLines function and use "Service Header" as parameter to the InitializeForm call.
+      PA034291   04.11.13 SM I002269: In OnDelee trigger update of the Service Header added.
+      PA034531   21.11.13 GC 19042 Bill-to Customer No. OnAfterValidate trigger - Call UPDATE in order to show Vehicle Service Contracts
+      PA034527   11.12.13 GG 19632 Field "EU Tire Data Regulation" modified to "EU Tire Label Regulation"
+      PA035952   11.04.14 LR Add ShortcutKey property for control ID 1906015704
+      PA035258   10.06.14 WZ Created new function CreateDealerPackage which will create Package, Package Version and
+                             Package BOM based on the selected Service Lines.
+      PA036313   20.10.14 EL Code has been added in OnAfterGetRecord and OnInsertRecord to get the Hide Labor cost from User Setup.
+      PA035597   10.02.14 GC NAV 2013 R2 Technical Upgrade
+      PA036002   25.07.14 TS 26208 Dimensions Functionality - Dimension Code fields displayed on Page.
+      PA035903   25.08.14 CH NAV 2013 UI Enhancement.
+      PA036547   06.11.14 GE Merge N.6.1.4 to N.7.1.0 of PA035258.
+      PA037341   19.01.15 DR Merge of PA036313 for Labor WIP posting
+                             - Useless clone functions removed
+                             - Variable names corrected
+      PA037341   22.01.15 GL Merge of PA035952
+      PA036549   06.02.15 DR 33607: Show an error when someone opens the Resource Assignment for Text lines
+      PA036950   15.12.14 VI Permission check for "Time Management Module" has been done for accessing Time Management Module
+                             Ranged Objects.
+      PA037994   26.05.15 VJ Merge of PA036950.
+      PA037942   20.10.15 SM Added call of new function CheckForLineDuplicates.
+      PA037938   07.12.15 SM 50704 Calling of UpdateShelfNoServLines function added from field "Shelf/Bin No.".
+      PA037938   07.12.15 SM 50694 Removed Calling of UpdateShelfNoServLines function according to a design changes.
+      PA041326   01.08.16 VJ UPDATED CurrPage as FALSE hence lines will be refreshed.
+      PA041328   09.08.16 VJ Merge of PA041326
+      PA041146   02.08.16 PT Style=Attention and StyleExpr=LineWarningG has been added in various fields
+                             - Currpage update added on field "Bin code"
+      PA041146   18.08.16 PT 68559 Currpage update added on field "Bin Code" OnValidate
+                             - Checking if quantity is sufficient in function InsertLine if Type is "Item"
+      PA041155   28.09.16 SP Merge of PA041146 and PA041146.68559
+      PA041495   31.08.16 KR Created new function UpdateServiceTotalFactbox() to update the Factbox and calling from OnValidate of "Unit Price",
+                             "Line Discount %" and Amount.
+      PA041495   15.09.16 KR 69914 Calling function UpdateServiceTotalFactbox() from InsertLine() and QuantityOnAfterValidate() functions to update factbox for labor.
+      PA041582   20.09.16 JS Merge of PA041495 and PA041495.69914
+      PA041776   21.09.16 GI 70856 Removed the code that was added with PA041146.68559 because the default bin code should not be removed from the
+                             Service Line.
+      PA041778   12.10.16 GI Merge of PA041776
+      PA039784   05.04.16 GN 57933 Removed check of empty resource no in lines
+      PA040256   19.04.16 GV 59037 Make field "Unit Cost (LCY)" editable when type is G/L Account
+      PA042629   13.01.17 PT Validating "Unit Cost(LCY)" on field "Service Job No." with resource unit cost if calculated charging group cost is set to 0 for type Labor
+                             - Added the check on "No." OnValidate if calculated charging group cost is not equal to 0
+      PA042631   19.01.17 PT Merge of PA042629
+      PA042631   01.02.17 PT 86859 Rollback the changes done by this PA042629 from "No." OnValidate trigger
+      PA042806   03.01.17 DR Call ServiceJobNoOnValidate function to correct all Service Job depending values when a new line is created
+                             Function OnAfterGetCurrRecord changed to PageOnAfterGetCurrRecord.
+                             Business logic moved from CheckPricingControl function moved to function PageOnAfterGetCurrRecord.
+      PA042626   03.01.17 DR Merge of PA042806
+      PA042968   14.02.17 DR all "Exch. Parts Tax" relevant fields added to the page as VISIBLE=FALSE
+      PA043026   28.02.17 DR Merge of PA042968
+      PA042761   28.03.17 JS 92213 Calling the function UpdateServiceTotalFactbox to update the Factbox from OnValidate of "Line Discount Amount".
+      PA042763   28.03.17 JS Merge of PA042761.92213
+      --- 7.1.4 ---
+      PA040256   24.04.16 GV 59167 Run function QuantityOnAfterValidate in order to refresh Document Status Code
+      PA040667   15.06.16 WZ New field created 5025445 "Serial No.".
+                             New Page action "Coded Parts Type Parameters" added.
+                             New field added "Coded Part Type". Use Serial No as parameter
+      PA040070   24.06.16 GL 63485 Changed the Runformlink of Action Coded Part Type Parameters to use the Data Make Code
+      PA040976   30.08.16 SU 68939 Removed "Make Code" parameter from Page action "Coded Parts Type Parameters"
+                             allowing Items with different Makes from document
+      PA040977   23.09.16 SU Merge of PA040976
+      PA042430   02.12.16 DR PAs in Documentation Trigger resorted in order to match better to other myengine versions
+      PA042431   02.12.16 DR Merge of PA042430
+      PA042884   06.02.17 GY Replaced "Qty. Shipped (Base)" field with "Quantity Shipped" to the page.
+      PA044205   28.06.17 JS Calling the function UpdateServiceTotalFactbox to update the Factbox from OnValidate of "Amount Including VAT".
+      PA044207   14.07.17 JS Merge of PA044205
+      EU.0027741 30.05.18 MS Replace code in OnDeleteRecord trigger by calling to centralized function. Remove DeleteServiceLedgerEntries function
+      --- 7.1.5 ---
+      PA042885   06.02.17 GY Merge of PA042884
+      PA041187   03.03.17 UX 89475 Filter Type added for CodedPartValuesEnabledG.
+      PA038447   26.07.16 GS OnNewRecord(), added default setup for Service Order Line Type according to design
+      EU.0024670 08.05.18 AG Update Service Totals factbox if Service Job No. is modified.
+      EU.0034986 16.08.18 EG No Resource assignments take place when licensed time control permission is not found.
+      --- 7.1.6 ---
+      EU.0000043 21.06.17 WZ Removed Action Assignments and function ShowAssignment
+      --- 7.2.0 ---
+      EU.0005215 08.09.17 JS 2283 Merge of PA044205
+      EU.0024419 26.04.18 GV Call of function SetCurrFieldNo in trigger OnAssistEdit of field Bill-to Customer No.
+      EU.0025639 08.05.18 AG Merge of EU.0024670
+      EU.0027748 05.06.18 MS Merge of EU.0027741
+      EU.0034988 16.08.18 EG Merge of EU.0034986
+      EU.0052165 07.02.19 DR OnAssistEditfor the "Bill-to Customer No." field changed. It is important that the SetCurrFieldNo function sets the correct CurrFieldNo and so the
+                             normal VALIDATE("Bill-to Customer No.") behaves identical to a manual entered "Bill-to Customer No." in the Page.
+                             Additional changes:
+                             - The global variables are sorted according to the styleguide
+                             - UI for page fields which are depending on a Service Job changed:
+                               The "Bill-to Customer No.", "Serv. Contract Type", "Service Posting Group" and "Sales Department Code" fields are changed to be not editable as they are
+                               controlled by the corresponding Service Job. The fields are also shown in gray from the moment the line is assigned to a Job.
+      EU.0056954 15.03.19 GV Code added in OnValidate trigger of "Bill-to Customer No." in order to save current value of Bill-to Customer.
+      EU.0052165 10.04.19 DR Concept change: "Bill-to Customer No." in a "Service Line" can be different to a "Bill-to Customer No." in a Service Job.
+                             Boolean FieldIsControlledByJobLineG is only activated when a Job has a Fixed Price or the main Bill-to Customer of the Job is internal.
+                             - COMMIT removed in the ShowCustomers function.
+                             Additional changes:
+                             - Take "Fair Deal" from the xRec. Reading it freshly from the Job is not needed.
+                             - Remove '&' from Action Captions
+      EU.0065661 03.07.19 RE Code added to refresh the page after "Bill-to Customer No." update
+      EU.0065317 31.07.19 SM In procedure UpdateServiceTotalFactbox update command is removed for Service Header. In page 5025649 In ServLines part added property UpdatePropagation=Both
+                             to replace MODIFY.
+      EU.0079233 30.10.19 DR In function ShowServContract consider the case that the mileage must be taken from the Service Header.
+                             In function GetServContractFromServJobLine take care to take the "Serv. Contract Type" only from the Job when the bill-to customer matches.
+                             In case it is not matching then remove the "Serv. Contract Type"
+      EU.0064128 05.11.19 KR Code added to update the Service Contract Type
+      EU.0089938 02.04.20 GD OnOpenPage(), OnClosePage() modification to set value to UserSessionUnit.
+      --- 7.3.0 --- downmerge
+      PA041510            WZ Added new field Availability and set value OnAfterGetRecord trigger. Removed LineWarning.
+      PA041510            MS New function created "GetSelectedRecords" to provide a temporal set of selected records.
+      EU.0005636          MS Downmerge of PA041510 and EU.0000369
+      EU.0000369          UX Action "Reserve" not visible by default
+      EU.0044955          GE 50192 Skip Availability check if "No." is empty.
+      --- 7.2.1 ---
+      EU.0092079 06.04.20 GD 89939 Merge of EU.0089938.
+      EU.0090125 21.02.20 JV Downmerge of EU.0005636
+                             - Visible false is set for Reserve action
+      EU.0090167 30.04.20 JV Added Availability field
+                 05.05.20 ER Function InsertLine() modified to execute CALCFIELDS("No. of Resources") if there are the necessary license permissions
+      EU.0101759 04.09.20 GI 104947 Modification due to renumbering of Kuma range.
+      EU.0111610 03.02.20 GV 112936 Modification OnAssistEdit of Bill-to Customer No. field in order to update properly Service Line Customer record.
+      EU.0111610 18.02.21 EG 113539 Added page field ExpectedQtyOnHandG that shows current inventory plus expected qtys from incoming purchase orders on item lines.
+      EU.0104306 17.09.20 DR Apply correct customer line splits for a new added line with Service Job number.
+                             - New field Skip VAT Adjustment Calc." added.
+      EU.0104306 17.09.20 DR "Amount" and "Amount including VAT" column are no longer shown at the same time.
+                             Show the "Amount including VAT" only when the enhanced VAT Calculation logic is used. if not show the "Amount" field.
+                             - New function ResetHdrRec
+                             - For lines, which are fully invoiced set the following fields to not editable:
+                               "Amount", "Amount Including VAT", "Unit Price", "Line Discount %", "Line Discount Amount"
+      EU.0104306 17.09.20 DR Field "VAT %" added.
+      EU.0124901 27.08.21 DR 125228 In ResetHdrRec function read the header record and update the AmountVisibleG flag right there already.
+      EU.0115012 14.10.21 DS Multiple actions visibility condition changed for Web Service Assistance.
+      EU.0135165 18.04.22 PS 126936 Look and feel of "Amount" and "Amount incl. VAT" field control made identical in all Parts, Service and Vehicle sales documents.
+      EU.0138596 13.05.22 DR Add new "Autom. Rounding Disc. %" and "Autom. Rounding Disc. Amount" fields.
+      EU.0140491 10.06.22 EG 140221 Serv Contract Type Parameter modified to length 20 in BilltoAssist().
+      EU.0156444 16.03.23 EG 155083 Calling CheckForLineDuplicates() to check duplicates as per setup in InsertLine instead of OnValidate of ÊNo.Ë field.
+      AP002036   17.01.24 RL Add field "Profit %".
+      AP002247 19.03.24 RL "Make Code" := ItemG."Make Code", add field "Data Make Code";
+    }
+    END.
+  }
+}
+

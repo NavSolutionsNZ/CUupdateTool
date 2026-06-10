@@ -1,0 +1,365 @@
+OBJECT Page 38 Item Ledger Entries
+{
+  OBJECT-PROPERTIES
+  {
+    Date=01/18/19;
+    Time=[ 3:56:00 PM];
+    Version List=NAVW1.x,N.7.2.0_SLA;
+  }
+  PROPERTIES
+  {
+    Editable=No;
+    CaptionML=ENU=Item Ledger Entries;
+    SourceTable=Table32;
+    DataCaptionFields=Item No.;
+    PageType=List;
+    OnOpenPage=VAR
+                 UserSetupL@1109400000 : Record 91;
+               BEGIN
+                 // Start INC
+                 DealerCheckRunForm;
+                 // Stop INC
+                 // Start PA032440
+                 UserSetupL.GET(USERID);
+                 HideItemCostG := UserSetupL."Hide Item Cost";
+                 // Stop PA032440
+               END;
+
+    ActionList=ACTIONS
+    {
+      { 1900000003;0 ;ActionContainer;
+                      ActionContainerType=RelatedInformation }
+      { 20      ;1   ;ActionGroup;
+                      CaptionML=ENU=&Ledger Entries }
+      { 61      ;2   ;Action    ;
+                      ShortCutKey=Shift+Ctrl+D;
+                      CaptionML=ENU=Dimensions;
+                      Description=PA035597;
+                      Image=Dimensions;
+                      OnAction=BEGIN
+                                 ShowDimensions;
+                               END;
+                                }
+      { 21      ;2   ;Action    ;
+                      ShortCutKey=Ctrl+F7;
+                      CaptionML=ENU=&Value Ledger Entries;
+                      RunObject=Page 5802;
+                      RunPageView=SORTING(Item Ledger Entry No.);
+                      RunPageLink=Item Ledger Entry No.=FIELD(Entry No.);
+                      Promoted=Yes;
+                      Image=ValueLedger;
+                      PromotedCategory=Process }
+      { 30      ;1   ;ActionGroup;
+                      CaptionML=ENU=&Application }
+      { 58      ;2   ;Action    ;
+                      CaptionML=ENU=Applied E&ntries;
+                      Image=Approve;
+                      OnAction=VAR
+                                 ShowBalancedLedgEntries@1109400001 : Codeunit 5801;
+                               BEGIN
+                                 ShowBalancedLedgEntries.RUN(Rec);
+                               END;
+                                }
+      { 56      ;2   ;Action    ;
+                      CaptionML=ENU=&Reservation Entries;
+                      Promoted=Yes;
+                      Image=ReservationLedger;
+                      PromotedCategory=Process;
+                      OnAction=BEGIN
+                                 ShowReservationEntries(TRUE);
+                               END;
+                                }
+      { 1055601 ;2   ;Action    ;
+                      CaptionML=ENU=Application Worksheet;
+                      ToolTipML=ENU=View item applications that are automatically created between item ledger entries during item transactions.;
+                      Description=EU.0048475;
+                      RunObject=Page 521;
+                      RunPageLink=Item No.=FIELD(Item No.);
+                      Image=ApplicationWorksheet }
+      { 1900000004;0 ;ActionContainer;
+                      ActionContainerType=ActionItems }
+      { 98      ;1   ;ActionGroup;
+                      Name=Function;
+                      CaptionML=ENU=F&unctions }
+      { 99      ;2   ;Action    ;
+                      ShortCutKey=F7;
+                      CaptionML=ENU=&Change Disable for Requisition Setting;
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=Cancel;
+                      PromotedCategory=Process;
+                      OnAction=VAR
+                                 ItemLedgEntryL@1109400001 : Record 32;
+                                 "Req. Flag Management"@1109400002 : Codeunit 5028664;
+                               BEGIN
+                                 ItemLedgEntryL.COPY(Rec);
+                                 "Req. Flag Management".ChgItemLedgEntrAllocIdentifier(ItemLedgEntryL);
+                               END;
+                                }
+      { 32      ;1   ;Action    ;
+                      CaptionML=ENU=&Navigate;
+                      Promoted=Yes;
+                      Image=Navigate;
+                      PromotedCategory=Process;
+                      OnAction=BEGIN
+                                 Navigate.SetDoc("Posting Date","Document No.");
+                                 Navigate.RUN;
+                               END;
+                                }
+    }
+  }
+  CONTROLS
+  {
+    { 1900000001;0;Container;
+                ContainerType=ContentArea }
+
+    { 1   ;1   ;Group     ;
+                GroupType=Repeater }
+
+    { 2   ;2   ;Field     ;
+                SourceExpr="Posting Date" }
+
+    { 4   ;2   ;Field     ;
+                SourceExpr="Entry Type" }
+
+    { 6   ;2   ;Field     ;
+                SourceExpr="Document No." }
+
+    { 1101297639;2;Field  ;
+                SourceExpr="Document Line No.";
+                Visible=FALSE }
+
+    { 8   ;2   ;Field     ;
+                SourceExpr="Item No.";
+                OnLookup=BEGIN
+                           // Start INC
+                           ItemNoOnLookUp();
+                           // Stop INC
+                         END;
+                          }
+
+    { 16  ;2   ;Field     ;
+                SourceExpr="Variant Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 10  ;2   ;Field     ;
+                SourceExpr=Description }
+
+    { 96  ;2   ;Field     ;
+                SourceExpr="Disable for Requisition" }
+
+    { 1109400000;2;Field  ;
+                Description=PA032795;
+                SourceExpr="External Document No.";
+                Visible=FALSE }
+
+    { 34  ;2   ;Field     ;
+                SourceExpr="Global Dimension 1 Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 36  ;2   ;Field     ;
+                SourceExpr="Global Dimension 2 Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 38  ;2   ;Field     ;
+                SourceExpr="Location Code";
+                AutoFormatExpr='JMD';
+                Visible=TRUE }
+
+    { 94  ;2   ;Field     ;
+                SourceExpr="Branch Code";
+                AutoFormatExpr='JMD' }
+
+    { 18  ;2   ;Field     ;
+                SourceExpr="Bin Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 12  ;2   ;Field     ;
+                SourceExpr=Quantity }
+
+    { 42  ;2   ;Field     ;
+                SourceExpr="Invoiced Quantity";
+                Visible=TRUE }
+
+    { 44  ;2   ;Field     ;
+                SourceExpr="Remaining Quantity";
+                Visible=TRUE }
+
+    { 117 ;2   ;Field     ;
+                SourceExpr="Reserved Quantity";
+                Visible=FALSE;
+                OnDrillDown=BEGIN
+                              ShowReservationEntries(TRUE);
+                              CurrPage.UPDATE;
+                            END;
+                             }
+
+    { 1109400002;2;Field  ;
+                Description=PA043784.96226;
+                SourceExpr="Adjusted Cost" }
+
+    { 14  ;2   ;Field     ;
+                SourceExpr=Amount;
+                Enabled=NOT HideItemCostG;
+                HideValue=HideItemCostG }
+
+    { 50  ;2   ;Field     ;
+                SourceExpr="Serial No.";
+                Visible=FALSE }
+
+    { 1117900000;2;Field  ;
+                SourceExpr="Factory No." }
+
+    { 48  ;2   ;Field     ;
+                SourceExpr="Book No.";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 24  ;2   ;Field     ;
+                SourceExpr=Open }
+
+    { 52  ;2   ;Field     ;
+                SourceExpr="Qty. per Unit of Measure";
+                Visible=FALSE }
+
+    { 80  ;2   ;Field     ;
+                SourceExpr="Drop Shipment";
+                Visible=FALSE }
+
+    { 22  ;2   ;Field     ;
+                SourceExpr="Applied Entry to Adjust";
+                Visible=FALSE }
+
+    { 54  ;2   ;Field     ;
+                SourceExpr="Prod. Order No.";
+                Visible=FALSE }
+
+    { 88  ;2   ;Field     ;
+                SourceExpr="User ID";
+                Visible=FALSE }
+
+    { 26  ;2   ;Field     ;
+                SourceExpr="Entry No." }
+
+    { 70  ;2   ;Field     ;
+                SourceExpr="Customer Group Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 72  ;2   ;Field     ;
+                SourceExpr="Item Group Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 74  ;2   ;Field     ;
+                SourceExpr="Purch. Order Type";
+                Visible=FALSE }
+
+    { 76  ;2   ;Field     ;
+                SourceExpr="Main Group Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 78  ;2   ;Field     ;
+                SourceExpr="Subgroup Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 82  ;2   ;Field     ;
+                SourceExpr="Line Group Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 84  ;2   ;Field     ;
+                SourceExpr="Main Area";
+                Visible=FALSE }
+
+    { 86  ;2   ;Field     ;
+                SourceExpr="Source No. (Payment)";
+                Visible=FALSE }
+
+    { 1109400001;2;Field  ;
+                Description=PA037562.34575;
+                SourceExpr="Salespers./Purch. Code" }
+
+    { 1100812959;2;Field  ;
+                Description=PA036728;
+                SourceExpr="Salesperson Code 2" }
+
+    { 1101297641;2;Field  ;
+                SourceExpr="Order Line No.";
+                Visible=FALSE }
+
+    { 1055600;2;Field     ;
+                Description=INC,PA041023.87187;
+                SourceExpr=VIN }
+
+    { 1900000007;0;Container;
+                ContainerType=FactBoxArea }
+
+    { 1900383207;1;Part   ;
+                Visible=FALSE;
+                PartType=System;
+                SystemPartID=RecordLinks }
+
+    { 1905767507;1;Part   ;
+                Visible=FALSE;
+                PartType=System;
+                SystemPartID=Notes }
+
+  }
+  CODE
+  {
+    VAR
+      Navigate@1000 : Page 344;
+      HideItemCostG@1109400001 : Boolean INDATASET;
+
+    PROCEDURE __INCADEA__@5025350();
+    BEGIN
+    END;
+
+    PROCEDURE DealerCheckRunForm@1101353001();
+    VAR
+      CompanyInfoL@1101353001 : Record 79;
+      DealerMgt@1101353000 : Codeunit 5086700;
+    BEGIN
+      // Start INC
+      IF CompanyInfoL.IMSCheck THEN
+        IF DealerMgt.GetDealer <> '' THEN
+          ERROR('');
+      // Stop INC
+    END;
+
+    BEGIN
+    {
+      // @ Area PartsSales, VehicleSales, PartsPurchase, VehiclePurchase
+      PA-Number  Date
+      ------------------------------------------------
+      PA032440   27.04.11 AA OnOpenForm trigger modified to read Hide Item Cost permission for the user
+      PA032795   26.10.11 PR Added control 'External Document No.'.
+      PA033067   12.04.12 DR DE Captions implemented
+      PA033259   09.08.12 AI Deletion of Start/Stop History in Code, update copyright and Version List
+      PA033259   18.09.12 DR Variable names changed according to incadea styleguide
+      PA035597   10.02.14 GC NAV 2013 R2 Technical Upgrade
+      PA036728   19.09.14 SW Added Control for new field "Salesperson Code 2"
+      PA036838   04.12.14 GI Added "Document Line No." and "Order Line No." fields in the form.
+      PA036548   17.12.14 GL Merge of PA036728
+      PA037341   15.01.15 GL Merge of PA036838
+      PA037562   17.04.15 GQ 34575 Added new field "Salespers./Purch. Code" in page
+      PA041023   01.02.17 KB 87187 Enabled VIN Filed.
+      PA043784   16.05.17 GY 96226 Added new field "Adjusted Cost" in page
+      --- 7.1.6 ---
+      EU.0002138 05.07.17 GY 2105 Merge of PA043784.
+      --- 7.2.0 ---
+      EU.0001175 10.10.17 AK Version List updated
+      EU.0048475 18.01.19 AN NAV 2017 - Item Application Worksheet functionality.
+                             New Action added: Application Worksheet, using properties instead of the original code.
+    }
+    END.
+  }
+}
+

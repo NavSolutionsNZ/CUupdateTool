@@ -1,0 +1,283 @@
+OBJECT Page 9081 Sales Hist. Bill-to FactBox
+{
+  OBJECT-PROPERTIES
+  {
+    Date=06/10/26;
+    Time=[ 8:52:51 AM];
+    Modified=Yes;
+    Version List=NAVW16.00.01,N.7.1.5,AP-2362,CU26Q1;
+  }
+  PROPERTIES
+  {
+    CaptionML=ENU=Sales History - Bill-to Customer;
+    SourceTable=Table18;
+    PageType=CardPart;
+  }
+  CONTROLS
+  {
+    { 1900000001;0;Container;
+                ContainerType=ContentArea }
+
+    { 21  ;1   ;Field     ;
+                CaptionML=ENU=Customer No.;
+                SourceExpr="No.";
+                OnDrillDown=BEGIN
+                              ShowDetails;
+                            END;
+                             }
+
+    { 1119432000;1;Field  ;
+                SourceExpr="Parts Orders Bill-to";
+                OnDrillDown=BEGIN
+                              // Start PA032473
+                              SalesHistoryDrilldown(FIELDNO("Parts Orders Bill-to"));
+                              // Stop PA032473
+                            END;
+                             }
+
+    { 1119432002;1;Field  ;
+                SourceExpr="Vehicle Orders Bill-to";
+                OnDrillDown=BEGIN
+                              // Start PA032473
+                              SalesHistoryDrilldown(FIELDNO("Vehicle Orders Bill-to"));
+                              // Stop PA032473
+                            END;
+                             }
+
+    { 1119432004;1;Field  ;
+                SourceExpr="Service Orders Bill-to";
+                OnDrillDown=BEGIN
+                              // Start PA032473
+                              SalesHistoryDrilldown(FIELDNO("Service Orders Bill-to"));
+                              // Stop PA032473
+                            END;
+                             }
+
+    { 1119432006;1;Field  ;
+                SourceExpr="Archived Parts Orders Bill-to";
+                OnDrillDown=BEGIN
+                              // Start PA032473
+                              SalesHistoryDrilldown(FIELDNO("Archived Parts Orders Bill-to"));
+                              // Stop PA032473
+                            END;
+                             }
+
+    { 1119432008;1;Field  ;
+                SourceExpr="Archived Veh. Orders Bill-to";
+                OnDrillDown=BEGIN
+                              // Start PA032473
+                              SalesHistoryDrilldown(FIELDNO("Archived Veh. Orders Bill-to"));
+                              // Stop PA032473
+                            END;
+                             }
+
+    { 1119432010;1;Field  ;
+                SourceExpr="Archived Serv. Orders Bill-to";
+                OnDrillDown=BEGIN
+                              // Start PA032473
+                              SalesHistoryDrilldown(FIELDNO("Archived Serv. Orders Bill-to"));
+                              // Stop PA032473
+                            END;
+                             }
+
+    { 1119432012;1;Field  ;
+                SourceExpr="Posted Parts Invoices Bill-to";
+                OnDrillDown=BEGIN
+                              // Start PA032473
+                              SalesHistoryDrilldown(FIELDNO("Posted Parts Invoices Bill-to"));
+                              // Stop PA032473
+                            END;
+                             }
+
+    { 1119432014;1;Field  ;
+                SourceExpr="Posted Vehicle Inv. Bill-to";
+                OnDrillDown=BEGIN
+                              // Start PA032473
+                              SalesHistoryDrilldown(FIELDNO("Posted Vehicle Inv. Bill-to"));
+                              // Stop PA032473
+                            END;
+                             }
+
+    { 1119432016;1;Field  ;
+                SourceExpr="Posted Service Inv. Bill-to";
+                OnDrillDown=BEGIN
+                              // Start PA032473
+                              SalesHistoryDrilldown(FIELDNO("Posted Service Inv. Bill-to"));
+                              // Stop PA032473
+                            END;
+                             }
+
+    { 1119432018;1;Field  ;
+                SourceExpr="Posted Parts Cr. Memo Bill-to";
+                Visible=FALSE;
+                OnDrillDown=BEGIN
+                              // Start PA032473
+                              SalesHistoryDrilldown(FIELDNO("Posted Parts Cr. Memo Bill-to"));
+                              // Stop PA032473
+                            END;
+                             }
+
+    { 1119432020;1;Field  ;
+                SourceExpr="Posted Veh. Cr. Memo Bill-to";
+                Visible=FALSE;
+                OnDrillDown=BEGIN
+                              // Start PA032473
+                              SalesHistoryDrilldown(FIELDNO("Posted Veh. Cr. Memo Bill-to"));
+                              // Stop PA032473
+                            END;
+                             }
+
+    { 1119432022;1;Field  ;
+                SourceExpr="Posted Serv. Cr. Memo Bill-to";
+                Visible=FALSE;
+                OnDrillDown=BEGIN
+                              // Start PA032473
+                              SalesHistoryDrilldown(FIELDNO("Posted Serv. Cr. Memo Bill-to"));
+                              // Stop PA032473
+                            END;
+                             }
+
+    { 1109400001;1;Field  ;
+                Description=PA042025;
+                SourceExpr="Parts Quotes Bill-to";
+                Visible=FALSE;
+                OnDrillDown=BEGIN
+                              // Start PA042025
+                              SalesHistoryDrilldown(FIELDNO("Parts Quotes Bill-to"));
+                              // Stop PA042025
+                            END;
+                             }
+
+    { 1109400003;1;Field  ;
+                Description=PA042025;
+                SourceExpr="Vehicle Quotes Bill-to";
+                Visible=FALSE;
+                OnDrillDown=BEGIN
+                              // Start PA042025
+                              SalesHistoryDrilldown(FIELDNO("Vehicle Quotes Bill-to"));
+                              // Stop PA042025
+                            END;
+                             }
+
+    { 1109400005;1;Field  ;
+                Description=PA042025;
+                SourceExpr="Service Quotes Bill-to";
+                Visible=FALSE;
+                OnDrillDown=BEGIN
+                              // Start PA042025
+                              SalesHistoryDrilldown(FIELDNO("Service Quotes Bill-to"));
+                              // Stop PA042025
+                            END;
+                             }
+
+    { 1109400000;1;Field  ;
+                Description=PA032668;
+                SourceExpr="Archived Parts Quotes Bill-to";
+                Visible=FALSE;
+                OnDrillDown=BEGIN
+                              // Start PA032668
+                              SalesHistoryDrilldown(FIELDNO("Archived Parts Quotes Bill-to"));
+                              // Stop PA032668
+                            END;
+                             }
+
+    { 1109400002;1;Field  ;
+                Description=PA032668;
+                SourceExpr="Archived Veh. Quotes Bill-to";
+                Visible=FALSE;
+                OnDrillDown=BEGIN
+                              // Start PA032668
+                              SalesHistoryDrilldown(FIELDNO("Archived Veh. Quotes Bill-to"));
+                              // Stop PA032668
+                            END;
+                             }
+
+    { 1109400004;1;Field  ;
+                Description=PA032668;
+                SourceExpr="Archived Serv. Quotes Bill-to";
+                Visible=FALSE;
+                OnDrillDown=BEGIN
+                              // Start PA032668
+                              SalesHistoryDrilldown(FIELDNO("Archived Serv. Quotes Bill-to"));
+                              // Stop PA032668
+                            END;
+                             }
+
+    { 1109400006;1;Field  ;
+                Description=PA032668;
+                SourceExpr=Reminders;
+                OnDrillDown=BEGIN
+                              // Start PA032668
+                              SalesHistoryDrilldown(FIELDNO(Reminders));
+                              // Stop PA032668
+                            END;
+                             }
+
+    { 1109400008;1;Field  ;
+                Description=PA032668;
+                SourceExpr="Issued Reminders";
+                OnDrillDown=BEGIN
+                              // Start PA032668
+                              SalesHistoryDrilldown(FIELDNO("Issued Reminders"));
+                              // Stop PA032668
+                            END;
+                             }
+
+    { 1109400010;1;Field  ;
+                Description=PA032668;
+                SourceExpr="Finance Charge Memos";
+                Visible=FALSE;
+                OnDrillDown=BEGIN
+                              // Start PA032668
+                              SalesHistoryDrilldown(FIELDNO("Finance Charge Memos"));
+                              // Stop PA032668
+                            END;
+                             }
+
+    { 1109400012;1;Field  ;
+                Description=PA032668;
+                SourceExpr="Issued Finance Charge Memos";
+                Visible=FALSE;
+                OnDrillDown=BEGIN
+                              // Start PA032668
+                              SalesHistoryDrilldown(FIELDNO("Issued Finance Charge Memos"));
+                              // Stop PA032668
+                            END;
+                             }
+
+  }
+  CODE
+  {
+
+    PROCEDURE ShowDetails@1102601000();
+    BEGIN
+      PAGE.RUN(PAGE::"Customer Card",Rec);
+    END;
+
+    BEGIN
+    {
+      // @ Area PartsSales
+      // @ Area VehicleSales
+      // @ Area ServiceManagement
+      // @ Area General
+      PA-Number  Date
+      ------------------------------------------------
+      PA031550   25.01.10 SS New Object from NAVW16.00.01
+      PA032473   08.06.11 SS #3553587
+                             - OnDrillDown Trigger for all the fields modified to open the correct Pages in RTC.
+      PA032668   01.09.11 GL New fields "Archived Parts Quotes", "Archived Vehicle Quotes", "Archived Service Quotes", "Reminders",
+                             "Issued Reminders", "Finance Charge Memos" and "Issued Finance Charge Memos"
+      PA033067   12.04.12 DR DE Captions implemented
+      PA033019   07.08.12 DR 8319026: Change Names and ENU Caption for fields changed where "Posted" appeared as second word after
+                             "Vehicle", "Part" or "Service". The correct witing is "Posted Vehicle.." Posted Part.." or "Posted Service.."
+      PA033259   18.09.12 DR Variable names changed according to incadea styleguide
+      PA042025   21.10.16 MS Display new fields "Parts Quotes Bill-to", "Vehicle Quotes Bill-to" and "Service Quotes Bill-to" not visible by default
+      PA042027   29.11.16 DR Merge of PA042025
+      AP-2362    09.04.26 LU Created and Added the FactBox "Sales Hist. Sell-to FactBox2", "Sales Hist. Sell-to FactBox3", "Sales Hist. Bill-to FactBox2" and "Sales Hist. Bill-to FactBox3"
+                             - Divided the fields from "Sales Hist. Sell-to FactBox" and "Sales Hist. Bill-to FactBox" into "Sales Hist. Sell-to FactBox2", "Sales Hist. Sell-to FactBox3", "Sales Hist. Bill-to FactBox2" and "Sales Hist. Bill-to FactBox3"
+      CU26Q1     10.06.26 RL CU upgrade.
+    }
+    END.
+  }
+}
+

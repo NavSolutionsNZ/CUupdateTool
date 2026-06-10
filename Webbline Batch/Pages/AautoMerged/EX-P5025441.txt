@@ -1,0 +1,2272 @@
+OBJECT Page 5025441 Vehicle Sales Order Subform
+{
+  OBJECT-PROPERTIES
+  {
+    Date=09/20/23;
+    Time=[ 9:33:44 AM];
+    Modified=Yes;
+    Version List=N.7.2.1,WBL;
+  }
+  PROPERTIES
+  {
+    CaptionML=ENU=Lines;
+    MultipleNewLines=Yes;
+    SourceTable=Table37;
+    DelayedInsert=Yes;
+    SourceTableView=WHERE(Document Type=FILTER(Order),
+                          Order Type=FILTER('Vehicle Sales & Purchases'));
+    PageType=ListPart;
+    AutoSplitKey=Yes;
+    OnInit=BEGIN
+             AmountIncludingVATEditableG := TRUE;
+             AmountEditableG := TRUE;
+             UnitPriceEditableG := TRUE;
+             "EU Tire Data CodeVisible" := TRUE;
+             "EU Tire Data CodeEditable" := TRUE;
+             // Start EU.0104306
+             AmountVisibleG := NOT GeneralLedgerSetupG.EnhancedVATCalculationLogicActive();
+             BothAmountFieldsVisibleG := TRUE;
+             // Stop EU.0104306
+           END;
+
+    OnOpenPage=BEGIN
+                 // Start PA032440
+                 UserSetupG.GET(USERID);
+                 // Stop PA032440
+                 // Start PA033765
+                 SalesReceivablesSetupG.GET();
+                 // Start PA034527.19632
+                 EUTireDataCodeVisibleG := SalesReceivablesSetupG."EU Tire Label Regulation";
+                 // Stop PA034527.19632
+                 // Start PA035597
+                 // Stop PA035597
+                 // Stop PA033765
+                 OnActivateForm;
+                 // Start EU.0038938
+                 VehicleSetupG.GET;
+                 // Start EU.0112354
+                 ParkingLotBayVisibleG := VehicleSetupG."Mand. Veh. Pos. for Sales" <> VehicleSetupG."Mand. Veh. Pos. for Sales"::" ";
+                 // Stop EU.0112354
+                 // Stop EU.0038938
+               END;
+
+    OnAfterGetRecord=VAR
+                       RecRefL@1119427000 : RecordRef;
+                       VehicleL@1109400000 : Record 5025400;
+                     BEGIN
+                       // Start EU.0104306
+                       IF "Document No." <> SalesHdrG."No." THEN
+                         IF SalesHdrG.GET("Document Type","Document No.") THEN
+                           AmountVisibleG := NOT GeneralLedgerSetupG.EnhancedVATCalculationLogicInDocActive(SalesHdrG."VAT Calculation Logic");
+                       // Stop EU.0104306
+                       // Start PA032178
+                       // @ QuickWins - Colors on Document Line
+                       LineWarningG := FALSE;
+                       // Start PA032178
+                       IF ("Item Type" = "Item Type":: Item) AND ("No." <> '') THEN BEGIN
+                       // Stop PA032178
+                         RecRefL.GETTABLE(Rec);
+                         LineWarningG := RTCMgmtG.LineWarning(RecRefL);
+                       END;
+                       // Stop PA032178
+                       // Start PA032440
+                       HideUnitCostG := (UserSetupG."Hide Item Cost" AND ("Item Type" = "Item Type"::Item)) OR
+                         (UserSetupG."Hide Vehicle Cost" AND
+                         ("Item Type" IN ["Item Type"::Vehicle,"Item Type"::"Own Option","Item Type"::"Veh. Transfer"]));
+                       // Stop PA032440
+                       // Start PA032820
+                       CheckPricingControl();
+                       // Stop PA032820
+                       // Start PA036002.26208
+                       ShowShortcutDimCode(ShortcutDimCodeG);
+                       // Stop PA036002.26208
+                       OnAfterGetCurrRecord;
+                       // Start PA038140
+                       EnableCreatePurchaseOrderFromSales;
+                       // Stop PA038140
+                       // Start PA042665
+                       EnableEmissionFieldsG := (VIN = '') AND ("Item Type" = "Item Type"::Vehicle);
+                       // Stop PA042665
+                       // Start PA041687
+                       IsVehicleDetailsVisibleG := "Item Type" = "Item Type"::Vehicle;
+                       // Start EU.0141665.143994
+                       StyleExprPropertyG := 'Standard';
+                       // Stop EU.0141665.143994
+                       IF LineWarningG THEN
+                         StyleExprPropertyG := 'Attention';
+                       // Start PA041187.91164
+                       IF NOT VehicleL.GET(VIN) AND NOT LineWarningG AND ("Item Type" = "Item Type"::Vehicle) AND (VIN <> '') THEN
+                         StyleExprPropertyG := 'AttentionAccent';
+                       // Stop PA041187.91164
+                       // Stop PA041687
+                       // Start EU.0141665.143994
+                       IF "Item Type" = "Item Type"::" " THEN
+                         StyleExprPropertyG := 'Standard';
+                       // Stop EU.0141665.143994
+                       // Start EU.0055937
+                       IsVehicleLineG := ("Item Type" = "Item Type"::Vehicle);
+                       // Stop EU.0055937
+                     END;
+
+    OnNewRecord=BEGIN
+                  // Start PA032178
+                  // @ QuickWins - Colors on Document Line
+                  LineWarningG := FALSE;
+                  // Stop PA032178
+                  // Start PA041187.91164
+                  // Start EU.0141665.143994
+                  StyleExprPropertyG := 'Standard';
+                  // Stop EU.0141665.143994
+                  // Stop PA041187.91164
+                  "Item Type" := xRec."Item Type";
+                  Type := xRec.Type;
+                  IF xRec."Document No." = '' THEN BEGIN
+                    "Item Type" := "Item Type"::Vehicle;
+                    Type := Type::Item;
+                  END;
+
+                  IF SalesHdrG.GET("Document Type","Document No.") THEN
+                    "Shortcut Dimension 2 Code" := SalesHdrG."Shortcut Dimension 2 Code";
+
+                  Quantity := 1;
+                  "Order Type" := "Order Type"::"Vehicle Sales & Purchases";
+                  "Allow Invoice Disc." := FALSE;
+                  IF (Type = Type::" ") AND ("Item Type" = "Item Type"::" ") THEN
+                    Quantity := 0;
+                  // Start PA032820
+                  CheckPricingControl();
+                  // Stop PA032820
+                  // Start PA036002.26208
+                  CLEAR(ShortcutDimCodeG);
+                  // Stop PA036002.26208
+                  OnAfterGetCurrRecord;
+                END;
+
+    OnInsertRecord=BEGIN
+                     // Start PA032440
+                     HideUnitCostG := (UserSetupG."Hide Item Cost" AND ("Item Type" = "Item Type"::Item)) OR
+                       (UserSetupG."Hide Vehicle Cost" AND
+                       ("Item Type" IN ["Item Type"::Vehicle,"Item Type"::"Own Option","Item Type"::"Veh. Transfer"]));
+                     // Stop PA032440
+                     // Start PA032820
+                     CheckPricingControl();
+                     // Stop PA032820
+                   END;
+
+    OnModifyRecord=BEGIN
+                     // @ QuickWins - Colors on Document Line
+                     // Start PA035597
+                     CurrPage.UPDATE(FALSE);
+                     // Stop PA035597
+                   END;
+
+    OnDeleteRecord=VAR
+                     VehicleOrderOptionInvL@1109400000 : Record 5025464;
+                   BEGIN
+                     VehicleOrderOptionInvL.RESET;
+                     VehicleOrderOptionInvL.SETRANGE("Document Type", "Document Type");
+                     VehicleOrderOptionInvL.SETRANGE("Document No.", "Document No.");
+                     VehicleOrderOptionInvL.SETRANGE("Document Line No.", "Line No.");
+                     VehicleOrderOptionInvL.SETRANGE("Separate Invoice for Line", TRUE);
+                     VehicleOrderOptionInvL.SETRANGE("Avail. in Separate Posted Inv.",TRUE);
+                     IF VehicleOrderOptionInvL.FINDFIRST THEN BEGIN
+                       VehicleOrderOptionInvL.CALCFIELDS("Posted Own Invoice No.");
+                       ERROR(C_INC011,"Line No.",VIN,VehicleOrderOptionInvL."Posted Own Invoice No.")
+                     END ELSE BEGIN
+                       VehicleOrderOptionInvL.SETRANGE("Avail. in Separate Posted Inv.");
+                       IF VehicleOrderOptionInvL.FINDFIRST THEN BEGIN
+                         VehicleOrderOptionInvL.CALCFIELDS("Own Invoice No.");
+                         IF VehicleOrderOptionInvL."Own Invoice No." <> '' THEN
+                           ERROR(C_INC010, "Line No.", VIN, VehicleOrderOptionInvL."Own Invoice No.")
+                         ELSE
+                           ERROR(C_INC009, "Line No.", VIN);
+                       END;
+                     END;
+                     // Start PA042761
+                     UpdateSalesTotalFactbox();
+                     // Stop PA042761
+                   END;
+
+    ActionList=ACTIONS
+    {
+      { 1900000004;0 ;ActionContainer;
+                      ActionContainerType=ActionItems }
+      { 1906587504;1 ;ActionGroup;
+                      CaptionML=ENU=F&unctions }
+      { 1901991404;2 ;Action    ;
+                      CaptionML=ENU=Calculate &Invoice Discount;
+                      Visible=FALSE;
+                      Image=CalculateInvoiceDiscount;
+                      OnAction=BEGIN
+                                 ApproveCalcInvDisc;
+                               END;
+                                }
+      { 1907213204;2 ;Action    ;
+                      CaptionML=ENU=Copy &Vehicle;
+                      Image=CollapseDepositLines;
+                      OnAction=BEGIN
+                                 // Start PA042000
+                                 CopyVehicle;
+                                 // Stop PA042000
+                               END;
+                                }
+      { 1901741804;2 ;Action    ;
+                      CaptionML=ENU=E&xplode BOM;
+                      Image=ExplodeBOM;
+                      OnAction=BEGIN
+                                 ExplodeBOM;
+                               END;
+                                }
+      { 1903099004;2 ;Action    ;
+                      CaptionML=ENU=Insert &Ext. Texts;
+                      Image=Note;
+                      OnAction=BEGIN
+                                 InsertExtendedText(TRUE);
+                               END;
+                                }
+      { 1903866504;2 ;ActionGroup;
+                      CaptionML=ENU=Drop &Shipment }
+      { 1901312904;3 ;Action    ;
+                      CaptionML=ENU=Purchase &Order;
+                      Image=Document;
+                      OnAction=BEGIN
+                                 OpenPurchOrderForm;
+                               END;
+                                }
+      { 1109400019;2 ;Action    ;
+                      CaptionML=ENU=&Create Request;
+                      Image=NewDocument;
+                      OnAction=VAR
+                                 CreateServiceRequestL@1109400000 : Report 5208504;
+                               BEGIN
+                                 // Start PA038140
+                                 IF "Item Type" <> "Item Type"::Vehicle THEN
+                                   ERROR(C_INC_VehicleOnly);
+                                 IF "No." = '' THEN
+                                   ERROR(C_INC_ModelRequiered);
+                                 CreateServiceRequestL.GetRequestInfoFromSales(Rec);
+                                 CreateServiceRequestL.RUN;
+                                 // Stop PA038140
+                               END;
+                                }
+      { 1905427504;2 ;Action    ;
+                      Ellipsis=Yes;
+                      CaptionML=ENU=&Reserve;
+                      Description=EU.0090125;
+                      Visible=FALSE;
+                      Image=AutoReserve;
+                      OnAction=BEGIN
+                                 // Start PA042000
+                                 FIND;
+                                 ShowReservation;
+                                 // Stop PA042000
+                               END;
+                                }
+      { 1903926304;2 ;Action    ;
+                      CaptionML=ENU=Create Trade-In;
+                      Image=Copy;
+                      OnAction=VAR
+                                 SalesTradeInL@1170000000 : Record 5025442;
+                                 SalesHdrL@1170000001 : Record 36;
+                               BEGIN
+                                 // Start PA044456
+                                 SalesHdrL.GET("Document Type", "Document No.");
+                                 SalesTradeInL.ApplyStatusFunction(SalesHdrL);
+                                 //Stop PA044456
+                                 // Start PA042000
+                                 StartTradeIn;
+                                 // Stop PA042000
+                               END;
+                                }
+      { 1905849804;1 ;ActionGroup;
+                      CaptionML=ENU=&Print }
+      { 1906106004;2 ;Action    ;
+                      Ellipsis=Yes;
+                      CaptionML=ENU=&Sales Contract;
+                      Image=Confirm;
+                      OnAction=BEGIN
+                                 // Start PA042000
+                                 PrintSalesContract;
+                                 // Stop PA042000
+                               END;
+                                }
+      { 1907935204;1 ;ActionGroup;
+                      CaptionML=ENU=&Line }
+      { 1900580804;2 ;ActionGroup;
+                      CaptionML=ENU=&Item Availability by }
+      { 1904522204;3 ;Action    ;
+                      CaptionML=ENU=Period;
+                      Image=CloseYear;
+                      OnAction=BEGIN
+                                 // Start PA042000
+                                 ItemAvailability(0);
+                                 // Stop PA042000
+                               END;
+                                }
+      { 1902056104;3 ;Action    ;
+                      CaptionML=ENU=Variant;
+                      Visible=FALSE;
+                      Image=NewSparkle;
+                      OnAction=BEGIN
+                                 // Start PA042000
+                                 ItemAvailability(1);
+                                 // Stop PA042000
+                               END;
+                                }
+      { 1900639404;3 ;Action    ;
+                      CaptionML=ENU=&Location;
+                      Image=NewBranch;
+                      OnAction=BEGIN
+                                 // Start PA042000
+                                 ItemAvailability(2);
+                                 // Stop PA042000
+                               END;
+                                }
+      { 1906391604;3 ;Action    ;
+                      CaptionML=ENU=Bin;
+                      Image=Bins;
+                      OnAction=BEGIN
+                                 // Start PA042000
+                                 ItemAvailability(3);
+                                 // Stop PA042000
+                               END;
+                                }
+      { 5593700 ;2   ;Action    ;
+                      Name=Select Own Options;
+                      CaptionML=ENU=Select Own Options;
+                      Description=EU.0055937;
+                      Enabled=IsVehicleLineG;
+                      Image=ProdBOMMatrixPerVersion;
+                      OnAction=VAR
+                                 ItemL@1101103000 : Record 27;
+                                 ModelL@1101103001 : Record 27;
+                                 SalesLineL@1101103002 : Record 37;
+                                 OwnOptionsListL@1101103003 : Page 5025495;
+                               BEGIN
+                                 // Start EU.0055937
+                                 IF "Item Type" <> "Item Type"::Vehicle THEN
+                                   EXIT;
+                                 ItemL.RESET;
+                                 IF ModelL.GET("No.") THEN BEGIN
+                                   ItemL.FILTERGROUP(2);
+                                   ItemL.SETCURRENTKEY("Item Type","Make Code","No.");
+                                   ItemL.SETRANGE("Item Type", ModelL."Item Type"::"Own Option");
+                                   ItemL.SETRANGE("Make Code", ModelL."Make Code");
+                                   IF ModelL."Vehicle Category Code" <> '' THEN
+                                     ItemL.SETFILTER("Vehicle Category Code", '%1|%2', ModelL."Vehicle Category Code", '');
+                                   ItemL.SETFILTER("Model Code", '%1|%2', OwnOptionsListL.GetModelFilter(Rec), '');
+                                   ItemL.FILTERGROUP(0);
+                                   OwnOptionsListL.SETTABLEVIEW(ItemL);
+                                 END;
+                                 OwnOptionsListL.LOOKUPMODE(TRUE);
+
+                                 IF OwnOptionsListL.RUNMODAL = ACTION::LookupOK THEN BEGIN
+                                   OwnOptionsListL.SETSELECTIONFILTER(ItemL);
+                                   IF ItemL.FINDSET THEN BEGIN
+                                     REPEAT
+                                       SalesLineL.INIT;
+                                       SalesLineL."Document No." := "Document No.";
+                                       SalesLineL."Document Type" := "Document Type";
+                                       SalesLineL."Line No." := SalesLineL.GetNextLineNo();
+                                       SalesLineL.Type := Type::Item;
+                                       SalesLineL.SetValidateAvailableQty(TRUE);
+                                       SalesLineL.VALIDATE("Item Type", SalesLineL."Item Type"::"Own Option");
+                                       SalesLineL.VALIDATE("No.", ItemL."No.");
+                                       SalesLineL.VALIDATE(Quantity, 1); // Set "Qty. to Ship" and "Qty. to Invoice"
+                                       SalesLineL."Vehicle Line No." := "Line No.";
+                                       SalesLineL.VALIDATE("Unit Price", ItemL."Unit Price");
+                                       SalesLineL.VALIDATE(Amount);
+                                       SalesLineL.INSERT(TRUE);
+                                     UNTIL ItemL.NEXT = 0;
+                                     UpdateSalesTotalFactbox();
+                                     CurrPage.UPDATE(FALSE);
+                                   END;
+                                 END;
+                                 // Stop EU.0055937
+                               END;
+                                }
+      { 1109400003;2 ;Action    ;
+                      ShortCutKey=Shift+Ctrl+D;
+                      CaptionML=ENU=Dimensions;
+                      Description=PA035597;
+                      Image=Dimensions;
+                      OnAction=BEGIN
+                                 // Start PA035597
+                                 ShowDimensions;
+                                 // Stop PA035597
+                               END;
+                                }
+      { 1904177204;2 ;Action    ;
+                      CaptionML=ENU=&Availability - All Companies;
+                      Image=SwitchCompanies;
+                      OnAction=BEGIN
+                                 AvailabilityAllCompanies();
+                               END;
+                                }
+      { 1900186704;2 ;Action    ;
+                      CaptionML=ENU=&Reservation Entries;
+                      Image=ReservationLedger;
+                      OnAction=BEGIN
+                                 // Start PA042000
+                                 ShowReservationEntries(TRUE);
+                                 // Stop PA042000
+                               END;
+                                }
+      { 1902538504;2 ;Action    ;
+                      CaptionML=ENU=Do&cument Line Tracking;
+                      Image=Trace;
+                      OnAction=BEGIN
+                                 // Start ----------------------------------- VK-G
+                                 ShowDocumentLineTracking;
+                                 // Stop  ----------------------------------- VK-G
+                               END;
+                                }
+      { 1109400016;2 ;Action    ;
+                      CaptionML=ENU=Create Purc&hase Order;
+                      Description=PA038140,PA038140.42896;
+                      Enabled=EnablePurchFromSalesG;
+                      Image=MakeOrder;
+                      OnAction=VAR
+                                 CustomerL@1109400002 : Record 18;
+                                 CreatePurchfromSalesL@1109400000 : Report 5028661;
+                                 YourReferenceL@1109400001 : Text[250];
+                               BEGIN
+                                 // Start PA038140
+                                 IF "No." = '' THEN
+                                   ERROR(C_INC_ModelRequiered);
+                                 PurchaseOrderExists;
+                                 CreatePurchfromSalesL.GetRequestInfoFromSales(Rec);
+                                 CreatePurchfromSalesL.RUN;
+                                 // Stop PA038140
+                               END;
+                                }
+      { 1109400017;2 ;Action    ;
+                      CaptionML=ENU=Ope&n Purchase Order;
+                      Description=PA038140.42896;
+                      Enabled=EnablePurchFromSalesG;
+                      Image=Document;
+                      OnAction=BEGIN
+                                 OpenPurchaseOrder;
+                               END;
+                                }
+      { 1903532204;2 ;Action    ;
+                      CaptionML=ENU=&Break Purchase Relation;
+                      Image=Delete;
+                      OnAction=BEGIN
+                                 // Start PA042000
+                                 DissolvePurchRelation;
+                                 // Stop PA042000
+                               END;
+                                }
+      { 1904320404;2 ;Action    ;
+                      CaptionML=ENU=&Trade-Ins;
+                      Image=ApplyEntries;
+                      OnAction=BEGIN
+                                 ShowSalTradeIns;
+                                 // Start EU.0037204
+                                 UpdateSalesTotalFactbox;
+                                 // Stop EU.0037204
+                               END;
+                                }
+      { 1902085804;2 ;Action    ;
+                      CaptionML=ENU=&Options;
+                      Image=ProdBOMMatrixPerVersion;
+                      OnAction=BEGIN
+                                 // Start PA042000
+                                 VehOptionShow;
+                                 // Stop PA042000
+                               END;
+                                }
+      { 1904887004;2 ;Action    ;
+                      CaptionML=ENU=Protected Veh. Codes;
+                      Image=CarryOutActionMessage;
+                      OnAction=BEGIN
+                                 // Start PA042000
+                                 VehProtectedCodeShow;
+                                 // Stop PA042000
+                               END;
+                                }
+      { 1901372704;2 ;Action    ;
+                      CaptionML=ENU=&Price Calculation;
+                      Image=Calculate;
+                      OnAction=BEGIN
+                                 ShowPriceCalculation;
+                               END;
+                                }
+      { 1907011804;2 ;Action    ;
+                      CaptionML=ENU=Alternative Parts;
+                      Visible=FALSE;
+                      Image=Components;
+                      OnAction=BEGIN
+                                 // Start PA042000
+                                 ShowAlternativeParts;
+                                 // Stop PA042000
+                               END;
+                                }
+      { 1904676304;2 ;Action    ;
+                      CaptionML=ENU=Vehicle Profiles;
+                      Image=CheckRulesSyntax;
+                      OnAction=BEGIN
+                                 // Start PA036841
+                                 VehicleProfile();
+                                 // Stop PA036841
+                               END;
+                                }
+      { 1901711904;2 ;Action    ;
+                      CaptionML=ENU=Vehicle &Insurances;
+                      Image=InsuranceLedger;
+                      OnAction=BEGIN
+                                 // Start PA042000
+                                 DisplayInsurances;
+                                 // Stop PA042000
+                               END;
+                                }
+      { 1900615504;2 ;Action    ;
+                      CaptionML=ENU=Vehicle C&ustomers;
+                      Image=TeamSales;
+                      OnAction=BEGIN
+                                 // Start PA042000
+                                 DisplayVehicleCustomer();
+                                 // Stop PA042000
+                               END;
+                                }
+      { 1900295304;2 ;Action    ;
+                      CaptionML=ENU=Customer &Financing;
+                      Image=ChangePaymentTolerance;
+                      OnAction=BEGIN
+                                 // Start PA042000
+                                 DisplayCustomerFinancing;
+                                 // Stop PA042000
+                               END;
+                                }
+      { 1906333304;2 ;Action    ;
+                      CaptionML=ENU=V&ehicle Sets/Accessories;
+                      Image=Links;
+                      OnAction=BEGIN
+                                 // Start PA042000
+                                 ShowVehicleSets;
+                                 // Stop PA042000
+                               END;
+                                }
+      { 1900265504;2 ;Action    ;
+                      CaptionML=ENU=Sa&les Incentives Overview;
+                      Image=CheckRulesSyntax;
+                      OnAction=BEGIN
+                                 // Start PA033985
+                                 // Start PA042000
+                                 ShowSalesIncentOverview();
+                                 // Stop PA042000
+                                 // Stop PA033985
+                               END;
+                                }
+      { 1904410004;2 ;Action    ;
+                      CaptionML=ENU=Item &Charge Assignment;
+                      Image=Allocations;
+                      OnAction=BEGIN
+                                 // Start PA042000
+                                 ShowItemChargeAssgnt;
+                                 // Stop PA042000
+                               END;
+                                }
+      { 1900121404;2 ;Action    ;
+                      CaptionML=ENU=Special &Functions;
+                      Description=PA033895.I000854;
+                      Image=ImportExport;
+                      OnAction=BEGIN
+                                 // Start PA033895.I000854
+                                 // Start PA042000
+                                 SpecialFunctionCall;
+                                 // Stop PA042000
+                                 // Stop PA033895.I000854
+                               END;
+                                }
+      { 1109400025;2 ;Action    ;
+                      CaptionML=ENU=Vehicle Details;
+                      Description=PA041687;
+                      Visible=IsVehicleDetailsVisibleG;
+                      Image=EditLines;
+                      OnAction=VAR
+                                 VehSearchResultL@1109400000 : Record 5205930;
+                                 TempVehicleSearchParamL@1109400001 : TEMPORARY Record 5205934;
+                                 VehicleSearchL@1109400002 : Codeunit 5205934;
+                               BEGIN
+                                 // Start PA041687
+                                 TempVehicleSearchParamL."Service Instance ID" := SERVICEINSTANCEID;
+                                 TempVehicleSearchParamL."Session ID" := SESSIONID;
+                                 TempVehicleSearchParamL.VIN := VIN;
+                                 TempVehicleSearchParamL."Vehicle Status" := TempVehicleSearchParamL."Vehicle Status"::All;
+                                 TempVehicleSearchParamL."Availability Status" := TempVehicleSearchParamL."Vehicle Status"::All;
+                                 VehicleSearchL.RunSearch(TempVehicleSearchParamL);
+                                 VehSearchResultL.SETRANGE(VIN, VIN);
+                                 // Start PA044486
+                                 IF NOT VehSearchResultL.ISEMPTY THEN
+                                 // Stop PA044486
+                                   PAGE.RUNMODAL(PAGE::"Vehicle Details", VehSearchResultL);
+                                 // Stop PA041687
+                               END;
+                                }
+      { 1109400024;2 ;Action    ;
+                      CaptionML=ENU=Technical Data;
+                      Description=EU.0020651;
+                      Image=ViewWorksheet;
+                      OnAction=VAR
+                                 TechDataValueL@1109400000 : Record 5205856;
+                               BEGIN
+                                 // Start EU.0020651
+                                 TechDataValueL.OpenTechDataPage(Rec);
+                                 // Stop EU.0020651
+                               END;
+                                }
+    }
+  }
+  CONTROLS
+  {
+    { 1900000001;0;Container;
+                ContainerType=ContentArea }
+
+    { 1   ;1   ;Group     ;
+                GroupType=Repeater;
+                FreezeColumnID=VIN }
+
+    { 74  ;2   ;Field     ;
+                CaptionML=ENU=Item Type;
+                Description=PA036549.33665,PA037937.47421,PA040704;
+                SourceExpr="Item Type";
+                StyleExpr=StyleExprPropertyG;
+                OnValidate=BEGIN
+                             // Start PA038140
+                             EnableCreatePurchaseOrderFromSales;
+                             // Stop PA038140
+                           END;
+                            }
+
+    { 4   ;2   ;Field     ;
+                Description=PA033984,PA036549.33665;
+                SourceExpr="No.";
+                StyleExpr=StyleExprPropertyG;
+                OnValidate=BEGIN
+                             // Start PA037942
+                             CheckForLineDuplicates;
+                             // Stop PA037942
+                             // Start PA034531.I001184
+                             IF "No." = OnLookupItemG."No." THEN
+                               "Shortcut Dimension 2 Code" := OnLookupItemG."Make Code";
+                             CLEAR(OnLookupItemG);
+                             // Stop PA034531.I001184
+                             // Start PA036002.26208
+                             ShowShortcutDimCode(ShortcutDimCodeG);
+                             // Stop PA036002.26208
+                             NoOnAfterValidate;
+                             // Start EU.0142312
+                             // Stop EU.0142312
+                             // Start EU.0143135.143277
+                             CreateAutoOpportunity();
+                             // Stop EU.0143135.143277
+                             // Start PA042761
+                             UpdateSalesTotalFactbox();
+                             // Stop PA042761
+                           END;
+
+                OnLookup=BEGIN
+                           // Start PA034531.I001184
+                           EXIT(NoOnLookup(Text,OnLookupItemG));
+                           // Stop PA034531.I001184
+                         END;
+
+                OnAssistEdit=BEGIN
+                               // Start PA042000
+                               IF NOT NoOnAssistEdit() THEN
+                                 EXIT;
+                               // Stop PA042000
+                               // Start PA038216.44441
+                               IF ("No." > '') AND ("No." <> xRec."No.") THEN
+                               // Stop PA038216.44441
+                                 InsertLine();
+                             END;
+                              }
+
+    { 1109400014;2;Field  ;
+                Description=PA032795;
+                SourceExpr="Line No.";
+                Visible=FALSE }
+
+    { 76  ;2   ;Field     ;
+                Description=PA033984;
+                SourceExpr=VIN;
+                StyleExpr=StyleExprPropertyG;
+                OnValidate=BEGIN
+                             IsVINChangedG := VIN <> xRec.VIN;
+                             VINOnAfterValidate;
+                             // Start EU.0142312
+                             UpdateSalesTotalFactbox();
+                             // Stop EU.0142312
+                           END;
+
+                OnLookup=BEGIN
+                           EXIT(VINLookup(Text));
+                         END;
+                          }
+
+    { 4400;2   ;Field     ;
+                Description=INC,EU.0000044;
+                SourceExpr="License No.";
+                OnValidate=BEGIN
+                             // Start EU.0001175.8313
+                             IsVINChangedG := VIN <> xRec.VIN;
+                             VINOnAfterValidate;
+                             // Stop EU.0001175.8313
+                           END;
+
+                OnLookup=BEGIN
+                           // Start EU.0000044
+                           EXIT(LicenseNoLookup(Text));
+                           // Stop EU.0000044
+                         END;
+                          }
+
+    { 86  ;2   ;Field     ;
+                SourceExpr="Vehicle Line No.";
+                StyleExpr=StyleExprPropertyG;
+                QuickEntry=FALSE }
+
+    { 1109400012;2;Field  ;
+                SourceExpr="Vehicle Sets/Accessories";
+                Visible=FALSE;
+                StyleExpr=StyleExprPropertyG }
+
+    { 1119432000;2;Field  ;
+                SourceExpr="IC Partner Ref. Type";
+                Visible=FALSE;
+                StyleExpr=StyleExprPropertyG }
+
+    { 1119432002;2;Field  ;
+                SourceExpr="IC Partner Reference";
+                Visible=FALSE }
+
+    { 1119432004;2;Field  ;
+                SourceExpr="IC Partner Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 46  ;2   ;Field     ;
+                SourceExpr="Book No.";
+                AutoFormatExpr='JMD';
+                Visible=FALSE;
+                StyleExpr=StyleExprPropertyG }
+
+    { 6   ;2   ;Field     ;
+                SourceExpr=Description;
+                StyleExpr=StyleExprPropertyG;
+                QuickEntry=FALSE }
+
+    { 66  ;2   ;Field     ;
+                SourceExpr="Description 2";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG }
+
+    { 1109400015;2;Field  ;
+                BlankZero=Yes;
+                SourceExpr=Quantity;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG;
+                OnValidate=BEGIN
+                             QuantityOnAfterValidate;
+                           END;
+
+                QuickEntry=FALSE }
+
+    { 12  ;2   ;Field     ;
+                BlankZero=Yes;
+                Description=PA042117, EU.0104306;
+                SourceExpr="Unit Price";
+                Editable=UnitPriceEditableG AND (Quantity <> "Quantity Invoiced");
+                Style=Attention;
+                StyleExpr=LineWarningG;
+                OnValidate=BEGIN
+                             // Start PA042761
+                             UpdateSalesTotalFactbox();
+                             // Stop PA042761
+                           END;
+                            }
+
+    { 16  ;2   ;Field     ;
+                BlankZero=Yes;
+                Description=EU.0104306;
+                SourceExpr="Line Discount %";
+                Editable=(Quantity <> "Quantity Invoiced");
+                Style=Attention;
+                StyleExpr=LineWarningG;
+                OnValidate=BEGIN
+                             // Start PA042761
+                             UpdateSalesTotalFactbox();
+                             // Stop PA042761
+                           END;
+
+                QuickEntry=FALSE }
+
+    { 14  ;2   ;Field     ;
+                BlankZero=Yes;
+                Description=EU.0104306;
+                SourceExpr=Amount;
+                Visible=BothAmountFieldsVisibleG OR AmountVisibleG;
+                Editable=AmountEditableG AND (Quantity <> "Quantity Invoiced");
+                Style=Attention;
+                StyleExpr=LineWarningG;
+                OnValidate=BEGIN
+                             // Start PA042761
+                             UpdateSalesTotalFactbox();
+                             // Stop PA042761
+                           END;
+
+                QuickEntry=FALSE }
+
+    { 40  ;2   ;Field     ;
+                BlankZero=Yes;
+                Description=EU.0104306;
+                SourceExpr="Amount Including VAT";
+                Visible=BothAmountFieldsVisibleG OR NOT AmountVisibleG;
+                Editable=AmountIncludingVATEditableG AND (Quantity <> "Quantity Invoiced");
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG;
+                OnValidate=BEGIN
+                             // Start PA044205
+                             UpdateSalesTotalFactbox();
+                             // Stop PA044205
+                           END;
+                            }
+
+    { 10430602;2;Field    ;
+                Description=EU.0104306;
+                SourceExpr="VAT %";
+                Visible=FALSE;
+                Editable=FALSE }
+
+    { 1101157045;2;Field  ;
+                SourceExpr="No. of Sales Incentives";
+                Visible=FALSE;
+                StyleExpr=StyleExprPropertyG;
+                OnDrillDown=BEGIN
+                              // Start PA033985
+                              ShowSalesIncentOverview();
+                              // Stop PA033985
+                            END;
+                             }
+
+    { 1109400010;2;Field  ;
+                SourceExpr=Promotion;
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG }
+
+    { 1109400000;2;Field  ;
+                SourceExpr="Number of Alternative Parts";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG }
+
+    { 80  ;2   ;Field     ;
+                SourceExpr="VAT Calculation Type";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG }
+
+    { 70  ;2   ;Field     ;
+                SourceExpr="Vehicle Unit Price Date";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG }
+
+    { 56  ;2   ;Field     ;
+                SourceExpr="Disable for Requisition";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG }
+
+    { 68  ;2   ;Field     ;
+                SourceExpr="Posting Group";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG }
+
+    { 54  ;2   ;Field     ;
+                SourceExpr="Gen. Prod. Posting Group";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG;
+                OnValidate=BEGIN
+                             GenProdPostingGroupOnAfterVali;
+                           END;
+                            }
+
+    { 1101353001;2;Field  ;
+                SourceExpr="Gen. Bus. Posting Group" }
+
+    { 62  ;2   ;Field     ;
+                SourceExpr="Expected Shipping Week";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG }
+
+    { 90  ;2   ;Field     ;
+                SourceExpr="Shipment Date";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG }
+
+    { 26  ;2   ;Field     ;
+                SourceExpr="Registration Date";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG }
+
+    { 28  ;2   ;Field     ;
+                Description=PA036549.33665;
+                SourceExpr=Mileage;
+                Visible=FALSE;
+                Editable=TRUE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG }
+
+    { 1117700000;2;Field  ;
+                SourceExpr="Running Time";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG }
+
+    { 18  ;2   ;Field     ;
+                BlankZero=Yes;
+                SourceExpr="Qty. to Ship";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG;
+                OnValidate=BEGIN
+                             QtytoShipOnAfterValidate;
+                           END;
+                            }
+
+    { 20  ;2   ;Field     ;
+                BlankZero=Yes;
+                SourceExpr="Quantity Shipped";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG }
+
+    { 22  ;2   ;Field     ;
+                BlankZero=Yes;
+                SourceExpr="Qty. to Invoice";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG }
+
+    { 24  ;2   ;Field     ;
+                BlankZero=Yes;
+                SourceExpr="Quantity Invoiced";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG }
+
+    { 88  ;2   ;Field     ;
+                SourceExpr="Allow Item Charge Assignment";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG }
+
+    { 92  ;2   ;Field     ;
+                BlankZero=Yes;
+                SourceExpr="Qty. to Assign";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=LineWarningG;
+                OnDrillDown=BEGIN
+                              CurrPage.SAVERECORD;
+                              ShowItemChargeAssgnt;
+                              CurrPage.UPDATE(FALSE);
+                            END;
+                             }
+
+    { 94  ;2   ;Field     ;
+                BlankZero=Yes;
+                SourceExpr="Qty. Assigned";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG;
+                OnDrillDown=BEGIN
+                              CurrPage.SAVERECORD;
+                              ShowItemChargeAssgnt;
+                              CurrPage.UPDATE(FALSE);
+                            END;
+                             }
+
+    { 44  ;2   ;Field     ;
+                SourceExpr="Unit of Measure Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG;
+                OnValidate=BEGIN
+                             UnitofMeasureCodeOnAfterValida;
+                           END;
+                            }
+
+    { 84  ;2   ;Field     ;
+                SourceExpr="From Purch. Document No.";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG }
+
+    { 50  ;2   ;Field     ;
+                SourceExpr=Reserve;
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG;
+                OnValidate=BEGIN
+                             ReserveOnAfterValidate;
+                           END;
+                            }
+
+    { 36  ;2   ;Field     ;
+                SourceExpr="Location Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG;
+                OnLookup=BEGIN
+                           EXIT(LocationCodeLookup(Text));
+                         END;
+
+                OnAssistEdit=BEGIN
+                               LocationCodeAssist;
+                             END;
+                              }
+
+    { 3893800;2;Field     ;
+                Name=Parking Lot;
+                CaptionML=ENU=Parking Lot;
+                Description=EU.0038938;
+                SourceExpr="Parking Lot";
+                Visible=ParkingLotBayVisibleG }
+
+    { 1109400026;2;Field  ;
+                Name=Parking Bay;
+                CaptionML=ENU=Parking Bay;
+                Description=EU.0038938;
+                SourceExpr="Parking Bay";
+                Visible=ParkingLotBayVisibleG }
+
+    { 1109400002;2;Field  ;
+                SourceExpr=Inventory;
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG;
+                OnAssistEdit=BEGIN
+                               AvailableAssist();
+                             END;
+                              }
+
+    { 2   ;2   ;Field     ;
+                SourceExpr="Branch Book No.";
+                AutoFormatExpr='JMD';
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG }
+
+    { 82  ;2   ;Field     ;
+                SourceExpr="VAT Prod. Posting Group";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG;
+                OnValidate=BEGIN
+                             VATProdPostingGroupOnAfterVali;
+                           END;
+                            }
+
+    { 64  ;2   ;Field     ;
+                SourceExpr="Vehicle Status";
+                Visible=TRUE;
+                Editable=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG;
+                QuickEntry=FALSE }
+
+    { 32  ;2   ;Field     ;
+                SourceExpr="Shortcut Dimension 1 Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG }
+
+    { 34  ;2   ;Field     ;
+                SourceExpr="Shortcut Dimension 2 Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG }
+
+    { 1109400013;2;Field  ;
+                SourceExpr=ShortcutDimCodeG[3];
+                CaptionClass='1,2,3';
+                Visible=FALSE;
+                OnValidate=BEGIN
+                             // Start PA036002.26208
+                             ValidateShortcutDimCode(3,ShortcutDimCodeG[3]);
+                             // Stop PA036002.26208
+                           END;
+
+                OnLookup=BEGIN
+                           // Start PA036002.26208
+                           LookupShortcutDimCode(3,ShortcutDimCodeG[3]);
+                           // Stop PA036002.26208
+                         END;
+                          }
+
+    { 1109400011;2;Field  ;
+                SourceExpr=ShortcutDimCodeG[4];
+                CaptionClass='1,2,4';
+                Visible=FALSE;
+                OnValidate=BEGIN
+                             // Start PA036002.26208
+                             ValidateShortcutDimCode(4,ShortcutDimCodeG[4]);
+                             // Stop PA036002.26208
+                           END;
+
+                OnLookup=BEGIN
+                           // Start PA036002.26208
+                           LookupShortcutDimCode(4,ShortcutDimCodeG[4]);
+                           // Stop PA036002.26208
+                         END;
+                          }
+
+    { 1109400009;2;Field  ;
+                SourceExpr=ShortcutDimCodeG[5];
+                CaptionClass='1,2,5';
+                Visible=FALSE;
+                OnValidate=BEGIN
+                             // Start PA036002.26208
+                             ValidateShortcutDimCode(5,ShortcutDimCodeG[5]);
+                             // Stop PA036002.26208
+                           END;
+
+                OnLookup=BEGIN
+                           // Start PA036002.26208
+                           LookupShortcutDimCode(5,ShortcutDimCodeG[5]);
+                           // Stop PA036002.26208
+                         END;
+                          }
+
+    { 1109400007;2;Field  ;
+                SourceExpr=ShortcutDimCodeG[6];
+                CaptionClass='1,2,6';
+                Visible=FALSE;
+                OnValidate=BEGIN
+                             // Start PA036002.26208
+                             ValidateShortcutDimCode(6,ShortcutDimCodeG[6]);
+                             // Stop PA036002.26208
+                           END;
+
+                OnLookup=BEGIN
+                           // Start PA036002.26208
+                           LookupShortcutDimCode(6,ShortcutDimCodeG[6]);
+                           // Stop PA036002.26208
+                         END;
+                          }
+
+    { 1109400005;2;Field  ;
+                SourceExpr=ShortcutDimCodeG[7];
+                CaptionClass='1,2,7';
+                Visible=FALSE;
+                OnValidate=BEGIN
+                             // Start PA036002.26208
+                             ValidateShortcutDimCode(7,ShortcutDimCodeG[7]);
+                             // Stop PA036002.26208
+                           END;
+
+                OnLookup=BEGIN
+                           // Start PA036002.26208
+                           LookupShortcutDimCode(7,ShortcutDimCodeG[7]);
+                           // Stop PA036002.26208
+                         END;
+                          }
+
+    { 1109400001;2;Field  ;
+                SourceExpr=ShortcutDimCodeG[8];
+                CaptionClass='1,2,8';
+                Visible=FALSE;
+                OnValidate=BEGIN
+                             // Start PA036002.26208
+                             ValidateShortcutDimCode(8,ShortcutDimCodeG[8]);
+                             // Stop PA036002.26208
+                           END;
+
+                OnLookup=BEGIN
+                           // Start PA036002.26208
+                           LookupShortcutDimCode(8,ShortcutDimCodeG[8]);
+                           // Stop PA036002.26208
+                         END;
+                          }
+
+    { 42  ;2   ;Field     ;
+                SourceExpr="Bin Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG;
+                OnAssistEdit=BEGIN
+                               BinCodeAssist;
+                             END;
+                              }
+
+    { 48  ;2   ;Field     ;
+                BlankZero=Yes;
+                SourceExpr="Reserved Quantity";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG;
+                OnDrillDown=BEGIN
+                              CurrPage.SAVERECORD;
+                              COMMIT;
+                              ShowReservationEntries(TRUE);
+                              CurrPage.UPDATE;
+                            END;
+                             }
+
+    { 10  ;2   ;Field     ;
+                SourceExpr="Unit of Measure";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG }
+
+    { 38  ;2   ;Field     ;
+                SourceExpr="Unit Cost (LCY)";
+                Visible=FALSE;
+                Editable=FALSE;
+                HideValue=HideUnitCostG;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG }
+
+    { 78  ;2   ;Field     ;
+                SourceExpr="VAT Base Amount";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG }
+
+    { 52  ;2   ;Field     ;
+                BlankZero=Yes;
+                Description=EU.0104306;
+                SourceExpr="Line Discount Amount";
+                Visible=FALSE;
+                Editable=(Quantity <> "Quantity Invoiced");
+                Style=Attention;
+                StyleExpr=LineWarningG;
+                OnValidate=BEGIN
+                             // Start PA042761.92213
+                             UpdateSalesTotalFactbox();
+                             // Stop PA042761.92213
+                           END;
+                            }
+
+    { 58  ;2   ;Field     ;
+                SourceExpr="Serial No.";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG }
+
+    { 60  ;2   ;Field     ;
+                SourceExpr="Appl.-to Item Entry";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG }
+
+    { 1109400008;2;Field  ;
+                SourceExpr="Appl.-from Item Entry";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG }
+
+    { 1101353000;2;Field  ;
+                SourceExpr="Factory No.";
+                Visible=FALSE;
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG }
+
+    { 1101221267;2;Field  ;
+                SourceExpr="EU Tire Data Code";
+                Visible=EUTireDataCodeVisibleG;
+                Editable=EUTireDataCodeEditableG }
+
+    { 1109400006;2;Field  ;
+                SourceExpr="Print Option Line";
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG;
+                QuickEntry=FALSE }
+
+    { 1109400004;2;Field  ;
+                SourceExpr="Print Unit Price";
+                Style=Attention;
+                StyleExpr=StyleExprPropertyG;
+                QuickEntry=FALSE }
+
+    { 1109400018;2;Field  ;
+                Description=PA042167;
+                SourceExpr="Date of Re-motorization";
+                Visible=FALSE }
+
+    { 1109400020;2;Field  ;
+                Description=PA042665;
+                SourceExpr="Combined Consumption";
+                Enabled=EnableEmissionFieldsG;
+                StyleExpr=StyleExprPropertyG }
+
+    { 1109400022;2;Field  ;
+                Description=PA042665,PA042665.86084;
+                SourceExpr="Efficiency Class";
+                Visible=false;
+                Enabled=EnableEmissionFieldsG }
+
+    { 1109400023;2;Field  ;
+                Description=PA042665;
+                SourceExpr="Emission Test Procedure";
+                Visible=FALSE;
+                Enabled=EnableEmissionFieldsG }
+
+    { 1109400021;2;Field  ;
+                Description=PA042665,PA042665.86084;
+                SourceExpr="Cruising Range";
+                Visible=FALSE;
+                Enabled=EnableEmissionFieldsG }
+
+  }
+  CODE
+  {
+    VAR
+      GeneralLedgerSetupG@10430600 : Record 98;
+      VehicleSetupG@3893804 : Record 5025401;
+      SalesReceivablesSetupG@1101221267 : Record 311;
+      UserSetupG@1109400025 : Record 91;
+      CustG@1109400027 : Record 18;
+      SalesLineTempG@1109400001 : TEMPORARY Record 37;
+      SalesHdrG@1109400002 : Record 36;
+      VehicleG@1109400003 : Record 5025400;
+      OnLookupItemG@1101286982 : Record 27;
+      VehicleUnitG@1109400004 : Codeunit 5025409;
+      CollectionUnitG@1109400005 : Codeunit 5028657;
+      TransfExtTextG@1109400006 : Codeunit 378;
+      RTCMgmtG@1119432000 : Codeunit 5206801;
+      SalesIncentiveMgmtG@1101286983 : Codeunit 5025412;
+      DocLineTrackingG@1109400007 : Page 5206913;
+      C_INC001@1109400008 : TextConst 'ENU=Trade-In is only possible for vehicles.';
+      C_INC002@1109400009 : TextConst 'ENU=Vehicle has already been invoiced.';
+      C_INC003@1109400010 : TextConst 'ENU=There are no planned trade-ins available';
+      C_INC004@1109400011 : TextConst 'ENU=For the planned trade-in, the VIN is missing';
+      C_INC005@1109400012 : TextConst 'ENU=All planned trade-ins have been already assigned';
+      C_INC006@1109400013 : TextConst 'ENU=All Trade-Ins have already been purchased and invoiced';
+      C_INC008@1109400015 : TextConst 'ENU=Only vehicles can be copied';
+      C_INC009@1109400016 : TextConst 'ENU=You cannot delete line %1 for vehicle %2, because a separate invoice is still planned.';
+      FormUpdateG@1109400019 : Boolean;
+      C_INC010@1109400020 : TextConst 'ENU=You cannot delete the line %1 associated with the vehicle %2, because the separate invoice %3 is due to be created for it.';
+      C_INC011@1109400021 : TextConst 'ENU=You can no longer delete the line %1 associated with the vehicle %2, because the separate invoice %3 already exists for it.';
+      C_INC012@1109400022 : TextConst 'ENU=Sales contracts may only be printed for the ''Vehicle'' item type !';
+      IsVINChangedG@1109400023 : Boolean;
+      C_INC013@1109400024 : TextConst 'ENU=For %1 %2 there exists the open vehicle purchase order %3! Attention: %4!';
+      LineWarningG@1119427000 : Boolean INDATASET;
+      HideUnitCostG@1109400026 : Boolean INDATASET;
+      EUTireDataCodeEditableG@1101221268 : Boolean INDATASET;
+      EUTireDataCodeVisibleG@1101221269 : Boolean INDATASET;
+      C_INC014@1101341136 : TextConst 'ENU="There is no %1 record with %2 = %3!"';
+      "EU Tire Data CodeEditable"@19010121 : Boolean INDATASET;
+      "EU Tire Data CodeVisible"@19010865 : Boolean INDATASET;
+      UnitPriceEditableG@19072822 : Boolean INDATASET;
+      AmountEditableG@19000309 : Boolean INDATASET;
+      AmountIncludingVATEditableG@19025550 : Boolean INDATASET;
+      ShortcutDimCodeG@1109400000 : ARRAY [8] OF Code[20];
+      EnablePurchFromSalesG@1109400014 : Boolean;
+      C_INC_ModelRequiered@1109400017 : TextConst 'ENU=Please introduce the Model No.';
+      C_INC_PurchaseLinkExist@1109400018 : TextConst 'ENU=Sales line Order %1 %2 %3 has already been assigned to Purchase Order %4 %5 %6';
+      C_INC_PurchaseLinkNotExist@1109400028 : TextConst 'ENU=No purchase order is available for this sales line.';
+      C_INC_VehicleOnly@1109400029 : TextConst 'ENU=A new request can only be created for vehicles and models!';
+      EnableEmissionFieldsG@1109400030 : Boolean;
+      IsVehicleDetailsVisibleG@1109400031 : Boolean;
+      StyleExprPropertyG@1109400032 : Text[50];
+      C_INC_TradeIn@1109400033 : TextConst 'ENU=Please input the vehicle to be sold before the trade-in.';
+      IsVehicleLineG@5593700 : Boolean;
+      ParkingLotBayVisibleG@3893801 : Boolean;
+      AmountVisibleG@10430601 : Boolean;
+      BothAmountFieldsVisibleG@10430602 : Boolean;
+
+    PROCEDURE ResetHdrRec@10430600();
+    BEGIN
+      // Start EU.0104306
+      // Start EU.0124901.125228
+      IF SalesHdrG.GET("Document Type","Document No.") THEN
+        AmountVisibleG := NOT GeneralLedgerSetupG.EnhancedVATCalculationLogicInDocActive(SalesHdrG."VAT Calculation Logic");
+      // Stop EU.0124901.125228
+      // Stop EU.0104306
+    END;
+
+    PROCEDURE ApproveCalcInvDisc@1();
+    BEGIN
+      CODEUNIT.RUN(CODEUNIT::"Sales-Disc. (Yes/No)",Rec);
+    END;
+
+    PROCEDURE CalcInvDisc@6();
+    BEGIN
+      CODEUNIT.RUN(CODEUNIT::"Sales-Calc. Discount",Rec);
+    END;
+
+    PROCEDURE ExplodeBOM@3();
+    BEGIN
+      CODEUNIT.RUN(CODEUNIT::"Sales-Explode BOM",Rec);
+    END;
+
+    PROCEDURE OpenPurchOrderForm@4();
+    VAR
+      PurchHdrL@1109400000 : Record 38;
+      PurchOrderL@1109400001 : Page 5025448;
+    BEGIN
+      // Start PA032651.4619161
+      TESTFIELD("Purchase Order No.");
+      PurchHdrL.SETRANGE("No.","Purchase Order No.");
+      PurchOrderL.SETTABLEVIEW(PurchHdrL);
+      PurchOrderL.EDITABLE := FALSE;
+      PurchOrderL.RUN;
+      // Stop PA032651.4619161
+    END;
+
+    PROCEDURE InsertExtendedText@5(UnconditionallyP@1109400000 : Boolean);
+    BEGIN
+      IF TransfExtTextG.SalesCheckIfAnyExtText(Rec,UnconditionallyP) THEN BEGIN
+        CurrPage.SAVERECORD;
+        TransfExtTextG.InsertSalesExtText(Rec);
+      END;
+      IF TransfExtTextG.MakeUpdate() THEN
+        FormUpdateG := TRUE;
+    END;
+
+    PROCEDURE ShowDocumentLineTracking@8();
+    BEGIN
+      CLEAR(DocLineTrackingG);
+      DocLineTrackingG.SetDoc(0, "Document No.","Line No.");
+      DocLineTrackingG.RUNMODAL;
+    END;
+
+    PROCEDURE ShowSalTradeIns@10();
+    VAR
+      VehicleTradeInL@1109400000 : Record 5025442;
+    BEGIN
+      IF "Item Type" <> "Item Type"::Vehicle THEN
+        ERROR(C_INC001);
+      // Start PA041187.90211
+      IF "No." = '' THEN
+        ERROR(C_INC_TradeIn);
+      // Stop PA041187.90211
+      VehicleTradeInL.SETRANGE("Document Type", "Document Type");
+      VehicleTradeInL.SETRANGE("Document No.", "Document No.");
+      VehicleTradeInL.SETRANGE("Document Line No.", "Line No.");
+      PAGE.RUNMODAL(PAGE::"Vehicle Trade-Ins", VehicleTradeInL);
+    END;
+
+    PROCEDURE StartTradeIn@19074670();
+    VAR
+      AddressLinkL@1109400000 : Record 5029112;
+      PurchHeadL@1109400002 : Record 38;
+      VehicleTradeInL@1109400003 : Record 5025442;
+      CreateTradeInReportL@1109400004 : Report 5025451;
+      VendCodeL@1109400001 : Code[20];
+      NoOfTotalLinesL@1109400005 : Integer;
+    BEGIN
+      // @ StartTradeIn - check and run Vehicle Trade in report
+      IF "Item Type" <> "Item Type"::Vehicle THEN
+        ERROR(C_INC001);
+
+      IF "Quantity Invoiced" <> 0 THEN
+        ERROR(C_INC002);
+      // Start PA032636
+      VehicleTradeInL.SETRANGE("Document Type", "Document Type");
+      VehicleTradeInL.SETRANGE("Document No.", "Document No.");
+      VehicleTradeInL.SETRANGE("Document Line No.", "Line No.");
+      IF VehicleTradeInL.ISEMPTY THEN
+        ERROR(C_INC003);
+
+      NoOfTotalLinesL := VehicleTradeInL.COUNT;
+      VehicleTradeInL.SETRANGE(VIN, '');
+      IF NOT VehicleTradeInL.ISEMPTY THEN
+        ERROR(C_INC004);
+      VehicleTradeInL.SETRANGE(VIN);
+      VehicleTradeInL.SETFILTER("Posted Purch. Invoice No.", '<>%1', '');
+      IF VehicleTradeInL.COUNT = NoOfTotalLinesL THEN
+        ERROR(C_INC006);
+      VehicleTradeInL.SETRANGE("Posted Purch. Invoice No.");
+      VehicleTradeInL.SETRANGE(Assigned, FALSE);
+      IF VehicleTradeInL.ISEMPTY THEN
+        ERROR(C_INC005);
+
+      VehicleTradeInL.FINDFIRST;
+      IF (VehicleTradeInL."Purch. Invoice No." <> '') AND (VehicleTradeInL."Posted Purch. Invoice No." = '') THEN BEGIN
+        PurchHeadL.GET(PurchHeadL."Document Type"::Invoice, VehicleTradeInL."Purch. Invoice No.");
+        VendCodeL := PurchHeadL."Buy-from Vendor No.";
+      END;
+      IF VendCodeL = '' THEN BEGIN
+        CustG.GET(VehicleTradeInL."Customer No.");
+        AddressLinkL.SETRANGE("Address No.", CustG."Address No.");
+        AddressLinkL.SETRANGE(Type, AddressLinkL.Type::Vendor);
+        IF AddressLinkL.FINDFIRST THEN
+          VendCodeL := AddressLinkL."No.";
+      END;
+
+      CLEAR(CreateTradeInReportL);
+      // Start PA041187.87656
+      CreateTradeInReportL.SETTABLEVIEW(VehicleTradeInL);
+      VehicleTradeInL.SETRECFILTER;
+      // Stop PA041187.87656
+      CreateTradeInReportL.SetTradeIn(PurchHeadL."No.", VendCodeL);
+      // Start PA038476
+      CreateTradeInReportL.SetStartingPoint(TRUE,FALSE,PurchHeadL."Document Type"::Invoice); //Starting Point is Sale, Sale is unposted, Document Type is Invoice
+      // Stop PA038476
+      // Start PA041187.87656
+      // Stop PA041187.87656
+      CreateTradeInReportL.RUNMODAL;
+      // Stop PA032636
+    END;
+
+    PROCEDURE ShowPriceCalculation@14();
+    VAR
+      ShowPriceCalcL@1109400001 : Page 5025825;
+    BEGIN
+      CLEAR(ShowPriceCalcL);
+      ShowPriceCalcL.SetLine(Rec);
+      ShowPriceCalcL.RUNMODAL;
+    END;
+
+    PROCEDURE CopyVehicle@19028037();
+    VAR
+      SalLineL@1109400000 : Record 37;
+    BEGIN
+      // @ CopyVehicle, run Copy Sales Vehicle Codeunit.
+      IF "Item Type" <> "Item Type"::Vehicle THEN
+        ERROR(C_INC008);
+      SalLineL.SETRANGE("Document Type", "Document Type");
+      SalLineL.SETRANGE("Document No.", "Document No.");
+      SalLineL.SETRANGE("Line No.", "Line No.");
+
+      REPORT.RUNMODAL(REPORT::"Copy Sales Vehicle", TRUE, FALSE, SalLineL);
+    END;
+
+    PROCEDURE AvailabilityAllCompanies@15();
+    VAR
+      ItemAvailabilityL@1109400000 : Codeunit 5028701;
+    BEGIN
+      ItemAvailabilityL.DisplayBySalesLine('',Rec);
+    END;
+
+    PROCEDURE InsertLine@19();
+    VAR
+      VehicleAvailOnHandL@1109400000 : Codeunit 5028660;
+    BEGIN
+      // Start PA032178
+      SalesLineTempG := Rec;
+      IF "Item Type" = "Item Type"::Vehicle THEN
+        "No." := '';
+      CurrPage.SAVERECORD;
+      "No." := SalesLineTempG."No.";
+
+      IF (Quantity = 0) OR (Quantity = 1) THEN
+        IF Type IN [Type::Item, Type::"Account (G/L)"] THEN BEGIN
+          VALIDATE(Quantity,1);
+          VehicleAvailOnHandL.CalculateSalesLine(Rec);
+          FormUpdateG := TRUE;
+        END;
+      IF "Item Type" = "Item Type"::Vehicle THEN BEGIN
+        VehicleUnitG.MakeSalLineOption(Rec);
+        VehicleUnitG.MakeSalLineFromOption(Rec);
+        SalesPriceCalculation();
+        GetOptionPrice();
+      END;
+      FormUpdateG := CreatedRelatedLines(Rec);
+      // Start PA035101.19477
+      UpdateaAddtlItemQuantity();
+      // Stop PA035101.19477
+
+      // Start PA035597
+      // Stop PA035597
+
+      IF Reserve = Reserve::Always THEN BEGIN
+      // Start PA035597
+      // Stop PA035597
+        AutoReserve(TRUE);
+        FormUpdateG := TRUE;
+      END;
+
+      // @ The behaviour in Classic Client is different from RTC so handled differently.
+      // @ Currform.Update throws an error message together with Currform.Saverecord in RTC.
+      // @ Modify - To save the values eg. Quantity, Qty. to Ship. etc
+      // @ Currform.Update(false) - For Autorefresh of lines eg. Deposit items, Extended texts
+      // @ FormUpdate condition skipped in RTC as the record is not saved when only the Model No. is entered without a VIN.
+      // @ Moreover the behaviour is different for Page Update in RTC.
+
+      // Start PA035597
+      MODIFY;
+      CurrPage.UPDATE(FALSE);
+      // Stop PA035597
+      // Stop PA032178
+    END;
+
+    PROCEDURE PrintSalesContract@19014045();
+    VAR
+      DocPrintL@1109400000 : Codeunit 5028656;
+    BEGIN
+      IF "Item Type" <> "Item Type"::Vehicle THEN
+        ERROR(C_INC012);
+      CLEAR(DocPrintL);
+      DocPrintL.PrintSalesContract(Rec);
+    END;
+
+    PROCEDURE DisplayInsurances@19079343();
+    VAR
+      VehicleInsurancePurchL@1109400000 : Record 5025499;
+      VehicleInsuranceL@1109400001 : Record 5025430;
+      FormVehicleInsurancePurchL@1109400002 : Page 5045480;
+      FormVehicleInsuranceL@1109400003 : Page 5025460;
+    BEGIN
+      IF "Item Type" = "Item Type"::Vehicle THEN BEGIN
+        IF NOT VehicleG.GET(VIN) THEN BEGIN
+          VehicleInsurancePurchL.RESET;
+          VehicleInsurancePurchL.FILTERGROUP(2);
+          VehicleInsurancePurchL.SETRANGE("Document No.","Document No.");
+          VehicleInsurancePurchL.SETRANGE("Document Type","Document Type");
+          VehicleInsurancePurchL.SETRANGE("Document Line","Line No.");
+          VehicleInsurancePurchL.FILTERGROUP(0);
+          FormVehicleInsurancePurchL.SETTABLEVIEW(VehicleInsurancePurchL);
+          FormVehicleInsurancePurchL.RUNMODAL;
+        END ELSE BEGIN
+          VehicleInsuranceL.RESET;
+          VehicleInsuranceL.FILTERGROUP(2);
+          VehicleInsuranceL.SETRANGE(VIN,VIN);
+          VehicleInsuranceL.FILTERGROUP(0);
+          VehicleInsuranceL.SETCURRENTKEY("Vehicle Book No.","Line No.");
+          VehicleInsuranceL.SETRANGE("Vehicle Book No.","Book No.");
+          IF VehicleInsuranceL.FINDLAST THEN
+            ;
+          VehicleInsuranceL.SETRANGE("Vehicle Book No.");
+          FormVehicleInsuranceL.SETTABLEVIEW(VehicleInsuranceL);
+          FormVehicleInsuranceL.Def("Book No.");
+          FormVehicleInsuranceL.RUNMODAL;
+        END;
+      END;
+    END;
+
+    PROCEDURE DisplayCustomerFinancing@19054277();
+    VAR
+      CustFinancingPurchL@1109400000 : Record 5025498;
+      CustFinancingL@1109400001 : Record 5025429;
+      FormCustFinancingPurchL@1109400002 : Page 5045479;
+      FormCustFinancingL@1109400003 : Page 5025459;
+    BEGIN
+      IF "Item Type" = "Item Type"::Vehicle THEN BEGIN
+        IF NOT VehicleG.GET(VIN) THEN BEGIN
+          CustFinancingPurchL.RESET;
+          CustFinancingPurchL.FILTERGROUP(2);
+          CustFinancingPurchL.SETRANGE("Document No.","Document No.");
+          CustFinancingPurchL.SETRANGE("Document Type","Document Type");
+          CustFinancingPurchL.SETRANGE("Document Line No.","Line No.");
+          CustFinancingPurchL.FILTERGROUP(0);
+          FormCustFinancingPurchL.SETTABLEVIEW(CustFinancingPurchL);
+          FormCustFinancingPurchL.RUNMODAL;
+        END ELSE BEGIN
+          CustFinancingL.RESET;
+          CustFinancingL.FILTERGROUP(2);
+          CustFinancingL.SETRANGE(VIN,VIN);
+          CustFinancingL.FILTERGROUP(0);
+          CustFinancingL.SETCURRENTKEY("Vehicle Book No.","Line No.");
+          CustFinancingL.SETRANGE("Vehicle Book No.","Book No.");
+          IF CustFinancingL.FINDLAST THEN
+            ;
+          CustFinancingL.SETRANGE("Vehicle Book No.");
+          FormCustFinancingL.SETTABLEVIEW(CustFinancingL);
+          FormCustFinancingL.Def("Book No.");
+          FormCustFinancingL.RUNMODAL;
+        END;
+      END;
+    END;
+
+    PROCEDURE Set@23(VAR SalesLineP@1109400000 : Record 37);
+    BEGIN
+      Rec := SalesLineP;
+    END;
+
+    PROCEDURE MarkLine@1109400010(DocTypeP@1109400002 : Integer;DocNoP@1109400001 : Code[20];LineNoP@1109400000 : Integer);
+    BEGIN
+      IF GET(DocTypeP,DocNoP,LineNoP) THEN BEGIN
+        MARK := TRUE;
+        CurrPage.UPDATE(FALSE);
+      END;
+    END;
+
+    PROCEDURE ShowVehicleSets@19019060();
+    VAR
+      SalesLineL@1109400000 : Record 37;
+    BEGIN
+      SalesLineL := Rec;
+      CODEUNIT.RUN(CODEUNIT::"Calc. Vehicle Set Prices", SalesLineL);
+    END;
+
+    PROCEDURE CheckPricingControl@1109400006();
+    BEGIN
+      // @ Checks the fields in the 'Pricing Control' tab in the User Setup. If the user has insufficient rights some fields are set to
+      // @ 'EDITABLE' = FALSE;
+      // Start PA032636
+      // Start EU.0104306
+      CASE TRUE OF
+        (Type = Type::Item) AND ("Item Type" = "Item Type"::Item):
+          UnitPriceEditableG := UserSetupG."Change Item Unit Price";
+        (Type = Type::"Account (G/L)") AND ("Labor No." > ''):
+          UnitPriceEditableG := UserSetupG."Change Labor Unit Price";
+        (Type = Type::Item) AND ("Item Type" = "Item Type"::Vehicle):
+          UnitPriceEditableG := UserSetupG."Change Vehicle Unit Price";
+        (Type = Type::Item) AND ("Item Type" = "Item Type"::"Own Option"):
+          UnitPriceEditableG := UserSetupG."Change Own Option Unit Price";
+        (Type = Type::Item) AND ("Item Type" = "Item Type"::"Veh. Transfer"):
+          UnitPriceEditableG := UserSetupG."Change Veh Transfer Unit Price";
+        ELSE
+          UnitPriceEditableG := TRUE;
+      END;
+      AmountEditableG := UnitPriceEditableG;
+      AmountIncludingVATEditableG := UnitPriceEditableG;
+      // Start EU.0135165.126936
+      IF "Item Type" <> "Item Type"::Vehicle THEN
+        IF UnitPriceEditableG THEN
+          IF GeneralLedgerSetupG.EnhancedVATCalculationLogicActive() THEN
+            IF SalesHdrG."VAT Calculation Logic" = SalesHdrG."VAT Calculation Logic"::"Amount + VAT" THEN
+              AmountIncludingVATEditableG := FALSE
+            ELSE
+              AmountEditableG := FALSE;
+      // Stop EU.0135165.126936
+      // Stop EU.0104306
+      // Stop PA032636
+    END;
+
+    PROCEDURE DisplayVehicleCustomer@19054222();
+    VAR
+      VehicleCustL@1109400001 : Record 5025469;
+      FormVehicleCustsL@1109400003 : Page 5025542;
+    BEGIN
+      // @ Opens the Vehicle Customer List
+      IF ("Item Type" = "Item Type"::Vehicle) AND (VIN <>'') THEN BEGIN
+        VehicleCustL.RESET;
+        VehicleCustL.FILTERGROUP(2);
+        VehicleCustL.SETRANGE(VIN,VIN);
+        VehicleCustL.FILTERGROUP(0);
+        IF VehicleCustL.FINDLAST THEN
+          ;
+        FormVehicleCustsL.SETTABLEVIEW(VehicleCustL);
+        FormVehicleCustsL.RUNMODAL;
+      END;
+    END;
+
+    PROCEDURE SpecialFunctionCall@19008086();
+    VAR
+      RecordReferenceL@1101287076 : RecordRef;
+      PageSpecialFunctionsL@1101287075 : Page 5206814;
+    BEGIN
+      // @ Sets the parameters to the special function page
+
+      // Start PA033895.I000854
+      CLEAR(RecordReferenceL);
+      RecordReferenceL.GETTABLE(Rec);
+      CLEAR(PageSpecialFunctionsL);
+      PageSpecialFunctionsL.SetParameters(PAGE::"Vehicle Sales Order Subform",RecordReferenceL,"Shortcut Dimension 2 Code",'');
+      PageSpecialFunctionsL.RUNMODAL;
+      // Stop PA033895.I000854
+    END;
+
+    PROCEDURE ShowSalesIncentOverview@19009355();
+    VAR
+      SalesIncentOverviewMgtL@1101286982 : Codeunit 5205920;
+    BEGIN
+      // Start PA033985
+      SalesIncentOverviewMgtL.ShowSalesIncentivesSalesLine(Rec,FALSE, DATABASE::"Sales Line");
+      // Stop PA033985
+    END;
+
+    PROCEDURE VehicleProfile@1100855255();
+    VAR
+      VehicleL@1100855256 : Record 5025400;
+      VehProfileMgmtL@1100855255 : Codeunit 5205903;
+      RecordrefL@1109400000 : RecordRef;
+    BEGIN
+      // @ Shows Vehcile Profile Questionnaire Card
+      // Start PA036841
+      IF VIN = '' THEN
+        EXIT;
+      IF NOT VehicleL.GET(VIN) THEN BEGIN
+        MESSAGE(STRSUBSTNO(C_INC014, VehicleL.TABLECAPTION, VehicleL.FIELDNAME(VIN), VIN));
+        EXIT;
+      END;
+      // Start PA036841.31328
+      // Start PA044254
+      RecordrefL.GETTABLE(Rec);
+      VehProfileMgmtL.ShowProfileQuestionnaireCard(VehicleL, '', 0, RecordrefL);
+      // Stop PA044254
+      // Stop PA036841.31328
+      // Stop PA036841
+    END;
+
+    LOCAL PROCEDURE NoOnAfterValidate@19066594();
+    VAR
+      SalesHeaderL@1101286983 : Record 36;
+    BEGIN
+      InsertLine();
+      // Start PA033985.18807
+      // Start PA033984
+      IF "Item Type" <> "Item Type"::Vehicle THEN
+        EXIT;
+      SalesHeaderL.GET("Document Type","Document No.");
+      SalesIncentiveMgmtG.UpdateSalesIncentivesSale(SalesHeaderL,Rec);
+      IF "No." <> xRec."No." THEN
+        VehicleUnitG.InsertSalesDefaultTransFees(Rec,FALSE);
+      // Stop PA033984
+      // Stop PA033985.18807
+    END;
+
+    LOCAL PROCEDURE VINOnAfterValidate@19046725();
+    VAR
+      ItemChargeL@1109400004 : Record 5805;
+      VehUsageL@1109400001 : Record 5025470;
+      VehicleOptionL@1109400005 : Record 5025422;
+      SalesHeaderL@1101286983 : Record 36;
+      SalesLineL@1119427001 : Record 37;
+      PurchLineL@1109400002 : Record 39;
+      UnitCostL@1109400003 : Decimal;
+      FoundVehTransferL@1109400006 : Boolean;
+    BEGIN
+      SalesLineTempG := Rec;
+      "No." := '';
+      CurrPage.SAVERECORD;
+      GET("Document Type", "Document No.", "Line No.");
+      "No." := SalesLineTempG."No.";
+      COMMIT;
+      VehUsageL.BuildDisplay("Document Type", "Document No.", VIN);
+      VehicleOptionL.SETCURRENTKEY(VIN,"Copy-to Setting",Type);
+      VehicleOptionL.SETRANGE(VIN,VIN);
+      VehicleOptionL.SETRANGE("Copy-to Setting", VehicleOptionL."Copy-to Setting"::"To Own Doc. Line");
+      VehicleOptionL.SETRANGE(Type, VehicleOptionL.Type::"Other Item");
+      IF VehicleOptionL.FIND('-') THEN BEGIN
+        SalesLineL.SETCURRENTKEY("Document Type","Document No.",VIN);
+        SalesLineL.SETRANGE("Document Type","Document Type");
+        SalesLineL.SETRANGE("Document No.","Document No.");
+        SalesLineL.SETRANGE(VIN,VIN);
+        SalesLineL.SETRANGE("Item Type","Item Type"::"Veh. Transfer");
+        IF NOT SalesLineL.FIND('-') THEN
+          FoundVehTransferL := TRUE;
+      END;
+      IF ("Item Type" = "Item Type"::Vehicle) AND (IsVINChangedG OR FoundVehTransferL) THEN BEGIN
+        DeleteRelatedLines(FALSE);
+        VehicleUnitG.MakeSalLineOption(Rec);
+        VehicleUnitG.MakeSalLineFromOption(Rec);
+        SalesPriceCalculation();
+        IF ("Item Type" = "Item Type"::Vehicle) AND Promotion THEN BEGIN
+          IF ("Unit Price" <> 0) THEN
+            VALIDATE("Amount Including VAT", "Promotion Price incl. VAT");
+        END;
+        GetOptionPrice();
+        CreatedRelatedLines(Rec);
+      END;
+      IF "VAT Calculation Type" = "VAT Calculation Type"::"Differential Tax" THEN BEGIN
+        PurchLineL.SETCURRENTKEY(VIN);
+        PurchLineL.SETRANGE(VIN,VIN);
+        PurchLineL.SETRANGE("Document Type","Document Type"::Order);
+      // Start EU.0116400.118174
+        PurchLineL.SETRANGE("Order Type", PurchLineL."Order Type"::"Vehicle Sales & Purchases");
+        PurchLineL.SETRANGE("Item Type", PurchLineL."Item Type"::Vehicle);
+      // Stop EU.0116400.118174
+        IF PurchLineL.FIND('-') THEN BEGIN
+          MESSAGE(C_INC013, VehicleG.TABLECAPTION, VIN, PurchLineL."Document No.", FORMAT("VAT Calculation Type"));
+          UnitCostL := PurchLineL."Unit Cost (LCY)";
+          ItemChargeL.SETCURRENTKEY(VIN,"Book No.");
+          ItemChargeL.SETRANGE(VIN, PurchLineL.VIN);
+          ItemChargeL.SETRANGE("Book No.", PurchLineL."Book No.");
+        END ELSE BEGIN
+          VehicleOptionL.GET(VIN,10000);
+          UnitCostL := VehicleOptionL."Unit Cost";
+          ItemChargeL.SETCURRENTKEY(VIN,"Book No.");
+          ItemChargeL.SETRANGE(VIN, VIN);
+          ItemChargeL.SETRANGE("Book No.","Book No.");
+        END;
+        IF ItemChargeL.FIND('-') THEN
+          REPEAT
+            UnitCostL := UnitCostL + ItemChargeL."Amount to Assign";
+          UNTIL ItemChargeL.NEXT = 0;
+        VALIDATE("Unit Cost (LCY)",UnitCostL);
+      END;
+      // Start PA033984
+      // Start PA033985.18808
+      IF ("Item Type" = "Item Type"::Vehicle) AND IsVINChangedG THEN
+        VehicleUnitG.InsertSalesDefaultTransFees(Rec,FALSE);
+      // Start PA033985
+      IF "Item Type" = "Item Type"::Vehicle THEN BEGIN
+      // Stop PA033985.18808
+        SalesHeaderL.GET("Document Type","Document No.");
+        SalesIncentiveMgmtG.UpdateSalesIncentivesSale(SalesHeaderL,Rec);
+      END;
+      // Stop PA033985
+      // Stop PA033984
+      // Start EU.0142312
+      // Start EU.0035974
+      CreateAutoOpportunity();
+      // Stop EU.0035974
+      // Stop EU.0142312
+      // Start PA035597
+      MODIFY;
+      CurrPage.UPDATE(FALSE);
+      // Stop PA035597
+
+      CheckPostingGroup();
+      // Start EU.0037204
+      UpdateSalesTotalFactbox();
+      // Stop EU.0037204
+    END;
+
+    LOCAL PROCEDURE GenProdPostingGroupOnAfterVali@19030109();
+    BEGIN
+      IF "Item Type" = "Item Type"::Vehicle THEN
+        CurrPage.UPDATE();
+    END;
+
+    LOCAL PROCEDURE QtytoShipOnAfterValidate@19008429();
+    BEGIN
+      CurrPage.UPDATE;
+    END;
+
+    LOCAL PROCEDURE QuantityOnAfterValidate@19032465();
+    BEGIN
+      IF Reserve = Reserve::Always THEN BEGIN
+        CurrPage.SAVERECORD;
+        AutoReserve(TRUE);
+      END;
+      // Start PA042761
+      UpdateSalesTotalFactbox();
+      // Stop PA042761
+    END;
+
+    LOCAL PROCEDURE UnitofMeasureCodeOnAfterValida@19057939();
+    BEGIN
+      IF Reserve = Reserve::Always THEN BEGIN
+        CurrPage.SAVERECORD;
+        AutoReserve(TRUE);
+      END;
+    END;
+
+    LOCAL PROCEDURE ReserveOnAfterValidate@19004502();
+    BEGIN
+      IF (Reserve = Reserve::Always) AND ("Outstanding Qty. (Base)" <> 0) THEN BEGIN
+        CurrPage.SAVERECORD;
+        AutoReserve(TRUE);
+      END;
+    END;
+
+    LOCAL PROCEDURE VATProdPostingGroupOnAfterVali@19001691();
+    BEGIN
+      IF "Item Type" = "Item Type"::Vehicle THEN
+        CurrPage.UPDATE();
+    END;
+
+    LOCAL PROCEDURE OnAfterGetCurrRecord@19077479();
+    VAR
+      ItemL@1101221267 : Record 27;
+    BEGIN
+      xRec := Rec;
+      // Start PA033765
+      EUTireDataCodeEditableG := FALSE;
+      // Start PA034527.19632
+      IF SalesReceivablesSetupG."EU Tire Label Regulation" THEN BEGIN
+      // Stop PA034527.19632
+        IF Type = Type::Item THEN BEGIN
+          EUTireDataCodeEditableG := ItemL.GET("No.") AND ItemL."Tire Item";
+        END;
+      END;
+      // Start PA035597
+      // Stop PA035597
+      // Stop PA033765
+    END;
+
+    LOCAL PROCEDURE OnActivateForm@19002417();
+    BEGIN
+      IF SalesHdrG.GET("Document Type","Document No.") AND ("Shortcut Dimension 2 Code" = '') THEN
+        "Shortcut Dimension 2 Code" := SalesHdrG."Shortcut Dimension 2 Code";
+    END;
+
+    LOCAL PROCEDURE ExpectedShippingWeekOnAfterInp@19053069(VAR Text@19053070 : Text[1024]);
+    BEGIN
+      CollectionUnitG.EnterDateAsWeek(Text);
+    END;
+
+    PROCEDURE EnableCreatePurchaseOrderFromSales@1109400003();
+    BEGIN
+      IF "Item Type" = "Item Type"::Vehicle THEN
+        EnablePurchFromSalesG := TRUE
+      ELSE
+        EnablePurchFromSalesG := FALSE;
+    END;
+
+    PROCEDURE PurchaseOrderExists@1109400004();
+    VAR
+      PurchaseLineL@1109400000 : Record 39;
+    BEGIN
+      // @ Checks if the Purchase Order Exist for the current Sales Line
+      PurchaseLineL.SETRANGE("From Sales Document Type","Document Type");
+      PurchaseLineL.SETRANGE("From Sales Document No.","Document No.");
+      PurchaseLineL.SETRANGE("From Sales Line No.","Line No.");
+      IF PurchaseLineL.FINDFIRST THEN
+        ERROR(C_INC_PurchaseLinkExist, "Document Type", "Document No.", "Line No.",
+          PurchaseLineL."Document Type", PurchaseLineL."Document No.",PurchaseLineL."Line No.");
+    END;
+
+    PROCEDURE OpenPurchaseOrder@1109400009();
+    VAR
+      PruchaseHeaderL@1109400004 : Record 38;
+      PurchaseLineL@1109400001 : Record 39;
+      PurchaseOrderPageL@1109400002 : Page 5025448;
+      ArchivedPruchHeaderL@1109400005 : Record 5046908;
+      ArchivedPurchLineL@1109400000 : Record 5046909;
+      ArchivedPurchOrderPageL@1109400003 : Page 5046921;
+    BEGIN
+      // @ Opens a Purchase Order if it exist for the current Sales Line
+      // Start PA040509
+      PurchaseLineL.SETRANGE("Document Type","From Purch. Document Type");
+      PurchaseLineL.SETRANGE("Document No.","From Purch. Document No.");
+      PurchaseLineL.SETRANGE("Line No.","From Purch. Line No.");
+      // Stop PA040509
+      IF PurchaseLineL.FINDFIRST THEN BEGIN
+        PruchaseHeaderL.SETRANGE("Document Type",PurchaseLineL."Document Type");
+        PruchaseHeaderL.SETRANGE("No.",PurchaseLineL."Document No.");
+        PurchaseOrderPageL.SETTABLEVIEW(PruchaseHeaderL);
+        PurchaseOrderPageL.RUN;
+      // Start PA040509
+        EXIT;
+      END;
+
+      ArchivedPurchLineL.SETRANGE("Document Type","From Purch. Document Type");
+      ArchivedPurchLineL.SETRANGE("Document No.","From Purch. Document No.");
+      ArchivedPurchLineL.SETRANGE("Line No.","From Purch. Line No.");
+      // Stop PA040509
+      IF ArchivedPurchLineL.FINDFIRST THEN BEGIN
+        ArchivedPruchHeaderL.SETRANGE("Document Type",ArchivedPurchLineL."Document Type");
+        ArchivedPruchHeaderL.SETRANGE("No.",ArchivedPurchLineL."Document No.");
+        ArchivedPurchOrderPageL.SETTABLEVIEW(ArchivedPruchHeaderL);
+        ArchivedPurchOrderPageL.RUN;
+      // Start PA040509
+        EXIT;
+      // Stop PA040509
+      END;
+      // Start PA040509
+      ERROR(C_INC_PurchaseLinkNotExist);
+      // Stop PA040509
+    END;
+
+    PROCEDURE RunVehicleSearch@1109400005();
+    VAR
+      ModVehOfInterestL@1109400001 : Record 5207809;
+      VehicleSearchL@1109400000 : Page 5205930;
+    BEGIN
+      // @ Function provides start of the Multicompany Vehicle Search with selected parameters.
+
+      // Start PA040026
+      IF "Item Type" = "Item Type"::Vehicle THEN
+        VehicleSearchL.InsertSalesLineFilters(Rec);
+
+      // Start PA040025
+      VehicleSearchL.SetSalesDocumentCaller();
+      // Stop PA040025
+      VehicleSearchL.RUNMODAL;
+      // Stop PA040026
+    END;
+
+    PROCEDURE UpdateSalesTotalFactbox@1000000002();
+    BEGIN
+      // @ This function refreshes the Sales Total Factbox.
+      // Start PA042761
+      CurrPage.UPDATE; // <-- Refresh of Sales line for line based fact box
+      IF SalesHdrG.GET("Document Type", "Document No.") THEN
+        SalesHdrG.MODIFY; // <-- Refresh of Sales Header for header based fact box
+      // Stop PA042761
+    END;
+
+    PROCEDURE GetSelectedRecords@1109400000(VAR TempRecP@1000 : TEMPORARY Record 37);
+    VAR
+      SalesLineL@1001 : Record 37;
+    BEGIN
+      // @ This function provides a temporal set of records based on the selected records on the page
+      // @ param TempRecP : temporary record based on Sales Line
+      // Start EU.0000369
+      // Start EU.0090125
+      CurrPage.SETSELECTIONFILTER(SalesLineL);
+      IF SalesLineL.FINDSET THEN
+        REPEAT
+          TempRecP := SalesLineL;
+          TempRecP.INSERT;
+        UNTIL SalesLineL.NEXT = 0;
+      // Stop EU.0090125
+      // Stop EU.0000369
+    END;
+
+    BEGIN
+    {
+      // @ Area VehicleSales
+      // @ Area GeneralLedger
+      +----------------------------------------------+
+      | Copyright (c) incadea                        |
+      +----------------------------------------------+
+      PA-Number  Date
+      ------------------------------------------------
+      PA031882   03.05.10 GL Removal of field "Apply.-to Job Entry"
+      PA031550   26.05.10 SS QuickWins
+      PA032111   12.08.10 GL (BRL): Object renumbering changes due to Microsoft Agreement.
+      PA032144   31.08.10 MA Merge of 3.2.3.0
+      PA032178   22.09.10 YI 1446608: Reset of Currform.Update/Curform.Saverecord commands; Function InsertLine rearranged
+                 05.10.10 YI 1179435: run addional Currform.update command in OnValidate trigger of field "No." only in the CC
+                 24.11.10 PR 1876953 Added code in "No." OnAftervalidate and OnAssistEdit() to avoid deletion of "Model No."
+                             automatically if the VIN is not entered, on re-opening the order screen
+                             and if the "Model No." screen is opened and closed without selecting any "Model No"
+                             through 'AssitEdit' button.
+                 21.12.10 SS 2285686: Rolled back #Defect1876953 and InsertLine() function modified.
+                             Additionally changed the updation of Colors in Document Lines.
+                 18.01.11 PR Modified code in OnAfterGetRecord() to display warning color in lines only for
+                             "Item Type" = Item.
+      PA032601   27.04.11 SS ShowVehDocStatistics() function removed.
+      PA032440   27.04.11 AA OnOpenPage, OnAfterGetRecord and OnInsertRecord triggers modified to read Hide Item Cost and Hide Vehicle
+                             Cost permission for the user
+      PA032473   01.06.11 SS 2156692 - Code Review Errors fixed.
+      PA032441   01.07.11 GC NAV 2009 SP1 W1 General Ledger Integration
+      PA032820   05.10.11 GM New Function 'Check Pricing Control' added to set price fields to not editable when the permissions
+                             are not sufficient
+      PA032795   26.10.11 PR Added 'Line No.' control with Visible = FALSE by default.
+      PA032636   04.01.12 DR 4371196
+                             - Avoid endless loop conflict when calling record functions from page fuinction with identical name.
+                             - Better Perfomrance: User SETRANGE instead of IF in REPEAT UNTIL loop.
+                             - Enhanced readabillity in function: CheckPricingControl
+                             Style guide changes:
+                             - Use SETRANGE instead of SETFILTER when possible.
+                             - Variable Names changed according to Style guide.
+                             - Useless Variables removed
+      PA032651   24.01.12 GD 4619161: Modified Call to Incadea Card Forms instead of Standard Forms
+      PA033067   12.04.12 DR DE Captions implemented
+      PA032651   19.04.12 SM 7178403: Captions ML are removed in cases when they are not neede on the page. Caption ML is retreived
+                             page a caption ML in the table on ehich a specific page lies. Changes are done by a specifications in a case.
+      PA033253   03.05.12 GM New function DisplayVehicleCustomer added
+      PA033259   09.08.12 AI Deletion of Start/Stop History in Code, update copyright and Version List
+      PA033019   27.08.12 GB 8298899: When is SERVICETIER not execute update OnafterValidate of VIN
+      PA033259   18.09.12 DR Variable names changed according to incadea style guide
+      PA033733   10.12.12 DR DE Captions added for version: N.6.1.2
+      PA033765   19.12.12 GC "EU Tire Data Code" field added
+      PA033895   22.04.13 GE I000854 Function SpecialFunctionCall() added
+      PA033984   07.05.13 DT Add Default Transfer Fees in case of "No." or "VIN"-Change
+      PA034531   04.09.13 GD I001184 Modified "No."-OnLookup(), "No."-OnValidate() to use correct LookUp Trigger Logic.
+      PA033985   21.10.13 CH New function ShowSalesIncentOverview(). New field "No. of Sales Incentives".
+                             Incentives calculation added to "No."-OnAfterValidate., function ShowSalesAssistanceLines() deleted
+                 20.11.13 DD 18808: VIN - OnAfterValidate Sales Incentives will be updated always when VIN is validated.
+                 25.11.13 DD 18807: No. - OnAfterValidate(), always recreate Sales Incentives on Validate
+      PA033985   25.11.13 GL 18815 Pass source record to Sales Incentive Overview mgt Codeunit
+      PA035101   05.12.13 MS 19477 Modification on InsertLine() function. Calling on UpdateaAddtlItemQuantity() function
+                             is necessary (same way as on parts) to consider additional items and deposits.
+      PA034527   11.12.13 GG 19632 Field "EU Tire Data Regulation" modified to "EU Tire Label Regulation"
+      PA036841   28.11.14 GD New function VehicleProfile().
+      PA036841   08.12.14 GD 31328 Modified VehicleProfile() to pass "Document No."
+      PA035597   10.02.14 GC NAV 2013 R2 Technical Upgrade
+      PA036002   25.07.14 TS 26208 Dimensions Functionality - Dimension Code fields displayed on Page.
+      PA035903   03.10.14 LR NAV 2013 UI Enhancement
+      PA036547   06.11.14 GE Merge N.6.1.4 to N.7.1.0
+      PA037341   15.01.15 CH Merge PA036841.
+      PA036549   09.02.15 LR 33665 Hide Mileage and display "Item Type" and "No."
+      PA038140   28.07.15 UX Change Mileage Field Property to Editable.
+                             Call to new function "Create Purchase Order".
+                             Call to new function "Create Request".
+      PA038140   14.08.15 WZ 42896 Renamed the variable from EnableCretePurchFromSales to EnablePurchFromSalesG.
+                             Use EnablePurchFromSalesG in the "Create" and "Open" functions to enable/disable it
+      PA038216   03.09.15 GE 44441 onAssistEdit of "No." modified to validate the value only when the user has pressed OK in the lookup page
+      PA037942   20.10.15 SM Added call of new function CheckForLineDuplicates.
+      PA037937   21.10.15 SR 47421 Item Type Caption has been renamed to Type.
+      PA038126   12.11.15 SM Added new function RunVehicleSearch.
+      PA040704   04.05.16 VJ Rollback PA037937.47421
+      PA040705   04.05.16 VJ Merge of PA040704
+                 06.05.16 DR Remove dummy _* functions when the NAV5 Form was converted to a NAV2009 Page.
+      PA040509   14.04.16 GJ Modified OpenPurchaseOrder() to open the correct Purchase Order document.
+      PA040511   11.05.16 GJ Merge of PA040509.
+      PA040070   24.06.16 SM 63510 Missing IncaDoc tags and Area Codes updated.
+      PA042000   14.10.16 NM Modified OnAssistEdit Trigger to take Status of Page Lookup call into consideration.
+                             - Record Variables resorted according to Styleguide
+                             - Call SchowReservationEntries function from the Rec directly
+                             - Cleanup of the "_*" functions and comments introduced with the Form-to-Page conversion in myengine 6.x
+      PA042083   14.10.16 NM Merge of PA042000
+      PA042117   16.11.16 KR 80585 Changed the QuickEtry property of "Unit Price" to true.
+      PA042118   16.11.16 KR Merge of PA042117.80585
+      PA042761   10.03.17 JS Created new function UpdateSalesTotalFactbox() to update the Factbox and calling from OnValidate of, "No." "Unit Price",
+                             "Line Discount %", Amount, OnDelete trigger and QuantityOnAfterValidate().
+      PA042761   28.03.17 JS 92213 Calling the function UpdateSalesTotalFactbox to update the Factbox from OnValidate of "Line Discount Amount".
+      PA042763   28.03.17 JS Merge of PA042761 and PA042761.92213
+      PA044205   28.06.17 JS Calling the function UpdateSalesTotalFactbox to update the Factbox from OnValidate of "Amount Including VAT".
+      PA044207   14.07.17 JS Merge of PA044205
+      --- 7.1.4 ---
+      PA042951   13.02.17 DR The Comfort Module is no longer optional. It is mandatory for the myengine.
+                             All Comfort Module name traces removed.
+      PA042952   13.02.17 DR Merge of PA042951
+      PA044456   03.08.17 PT Added the code to check if status is blocked on Sales Order
+      PA044457   09.08.17 PT Merge of PA044456
+      --- 7.1.5 ---
+      PA042167   29.11.16 CH New field "Date of Re-motorization".
+      PA040025   14.12.16 GI Used SetSalesDocumentCaller on Vehicle Search prior to the RUNMODAL.
+      PA042665   05.01.16 SP Added fields "Efficiency Class",Range,"Calculation Type" and "Combined Consumption".
+      PA042665   11.01.17 JV Added Code to enable and disable emission related fields based on VIN
+      PA040026   17.01.17 WZ Updated RunVehicleSearch and apply filter if ItemType is only Vehicle
+      PA038476   18.01.17 ER Used SetStartingPoint prior to running the trade-in report
+      PA038476   18.01.17 ER Used SetStartingPoint prior to running the trade-in report
+      PA042665   23.01.17 SP 86084 Changed visibility to false for "Cruising Range","Emission Test Procedure","Efficiency Class".
+      PA041687   31.01.17 IM Show Vehicle Details function for lines added
+      PA041187   13.02.17 JM 87656 Changed function StartTradeIn to allow creating Vehicle Purchase Invoice for Vehicle Sales Order with more than one Trade In Vehicles
+      PA041187   08.03.17 JM 90211 Trade-in page must not be used until Vehicle line has model or VIN
+      PA041187   17.03.17 IM 91164 Changed style for not owned vehicles.
+      PA044486   30.08.17 GD Action::"Vehicle Details" modification to not open Vehicle Details page when no records are found.
+      PA044254   05.10.17 RR Added recordref parameter to the called function ShowProfileQuestionnaireCard.
+      EU.0035974 28.08.18 UU Added code to create Opportunity when "No." or VIN is validated.
+      --- 7.1.6 ---
+      EU.0000044 09.06.17 JV License No. Field Added. Added code in OnLookup of License No.
+      --- 7.2.0 ---
+      EU.0005215 24.08.17 PT 3763 Merge of PA044456
+      EU.0005839 06.09.17 GY 4752 Merge of PA044486
+      EU.0005215 08.09.17 JS 2283 Merge of PA044205
+      EU.0004483 05.10.17 RR 2893 Merge of PA044254
+      EU.0001175 13.10.17 KR 8313 Calling VINOnAfterValidate function from OnValidate trigger of License No. to update Transfer lines associated with VIN.
+      EU.0020651 16.04.18 GI Implementation of WLTP framework.
+      EU.0035980 17.09.18 UU Merge of EU.0035974
+      EU.0037204 08.10.18 JS Calling the function UpdateSalesTotalFactbox to update the Factbox from VINOnAfterValidate,
+                             and also from action Trade-Ins.
+      --- 7.3.0 --- downmerge
+      EU.0055937 10.07.19 KR OnAfterGetRecord trigger changed and added new action Select Own Options
+      EU.0005636          MS Downmerge of EU.0000369
+      EU.0000369          MS New function GetSelectedRecords()
+      EU.0038938 25.10.18 UU Added new fields "Parking Bay" & "Parking Lot".
+      --- 7.2.1 ---
+      EU.0090125 21.02.20 JV Downmerge of EU.0005636
+                             - Visible false is set for Reserve action
+      EU.0105571 11.09.20 JV Downmerge of EU.0055937
+      EU.0101759 04.09.20 GI 104947 Modification due to renumbering of Kuma range.
+      EU.0107134 07.10.20 JV changes have been already merged under EU.0105571 BC 2009 release
+      EU.0116400 11.05.21 EG 118174 Check Purchase Lines that concern Vehicles when extracting unit cost of a differential taxation calculation type vehicle.
+      EU.0112354 20.01.21 AD Downmerge of EU.0038938
+      EU.0112354 11.05.21 DS Code modified because field name changed from "Enable Veh. Pos. for Sales" to "Mand. Veh. Pos. for Sales"
+                             and type changed from Boolean to Option.
+      EU.0104306 17.09.20 DR New field Skip VAT Adjustment Calc." added.
+      EU.0104306 17.09.20 DR Show both Amount fields "Amount" and "Amount Including VAT".
+                             - New function ResetHdrRec
+                             - For lines, which are fully invoiced set the following fields to not editable:
+                               "Amount", "Amount Including VAT", "Unit Price", "Line Discount %", "Line Discount Amount"
+      EU.0104306 17.09.20 DR Field "VAT %" added.
+      EU.0124901 27.08.21 DR 125228 In ResetHdrRec function read the header record and update the AmountVisibleG flag right there already.
+      EU.0135165 18.04.22 PS 126936 Look and feel of "Amount" and "Amount incl. VAT" field control made identical in all Parts, Service and Vehicle sales documents.
+      EU.0142312 25.07.22 DR call of CreateAutoOpportunity moved to the end of the VINOnAfterValidate function so it is included in the  CurrPage.UPDATE.
+      EU.0143135 27.07.22 JN 143277 CreateAutoOpportunity() function has been included in No. field so while validating No. Opportunity to be created.
+      EU.0141665 23.08.22 MH 143994 Changed Style Expression for the variable StyleExprPropertyG from 'Standart' to 'Standard'.
+      WBL        20.09.23 RL Add field "Gen. Bus. Posting Group".
+    }
+    END.
+  }
+}
+
