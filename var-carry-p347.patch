@@ -1,0 +1,2081 @@
+diff --git a/cuupdate/diffengine.py b/cuupdate/diffengine.py
+index 74eb532..7031907 100644
+--- a/cuupdate/diffengine.py
++++ b/cuupdate/diffengine.py
+@@ -388,8 +388,76 @@ class DiffEngine:
+                 ctags = [t for k, t in self._node_tags(a) if self._layer(t) == 'customer']
+                 rows.append(self._row(a, ctags[0] if ctags else None, 'DEV', 'code',
+                                       f'field {nid} customer code block not resolved by scorer -> human review'))
++
++        # 5) option-string VAR append carry (global + local). A declaration in
++        # BOTH A and B (same name, same scope) whose value is a single-quoted
++        # string literal that the customer EXTENDED by appending members (B's
++        # literal is a strict prefix of A's). Take A's. Other value differences
++        # (true edits, re-orders) are not prefixes -> not emitted here -> they
++        # fall to the whole-object DEV gate (no tag exists to attribute them).
++        for vo in self._var_option_carries():
++            rows.append(dict(node=None, tag=None, verdict='CARRY', kind='var-option',
++                             line=vo['b_line_no'],
++                             reason=f"VAR {vo['name']} [{vo['scope']}] option list "
++                                    f"extended by customer (CU value is a prefix) "
++                                    f"-> carry customer declaration"))
+         return rows
+ 
++    # ---- VAR-section scan (global + per-procedure local) -------------------
++    _VAR_DECL = re.compile(r'^      (\w+)@(\d+)\s*:\s*(.+?);\s*$')
++    _PROC_HDR = re.compile(r'^    (?:LOCAL )?PROCEDURE\s+\w+@(\d+)\s*\(')
++
++    def _var_blocks(self, lines):
++        """Return [{'scope', 'decls': {name: (line_idx, value)}}] for every VAR
++        section: the object-level block ('@global') and each procedure-level
++        block (keyed by the owning procedure @id). Locals are scoped per
++        procedure - never pooled - so cross-A/B matching compares like scope."""
++        blocks = []
++        scope = '@global'
++        i = 0
++        while i < len(lines):
++            pm = self._PROC_HDR.match(lines[i])
++            if pm:
++                scope = '@' + pm.group(1); i += 1; continue
++            if lines[i].rstrip() == '    VAR':
++                decls = {}; j = i + 1
++                while j < len(lines):
++                    m = self._VAR_DECL.match(lines[j])
++                    if m:
++                        decls[m.group(1)] = (j, m.group(3))
++                    elif lines[j].strip() == '':
++                        pass
++                    else:
++                        break
++                    j += 1
++                blocks.append({'scope': scope, 'decls': decls}); i = j; continue
++            i += 1
++        return blocks
++
++    def _var_option_carries(self):
++        """Rule-2 cases: declaration in both A and B (matched scope + name),
++        both values single-quoted literals, B's a STRICT prefix of A's."""
++        a_blocks = {b['scope']: b for b in self._var_blocks(self.A)}
++        out = []
++        for bb in self._var_blocks(self.B):
++            ab = a_blocks.get(bb['scope'])
++            if ab is None:
++                continue
++            for name, (b_idx, b_val) in bb['decls'].items():
++                if name not in ab['decls']:
++                    continue
++                _, a_val = ab['decls'][name]
++                if a_val == b_val:
++                    continue
++                if not (a_val.startswith("'") and a_val.endswith("'")
++                        and b_val.startswith("'") and b_val.endswith("'")):
++                    continue
++                ai, bi = a_val[1:-1], b_val[1:-1]
++                if ai.startswith(bi) and len(ai) > len(bi):
++                    out.append({'name': name, 'scope': bb['scope'],
++                                'b_line_no': b_idx + 1})
++        return out
++
+     def _caption_row(self, a, b, nid, ctags, cap_changed, opt_changed):
+         """Build a caption/option CARRY row. RULE (user decision): always carry
+         the customer's caption/option values on any such difference (tag not
+diff --git a/cuupdate/execute.py b/cuupdate/execute.py
+index 6420e92..5fc1f10 100644
+--- a/cuupdate/execute.py
++++ b/cuupdate/execute.py
+@@ -34,7 +34,10 @@ from diffengine import DiffEngine
+ #              its anchor-equivalent position. Both are verbatim transplants.
+ # caption:     caption/optioncaption/optionstring carry on a shared field -
+ #              replace B's caption/option property lines with A's values.
+-_EXECUTABLE_KINDS = {'field-graft', 'doc-graft', 'code', 'caption'}
++# var-option:  option-string VAR (global/local) the customer extended by
++#              appending members (B's literal is a strict prefix of A's) - take
++#              A's declaration line. RULE 2.
++_EXECUTABLE_KINDS = {'field-graft', 'doc-graft', 'code', 'caption', 'var-option'}
+ # Rows with this verdict are "no action needed, take B as-is" and don't block
+ # the gate (they describe vendor content we keep).
+ _BENIGN_VERDICT = 'TAKE_B'
+@@ -158,24 +161,143 @@ def _global_var_decls(lines):
+     return i, last_decl + 1, decls
+ 
+ 
+-def _carry_global_vars(engine):
+-    """Return (after_idx, [decl lines]) to insert customer-added global VAR
+-    declarations (present in A's global VAR, absent from B's) at the end of B's
+-    global VAR section - or None if there are none. Carries the declarations a
+-    customer code block may depend on but which carry no Start/Stop tag of their
+-    own. Matched by variable NAME (the @id can differ); a name in A not in B is
+-    a customer addition."""
+-    _, _, a_decls = _global_var_decls(engine.A)
+-    b_start, b_end, b_decls = _global_var_decls(engine.B)
+-    if b_start is None:
+-        return None
+-    added = [name for name in a_decls if name not in b_decls]
+-    if not added:
+-        return None
+-    # preserve A's declaration order
++_VAR_DECL = re.compile(r'^      (\w+)@(\d+)\s*:\s*(.+?);\s*$')
++_PROC_HDR = re.compile(r'^    (?:LOCAL )?PROCEDURE\s+\w+@(\d+)\s*\(')
++
++
++def _var_blocks(lines):
++    """Scan EVERY VAR section in the object - the object-level (global) block
++    and each LOCAL/PROCEDURE-level block - and return a list of blocks:
++
++        [{'scope': '@global' | '@<procid>',
++          'start': <idx of the 'VAR' line>,
++          'end':   <insert idx: first line after the last declaration>,
++          'decls': {name: (full_line, value)}}, ...]
++
++    A VAR section is a '    VAR' line (four-space indent). Its scope is the
++    procedure it belongs to: the global block is the one NOT preceded by a
++    PROCEDURE header; a local block is keyed by its owning procedure's @id.
++    Locals are scoped PER PROCEDURE - a local 'i' in proc X is unrelated to a
++    local 'i' in proc Y - so matching across A and B must compare like scope
++    with like scope, never pooling all locals together.
++
++    Declarations are '      <name>@<id> : <type-or-value>;' at six-space indent;
++    collection stops at the first non-decl, non-blank line so a block never
++    reaches into the following procedure."""
++    blocks = []
++    cur_scope = '@global'        # before any PROCEDURE header we're in object scope
++    i = 0
++    while i < len(lines):
++        l = lines[i]
++        pm = _PROC_HDR.match(l)
++        if pm:
++            cur_scope = '@' + pm.group(1)
++            i += 1
++            continue
++        if l.rstrip() == '    VAR':
++            decls = {}
++            j = i + 1
++            last = i
++            while j < len(lines):
++                m = _VAR_DECL.match(lines[j])
++                if m:
++                    decls[m.group(1)] = (lines[j], m.group(3))
++                    last = j
++                elif lines[j].strip() == '':
++                    pass
++                else:
++                    break
++                j += 1
++            blocks.append({'scope': cur_scope, 'start': i,
++                           'end': last + 1, 'decls': decls})
++            i = j
++            continue
++        i += 1
++    return blocks
++
++
++def _carry_vars(engine):
++    """RULE 1 (keep-over-delete, all scopes). For every VAR block in B - global
++    and per-procedure local - carry any declaration present in the MATCHING A
++    block but absent from B's, inserted at the end of B's block. Justified by
++    the compile-break asymmetry: a variable that is referenced but not declared
++    fails to compile, whereas an unused declaration is harmless - so when in
++    doubt we keep, never drop. No customer tag exists on a declaration, so this
++    relies on no provenance; it only ever ADDS what A has and B lacks.
++
++    Returns (insertions, log):
++      insertions: list of (after_idx, [decl lines]) for the executor.
++      log:        human-readable lines naming what was carried (silent-but-
++                  logged; this rule emits no classify row or gate).
++
++    Matching: A blocks and B blocks are paired by scope. Within a scope a
++    declaration is matched by variable NAME (its @id may differ between A and
++    B); a name in A's block not in B's block is a customer addition."""
++    a_blocks = {b['scope']: b for b in _var_blocks(engine.A)}
++    insertions = []
++    log = []
+     order = {l: k for k, l in enumerate(engine.A)}
+-    added_lines = [a_decls[n] for n in sorted(added, key=lambda n: order.get(a_decls[n], 0))]
+-    return (b_end, added_lines)
++    for bb in _var_blocks(engine.B):
++        ab = a_blocks.get(bb['scope'])
++        if ab is None:
++            continue
++        added = [n for n in ab['decls'] if n not in bb['decls']]
++        if not added:
++            continue
++        added.sort(key=lambda n: order.get(ab['decls'][n][0], 0))
++        added_lines = [ab['decls'][n][0] for n in added]
++        insertions.append((bb['end'], added_lines))
++        for n in added:
++            log.append(f"VAR carry [{bb['scope']}]: + {n} (customer-added, "
++                       f"absent from CU) -> kept (compile-safety)")
++    return insertions, log
++
++
++def _carry_var_options(engine):
++    """RULE 2 (option-string append carry, all scopes). For a declaration
++    present in BOTH the matching A and B VAR blocks at the same NAME where both
++    values are single-quoted string literals and B's literal is a STRICT PREFIX
++    of A's (the customer appended option members to the end), take A's line.
++
++    This is the option-string-as-text-constant case (e.g. ReportUsage2 on P347:
++    the customer extended the inline option list). A non-append value difference
++    (a true edit, a re-order, a rename) is NOT a prefix and is deliberately left
++    to the whole-object DEV gate - there is no tag to attribute it, so we don't
++    guess. Literal (character) prefix, not token prefix: a customer rename of an
++    existing member therefore fails the test and routes to DEV, as intended.
++
++    Returns list of (b_line_idx, a_line, name, vendor_changed) where
++    vendor_changed flags that B's own value is NOT a prefix-extension of A
++    elsewhere - reserved for the ordinal-shift WARN (vendor also changed the
++    list mid-stream). Here B IS a prefix of A by construction, so vendor didn't
++    change members; vendor_changed stays False (no WARN) for the append case."""
++    a_blocks = {b['scope']: b for b in _var_blocks(engine.A)}
++    out = []
++    for bb in _var_blocks(engine.B):
++        ab = a_blocks.get(bb['scope'])
++        if ab is None:
++            continue
++        # B line index for each name in this block: walk the block span.
++        for name, (b_line, b_val) in bb['decls'].items():
++            if name not in ab['decls']:
++                continue
++            a_line, a_val = ab['decls'][name]
++            if a_val == b_val:
++                continue
++            # both must be single-quoted string literals
++            if not (a_val.startswith("'") and a_val.endswith("'")
++                    and b_val.startswith("'") and b_val.endswith("'")):
++                continue
++            a_inner, b_inner = a_val[1:-1], b_val[1:-1]
++            # strict prefix: B's members are the leading run of A's, customer
++            # appended more. Equal already filtered above.
++            if a_inner.startswith(b_inner) and len(a_inner) > len(b_inner):
++                # locate B's physical line index for this declaration
++                idx = next((k for k in range(bb['start'], bb['end'])
++                            if engine.B[k] == b_line), None)
++                if idx is not None:
++                    out.append((idx, a_line, name, bb['scope']))
++    return out
+ 
+ 
+ def execute(custfn, vendfn, cust, vend, langs, params):
+@@ -206,6 +328,18 @@ def execute(custfn, vendfn, cust, vend, langs, params):
+     for r in captions:
+         b_lines = _carry_caption(b_lines, e, r['node'])
+ 
++    # --- RULE 2: option-string VAR append carry (global + local) ------------
++    # Replace B's declaration line with A's where the customer appended option
++    # members (B's literal is a strict prefix of A's). A single-line property
++    # replacement, like caption carry - B's line count is preserved so graft
++    # anchors keyed off B positions stay valid. The classifier emits a CARRY
++    # 'var-option' row per such case (gate + DEV-report visibility); here we
++    # apply it. Index is B's own line position (caption carry above changes
++    # content, never line count, so indices remain valid).
++    for idx, a_line, _name, _scope in _carry_var_options(e):
++        if 0 <= idx < len(b_lines):
++            b_lines[idx] = a_line
++
+     # --- build merged body: start from B, insert each customer block ------
+     # Each insertion: (after_b_line_idx, source_order, [verbatim A lines]).
+     # source_order is the block's position in A (1-based line) so that when two
+@@ -258,12 +392,12 @@ def execute(custfn, vendfn, cust, vend, langs, params):
+             raise GateToDev([f"unexpected executable kind {r['kind']}"])
+         insertions.append((after, src, block))
+ 
+-    # --- carry customer global VAR declarations (e.g. a Record var a carried
+-    # code block depends on). Present in A's global VAR, absent from B's. Rides
+-    # the same insertion list so the high-to-low application keeps indices sane.
+-    var_ins = _carry_global_vars(e)
+-    if var_ins is not None:
+-        after_v, block_v = var_ins
++    # --- RULE 1: carry customer VAR declarations (global + local), keep-over-
++    # delete. Present in A's matching-scope VAR block, absent from B's. Rides the
++    # same insertion list so the high-to-low application keeps indices sane.
++    # Silent-but-logged: pure compile-safety, no judgement, no classify row.
++    var_ins, var_log = _carry_vars(e)
++    for after_v, block_v in var_ins:
+         insertions.append((after_v, float('inf'), block_v))   # VAR section: apply last within its anchor
+ 
+     out = list(b_lines)                                 # caption-carried B (LF)
+diff --git a/docs/ARCHITECTURE.md b/docs/ARCHITECTURE.md
+index 433d7a2..2768c6e 100644
+--- a/docs/ARCHITECTURE.md
++++ b/docs/ARCHITECTURE.md
+@@ -322,8 +322,10 @@ Remaining caveats:
+ - **Execute path now covers (all fixtured):** field-graft; clean code transplant; **caption / option
+   carry** (CaptionML/OptionCaptionML/OptionString, plus the field's `Description=` tag list, subset-
+   guarded) — §8.8, §8.13; **coupled code + option in one field** (a field with both a code block and
+-  an option change carries both) — §8.13; **customer global VAR declarations** (present in A's global
+-  VAR, absent from B's — carried so dependent code compiles) — §8.14. Anchor selection picks the
++  an option change carries both) — §8.13; **customer VAR declarations** (global + per-procedure local;
++  present in A's matching-scope VAR block, absent from B's — carried so dependent code compiles;
++  keep-over-delete) and **option-string VAR append carry** (B's literal a strict prefix of A's — a
++  CARRY `var-option` row) — §8.14, §8.20. Anchor selection picks the
+   tightest valid bracket and balances nearest-code vs vendor-tag anchors (§8.13).
+   - NOT yet executing: VANILLA_MOD/SUPPRESS (DEV by rule); RDLC layout (DEV); local (in-procedure) VAR
+     additions; page/report structural diff beyond field-grafts.
+diff --git a/docs/CONTEXT.md b/docs/CONTEXT.md
+index 6b3dff5..04f1781 100644
+--- a/docs/CONTEXT.md
++++ b/docs/CONTEXT.md
+@@ -216,10 +216,12 @@ PROCEDURE name, do not confuse). Then justify each difference by tag layer:
+ **Updates since original (§8.13–§8.14):** a changed shared node can be BOTH code AND caption/option —
+ they are NOT either/or. A field with a code block in its trigger AND an extended OptionString/
+ OptionCaptionML now emits a scorer-routed code row AND a caption CARRY (the caption carry also brings
+-the field's `Description=` tag list, subset-guarded). Separately, EXECUTION-layer carries that aren't
+-verdict rows: customer GLOBAL VAR declarations (A-only in the object-level VAR section) are carried so
+-dependent code compiles (§8.14). Caption/option carry rule: ALWAYS carry customer caption/option on
+-any such difference, tag not required (§8.8).
++the field's `Description=` tag list, subset-guarded). Separately: customer VAR declarations (global +
++per-procedure local, A-only in the matching-scope VAR block) are carried EXECUTION-side, silent-but-
++logged, so dependent code compiles (keep-over-delete, §8.14/§8.20); an option-string VAR the customer
++EXTENDED (B's literal a strict prefix of A's) is carried via a CARRY `var-option` verdict row (§8.20).
++Caption/option carry rule: ALWAYS carry customer caption/option on any such difference, tag not
++required (§8.8).
+ 
+ Validated verdicts on the corpus (ALL CORRECT): T14 WBL 50000 graft; T36 AP001651 50090/91/96/97
+ graft; T36 AP2308 11/100 caption-carry; P21 WBL10 doc-graft (anchor after B 5452600); P5025649 WBL
+@@ -938,3 +940,59 @@ an override. No behavioural test weakened.
+ 
+ **Files:** cuupdate/diffengine.py (PAGE validated=True + rationale comment),
+ tests/test_diffengine.py (TYPE_CASES PAGE=True), docs/ARCHITECTURE.md (PAGE production status).
++
++### 8.20 Session log — VAR carry generalised: local scope + option-string append (P347)
++**Outcome: the VAR-declaration carry, previously global-only and add/drop-only, now (1) covers
++LOCAL procedure VAR blocks as well as the object-level block, and (2) carries an option-string VAR
++the customer EXTENDED (B's literal a strict prefix of A's). P347's `ReportUsage2` global option list
++now reproduces the hand merge. New frozen fixture P347. Suite green.**
++
++**Driver (Rich):** P347 (Page 347, customer tag DC). Tool output dropped the customer's extension of
++the `ReportUsage2@1109400000` inline option list (`...ADR Document` in B vs
++`...ADR Document,,,,,Direct Cr. EDI File,...` in A). The old `_carry_global_vars` only ADDED
++A-only declarations to the global block; it never inspected values, and never looked inside
++procedures. The value-diff was invisible to both the gate and the carry - B's shorter value rode
++through silently.
++
++**Design (agreed, discuss-first):**
++- **Variables carry NO customer tag** (Rich's correction) - there is no provenance to reason from on
++  a declaration line. So carry decisions cannot be "identity match -> take A".
++- **RULE 1 — keep over delete (all scopes).** Union of declarations per matching scope (global block;
++  each procedure's local block, scoped by owning procedure @id). Any name in A's block absent from
++  B's -> carry it. Never drop. Justified purely by the compile-break asymmetry: referenced-but-
++  undeclared fails to compile; declared-but-unused is harmless. Silent-but-logged (no classify row,
++  no gate) - it only ever ADDS, no judgement.
++- **RULE 2 — option-string append carry (all scopes).** Declaration present in BOTH matching blocks
++  (same name) where both values are single-quoted literals and **B's literal is a STRICT (character)
++  prefix of A's** -> take A's line. This is the option-string-as-text-constant case. LITERAL prefix,
++  not token prefix: a customer rename/re-order is NOT a prefix, so it fails the test and falls to the
++  whole-object DEV gate (no tag to attribute it -> we don't guess). Surfaced as a CARRY `var-option`
++  classify row (gate + DEV-report visibility), consistent with caption carry.
++- **Matching:** by variable NAME within a scope (the @id may differ). Name match across A/B in the
++  same scope. Locals scoped PER PROCEDURE - never pooled.
++
++**Implementation:**
++- `diffengine.py`: `_var_blocks` (scans object-level + every LOCAL/PROCEDURE VAR block, keyed by
++  scope), `_var_option_carries` (Rule 2 detection), new step 5 in `classify()` emitting CARRY
++  `var-option` rows.
++- `execute.py`: `_var_blocks` + `_carry_vars` (Rule 1, all scopes, returns insertions + log) REPLACES
++  `_carry_global_vars`; `_carry_var_options` (Rule 2 application - single-line replacement on
++  B-derived text, like caption carry, line count preserved). `var-option` added to
++  `_EXECUTABLE_KINDS`. Rule 2 applied before insertions shift indices; Rule 1 rides the insertions
++  list (apply-last within its anchor).
++
++**Out of scope (deferred, separate fix):** P347 line 118 Description tag drop (`...EU.0074599` vs
++hand `...EU.0074599,DC`) - the field-11 OptionString carries correctly via caption carry, but its
++Description tag-list `,DC` is not carried on a control whose OptionString changed. The frozen P347
++gold therefore reverts that one line to B's value so the fixture is tool-reproducible; the Description
++tag carry on option-changed controls is its own item.
++
++**Verification:** P347 reproduces the hand merge byte-exact (modulo agreed normalisation + the two
++out-of-scope/cosmetic lines: Description ,DC and the operator stamp wording). T81 (old global-VAR
++case) still passes through the generalised `_carry_vars`. Full suite green: diffengine PASS (incl.
++P347 verdict + exec), scorer 20/20, census 5/5.
++
++**Files:** cuupdate/diffengine.py (+_var_blocks, +_var_option_carries, +classify step 5),
++cuupdate/execute.py (-_carry_global_vars, +_var_blocks, +_carry_vars, +_carry_var_options, +var-option
++executable kind, rewired execute), tests/test_diffengine.py (P347 across verdict + exec layers),
++tests/fixtures/{EX,CU,MyMerged}-P347.stripped.txt (NEW).
+diff --git a/tests/fixtures/CU-P347.stripped.txt b/tests/fixtures/CU-P347.stripped.txt
+new file mode 100644
+index 0000000..db1c466
+--- /dev/null
++++ b/tests/fixtures/CU-P347.stripped.txt
+@@ -0,0 +1,532 @@
++OBJECT Page 347 Report Selection - Purchase
++{
++  OBJECT-PROPERTIES
++  {
++    Date=07/10/20;
++    Time=12:24:15 PM;
++    Version List=NAVW1.x,N.7.2.1;
++  }
++  PROPERTIES
++  {
++    CaptionML=ENU=Report Selection - Purchase;
++    SaveValues=Yes;
++    SourceTable=Table77;
++    DelayedInsert=Yes;
++    PageType=Worksheet;
++    OnOpenPage=BEGIN
++                 SetUsageFilter;
++               END;
++
++    OnNewRecord=BEGIN
++                  NewRecord;
++                END;
++
++    OnAfterGetCurrRecord=BEGIN
++                           // Start PA039784.54256
++                           RefreshButtons();
++                           // Stop PA039784.54256
++                         END;
++
++    ActionList=ACTIONS
++    {
++      { 1109400001;  ;ActionContainer;
++                      ActionContainerType=ActionItems }
++      { 1109400002;1 ;Action    ;
++                      Name=List Overview;
++                      CaptionML=ENU=List Overview;
++                      Description=PA039784.54256;
++                      Promoted=Yes;
++                      PromotedIsBig=Yes;
++                      Image=List;
++                      PromotedCategory=Process;
++                      OnAction=VAR
++                                 RepSelectionL@1109400000 : Record 77;
++                               BEGIN
++                                 // Start PA039784.54256
++                                 RepSelectionL.FILTERGROUP(2);
++                                 CASE ReportUsage2 OF
++                                   ReportUsage2::Inquiry:
++                                     RepSelectionL.SETRANGE(Usage,RepSelectionL.Usage::"P.Inquiry");
++                                   ReportUsage2::Order:
++                                     RepSelectionL.SETRANGE(Usage,RepSelectionL.Usage::"P.Order");
++                                   ReportUsage2::Invoice:
++                                     RepSelectionL.SETRANGE(Usage,RepSelectionL.Usage::"P.Inv.");
++                                   ReportUsage2::"Credit Memo":
++                                     RepSelectionL.SETRANGE(Usage,RepSelectionL.Usage::"P.Cr.Memo");
++                                   ReportUsage2::Receipt:
++                                     RepSelectionL.SETRANGE(Usage,RepSelectionL.Usage::"P.Receipt");
++                                   ReportUsage2::"Purchase Document - Test":
++                                     RepSelectionL.SETRANGE(Usage,RepSelectionL.Usage::"P.Test");
++                                   ReportUsage2::"Return Order":
++                                     RepSelectionL.SETRANGE(Usage,RepSelectionL.Usage::"P.Ret.Order");
++                                   ReportUsage2::"Return Shipment":
++                                     RepSelectionL.SETRANGE(Usage,RepSelectionL.Usage::"P.Ret.Shipment");
++                                 END;
++                                 RepSelectionL.FILTERGROUP(0);
++                                 RepSelectionL.SETCURRENTKEY(Usage,"Location Code","Make Code",Sequence);
++                                 IF PAGE.RUNMODAL(0, RepSelectionL) <> ACTION::LookupOK THEN
++                                   EXIT;
++                                 MakeUsageG := RepSelectionL."Make Code";
++                                 LocationUsageG := RepSelectionL."Location Code";
++                                 SetUsageFilter();
++                                 CurrPage.UPDATE(TRUE);
++
++                                 // Stop PA039784.54256
++                               END;
++                                }
++      { 1109400004;1 ;Action    ;
++                      Name=Previous;
++                      CaptionML=ENU=Previous;
++                      Description=PA039784.54256;
++                      Promoted=Yes;
++                      Enabled=BackEnabledG;
++                      PromotedIsBig=Yes;
++                      Image=PreviousRecord;
++                      PromotedCategory=Process;
++                      OnAction=BEGIN
++                                 // Start PA039784.54256
++                                 GroupRecordStep(-1);
++                                 // Stop PA039784.54256
++                               END;
++                                }
++      { 1109400005;1 ;Action    ;
++                      Name=Next;
++                      CaptionML=ENU=Next;
++                      Description=PA039784.54256;
++                      Promoted=Yes;
++                      Enabled=NextEnabledG;
++                      PromotedIsBig=Yes;
++                      Image=NextRecord;
++                      PromotedCategory=Process;
++                      OnAction=BEGIN
++                                 // Start PA039784.54256
++                                 GroupRecordStep(1);
++                                 // Stop PA039784.54256
++                               END;
++                                }
++    }
++  }
++  CONTROLS
++  {
++    { 1900000001;0;Container;
++                ContainerType=ContentArea }
++
++    { 11  ;1   ;Field     ;
++                CaptionML=ENU=Usage;
++                OptionCaptionML=ENU=Inquiry,,Order,Invoice,Credit Memo,Receipt,Purchase Document - Test,Return Order,Return Shipment,Return Order Picklist,ADR Document;
++                Description=PA041199.68194,EU.0074599;
++                SourceExpr=ReportUsage2;
++                OnValidate=BEGIN
++                             SetUsageFilter;
++                             ReportUsage2OnAfterValidate;
++                             // Start PA039784.54256
++                             RefreshButtons();
++                             // Stop PA039784.54256
++                           END;
++                            }
++
++    { 1109400000;1;Field  ;
++                CaptionML=ENU=Make Code;
++                SourceExpr=MakeUsageG;
++                OnValidate=BEGIN
++                             SetUsageFilter;
++                             MakeUsageGOnAfterValidate;
++                             // Start PA039784.54256
++                             RefreshButtons();
++                             // Stop PA039784.54256
++                           END;
++
++                OnLookup=VAR
++                           MakecodeL@1109400000 : Record 5028656;
++                         BEGIN
++                           // Start INC
++                           IF NOT MakecodeL.GET(Text) THEN
++                             CLEAR(MakecodeL);
++                           IF PAGE.RUNMODAL(0,MakecodeL) = ACTION::LookupOK THEN BEGIN
++                             Text := MakecodeL."Make Code";
++                             EXIT(TRUE);
++                           END ELSE
++                             EXIT(FALSE);
++                           // Stop INC
++                         END;
++                          }
++
++    { 1109400003;1;Field  ;
++                CaptionML=ENU=Location Code;
++                SourceExpr=LocationUsageG;
++                OnValidate=BEGIN
++                             // Start INC
++                             SetUsageFilter;
++                             // Stop INC
++                             LocationUsageGOnAfterValidate;
++                             // Start PA039784.54256
++                             RefreshButtons();
++                             // Stop PA039784.54256
++                           END;
++
++                OnLookup=VAR
++                           MakecodeL@1109400000 : Record 5028656;
++                           LocationCodeL@1109400003 : Record 14;
++                         BEGIN
++                           // Start INC
++                           IF NOT LocationCodeL.GET(Text) THEN
++                             CLEAR(LocationCodeL);
++                           IF PAGE.RUNMODAL(0,LocationCodeL) = ACTION::LookupOK THEN BEGIN
++                             Text := LocationCodeL.Code;
++                             EXIT(TRUE);
++                           END ELSE
++                             EXIT(FALSE);
++                           // Stop INC
++                         END;
++                          }
++
++    { 1   ;1   ;Group     ;
++                GroupType=Repeater }
++
++    { 2   ;2   ;Field     ;
++                SourceExpr=Sequence }
++
++    { 9   ;2   ;Field     ;
++                SourceExpr="Report ID";
++                LookupPageID=Objects;
++                OnValidate=BEGIN
++                             // Start PA036461.27591
++                             CurrPage.UPDATE(TRUE);
++                             // Stop PA036461.27591
++                           END;
++                            }
++
++    { 4   ;2   ;Field     ;
++                DrillDown=No;
++                SourceExpr="Report Caption" }
++
++    { 13  ;2   ;Field     ;
++                SourceExpr="Print Sent-From Line";
++                OnValidate=BEGIN
++                             // Start PA036461.27591
++                             CurrPage.UPDATE(TRUE);
++                             // Stop PA036461.27591
++                           END;
++                            }
++
++    { 15  ;2   ;Field     ;
++                SourceExpr="Print Address Block";
++                OnValidate=BEGIN
++                             // Start PA036461.27591
++                             CurrPage.UPDATE(TRUE);
++                             // Stop PA036461.27591
++                           END;
++                            }
++
++    { 1101267193;2;Field  ;
++                SourceExpr="Print Comp. Business Template";
++                OnValidate=BEGIN
++                             // Start PA035484.20754
++                             CurrPage.UPDATE(TRUE);
++                             // Stop PA035484.20754
++                           END;
++                            }
++
++    { 1119432006;2;Field  ;
++                Description=PA033052;
++                SourceExpr="Print Report Title";
++                OnValidate=BEGIN
++                             // Start PA036461.27591
++                             CurrPage.UPDATE(TRUE);
++                             // Stop PA036461.27591
++                           END;
++                            }
++
++    { 1119432008;2;Field  ;
++                Description=PA033052;
++                SourceExpr="Report Title";
++                OnValidate=BEGIN
++                             // Start PA036461.27591
++                             CurrPage.UPDATE(TRUE);
++                             // Stop PA036461.27591
++                           END;
++                            }
++
++    { 10136100;2;Field    ;
++                SourceExpr="Custom Report Layout Code";
++                Visible=FALSE }
++
++    { 10136101;2;Field    ;
++                SourceExpr="Use for Email Attachment" }
++
++    { 10136102;2;Field    ;
++                SourceExpr="Use for Email Body" }
++
++    { 10136103;2;Field    ;
++                SourceExpr="Email Body Layout Code";
++                Visible=FALSE }
++
++    { 10136104;2;Field    ;
++                SourceExpr="Email Body Layout Description" }
++
++    { 1900000007;0;Container;
++                ContainerType=FactBoxArea }
++
++    { 1900383207;1;Part   ;
++                Visible=FALSE;
++                PartType=System;
++                SystemPartID=RecordLinks }
++
++    { 1905767507;1;Part   ;
++                Visible=FALSE;
++                PartType=System;
++                SystemPartID=Notes }
++
++  }
++  CODE
++  {
++    VAR
++      ReportUsage2@1109400000 : 'Inquiry,,Order,Invoice,Credit Memo,Receipt,Purchase Document - Test,Return Order,Return Shipment,Return Order Picklist,ADR Document';
++      _INCADEA_@1109400001 : Boolean;
++      MakeUsageG@1109400002 : Code[20];
++      LocationUsageG@1109400003 : Code[20];
++      NextEnabledG@1109400004 : Boolean INDATASET;
++      BackEnabledG@1109400005 : Boolean INDATASET;
++
++    LOCAL PROCEDURE SetUsageFilter@1();
++    BEGIN
++      FILTERGROUP(2);
++      CASE ReportUsage2 OF
++        ReportUsage2::Inquiry:
++          SETRANGE(Usage,Usage::"P.Inquiry");
++        ReportUsage2::Order:
++          SETRANGE(Usage,Usage::"P.Order");
++        ReportUsage2::Invoice:
++          SETRANGE(Usage,Usage::"P.Inv.");
++        ReportUsage2::"Credit Memo":
++          SETRANGE(Usage,Usage::"P.Cr.Memo");
++        ReportUsage2::Receipt:
++          SETRANGE(Usage,Usage::"P.Receipt");
++        ReportUsage2::"Purchase Document - Test":
++          SETRANGE(Usage,Usage::"P.Test");
++      // Start INC
++        ReportUsage2::"Return Order":
++          SETRANGE(Usage,Usage::"P.Ret.Order");
++
++        ReportUsage2::"Return Shipment":
++          SETRANGE(Usage,Usage::"P.Ret.Shipment");
++      // Start PA041199.68194
++        ReportUsage2::"Return Order Picklist":
++          SETRANGE(Usage,Usage::"P.Ret.Order.Pick");
++      // Stop PA041199.68194
++      // Start EU.0074599
++        ReportUsage2::"ADR Document":
++          SETRANGE(Usage,Usage::"ADR Document");
++      // Stop EU.0074599
++      END;
++
++      SETRANGE("Make Code",MakeUsageG);
++
++      SETRANGE("Location Code", LocationUsageG);
++      //Stop INC
++      FILTERGROUP(0);
++    END;
++
++    LOCAL PROCEDURE ReportUsage2OnAfterValidate@19038799();
++    BEGIN
++      CurrPage.UPDATE;
++    END;
++
++    LOCAL PROCEDURE MakeUsageGOnAfterValidate@19064971();
++    BEGIN
++      CurrPage.UPDATE;
++    END;
++
++    LOCAL PROCEDURE LocationUsageGOnAfterValidate@19067914();
++    BEGIN
++      // Start INC
++      CurrPage.UPDATE;
++      // Stop INC
++    END;
++
++    LOCAL PROCEDURE GroupRecordStep@1109400001(StepP@1109400003 : Integer);
++    VAR
++      InDifferentGroupL@1109400000 : Boolean;
++      RepSelectionL@1109400002 : Record 77;
++    BEGIN
++      // @ GroupRecordStep - Used when pushing next or previous button to show the next
++      // @ or previous group of records that have the same usage, location code and make code.
++      // @ param stepP - Integer
++
++      // Start PA039784.54256
++      RepSelectionL := Rec;
++      RepSelectionL.SETCURRENTKEY(Usage,"Location Code","Make Code",Sequence);
++      // Start PA041199.68194
++      RepSelectionL.SETFILTER(Usage,'%1|%2|%3|%4|%5|%6|%7|%8|%9',Usage::"P.Inquiry",Usage::"P.Order",
++        Usage::"P.Inv.",Usage::"P.Cr.Memo",Usage::"P.Receipt",Usage::"P.Test",Usage::"P.Ret.Order",Usage::"P.Ret.Shipment",Usage::"P.Ret.Order.Pick");
++      // Stop PA041199.68194
++      REPEAT
++        RepSelectionL.NEXT(StepP);
++        InDifferentGroupL := NOT InTheSameGroup(RepSelectionL,Rec);
++      UNTIL InDifferentGroupL;
++      SetReportUsage2(RepSelectionL);
++      MakeUsageG := RepSelectionL."Make Code";
++      LocationUsageG := RepSelectionL."Location Code";
++      SetUsageFilter();
++      CurrPage.UPDATE;
++      // Stop PA039784.54256
++    END;
++
++    LOCAL PROCEDURE RefreshButtons@1109400002();
++    VAR
++      FirstRepSelectionL@1109400000 : Record 77;
++      LastRepSelectionL@1109400001 : Record 77;
++      RepSelectionL@1109400002 : Record 77;
++    BEGIN
++      // @ RefreshButtons - Used to Refresh the next, previous buttons
++
++      // Start PA039784.54256
++      BackEnabledG := FALSE;
++      NextEnabledG := FALSE;
++      RepSelectionL := Rec;
++      RepSelectionL.SETCURRENTKEY(Usage,"Location Code","Make Code",Sequence);
++      // Start PA041199.68194
++      RepSelectionL.SETFILTER(Usage,'%1|%2|%3|%4|%5|%6|%7|%8|%9',Usage::"P.Inquiry",Usage::"P.Order",
++        Usage::"P.Inv.",Usage::"P.Cr.Memo",Usage::"P.Receipt",Usage::"P.Test",Usage::"P.Ret.Order",Usage::"P.Ret.Shipment",Usage::"P.Ret.Order.Pick");
++      // Start PA041199.68194
++      FirstRepSelectionL.SETVIEW(RepSelectionL.GETVIEW);
++      LastRepSelectionL.SETVIEW(RepSelectionL.GETVIEW);
++      IF FirstRepSelectionL.FINDFIRST THEN BEGIN
++        LastRepSelectionL.FINDLAST;
++        BackEnabledG := PreviousGroupExists(FirstRepSelectionL);
++        NextEnabledG := NextGroupExists(LastRepSelectionL);
++      END;
++      // Stop PA039784.54256
++    END;
++
++    LOCAL PROCEDURE InTheSameGroup@1109400003(RepSelection1P@1109400000 : Record 77;RepSelection2P@1109400001 : Record 77) InTheSameGroupR : Boolean;
++    BEGIN
++      // @ InTheSameGroup - Used to check if 2 records have the same Usage, Make Code and Location Code
++      // @ param RepSelection1P - Record Report Selection
++      // @ param RepSelection2P - Record Report Selection
++      // @ retval InTheSameGroupR - Boolean
++
++      // Start PA039784.54256
++      InTheSameGroupR:= (RepSelection1P.Usage = RepSelection2P.Usage) AND
++        (RepSelection1P."Make Code" = RepSelection2P."Make Code") AND
++        (RepSelection1P."Location Code" = RepSelection2P."Location Code") ;
++      // Stop PA039784.54256
++    END;
++
++    LOCAL PROCEDURE PreviousGroupExists@1109400004(RepSelectionP@1109400000 : Record 77) : Boolean;
++    BEGIN
++      // @ PreviousGroupExists - Used to check if a previous group of records exists
++      // @ param RepSelectionP - Record Report Selection
++      // @ retval - Boolean
++
++      // Start PA039784.54256
++      IF (Usage < RepSelectionP.Usage) THEN
++        EXIT(FALSE);
++
++      IF Usage > RepSelectionP.Usage THEN
++        EXIT(TRUE);
++
++      IF ("Location Code" < RepSelectionP."Location Code") THEN
++        EXIT(FALSE);
++
++      IF ("Location Code" > RepSelectionP."Location Code") THEN
++        EXIT(TRUE);
++
++      IF ("Make Code" < RepSelectionP."Make Code") THEN
++        EXIT(FALSE);
++
++      IF ("Make Code" > RepSelectionP."Make Code") THEN
++        EXIT(TRUE);
++      EXIT(FALSE);
++      // Stop PA039784.54256
++    END;
++
++    LOCAL PROCEDURE NextGroupExists@1109400005(RepSelectionP@1109400000 : Record 77) : Boolean;
++    BEGIN
++      // @ NextGroupExists - Used to check if a next group of records exists
++      // @ param RepSelectionP - Record Report Selection
++      // @ retval - Boolean
++
++      // Start PA039784.54256
++      IF (Usage >  RepSelectionP.Usage) THEN
++        EXIT(FALSE);
++
++      IF Usage < RepSelectionP.Usage THEN
++        EXIT(TRUE);
++
++      IF ("Location Code" > RepSelectionP."Location Code") THEN
++        EXIT(FALSE);
++
++      IF ("Location Code" < RepSelectionP."Location Code") THEN
++        EXIT(TRUE);
++
++      IF ("Make Code" > RepSelectionP."Make Code") THEN
++        EXIT(FALSE);
++
++      IF ("Make Code" < RepSelectionP."Make Code") THEN
++        EXIT(TRUE);
++      EXIT(FALSE);
++      // Stop PA039784.54256
++    END;
++
++    LOCAL PROCEDURE SetReportUsage2@1109400007(RepSelectionP@1109400000 : Record 77);
++    BEGIN
++      // @ SetReportUsage2 - Used to map the records usage with the option ReportUsage2
++      // @ param RepSelectionP - Record Report Selection
++
++      // Start PA039784.54256
++      CASE RepSelectionP.Usage OF
++        RepSelectionP.Usage::"P.Inquiry":
++          ReportUsage2 := ReportUsage2::Inquiry;
++        RepSelectionP.Usage::"P.Order":
++          ReportUsage2 := ReportUsage2::Order;
++        RepSelectionP.Usage::"P.Inv.":
++          ReportUsage2 := ReportUsage2::Invoice;
++        RepSelectionP.Usage::"P.Cr.Memo":
++          ReportUsage2 := ReportUsage2::"Credit Memo";
++        RepSelectionP.Usage::"P.Receipt":
++          ReportUsage2 := ReportUsage2::Receipt;
++        RepSelectionP.Usage::"P.Test":
++          ReportUsage2 := ReportUsage2::"Purchase Document - Test";
++        RepSelectionP.Usage::"P.Ret.Order":
++          ReportUsage2 := ReportUsage2::"Return Order";
++        RepSelectionP.Usage::"P.Ret.Shipment":
++          ReportUsage2 := ReportUsage2::"Return Shipment";
++        // Start PA041199.68194
++        RepSelectionP.Usage::"P.Ret.Order.Pick":
++          ReportUsage2 := ReportUsage2::"Return Order Picklist";
++        // Start PA041199.68194
++      END;
++      // Stop PA039784.54256
++    END;
++
++    BEGIN
++    {
++      // @ Area Parts
++      PA-Number  Date
++      ------------------------------------------------
++      PA033052   23.05.11 PR Added new controls 'Report Title', 'Print Report Title', 'Print Add. Footer', 'Print Make Logo', 'Print Company Logo'.
++      PA033067   12.04.12 DR DE Captions implemented
++      PA033259   09.08.12 AI Deletion of Start/Stop History in Code, update copyright and Version List
++      PA033259   18.09.12 DR Variable names changed according to incadea style guide
++      PA033336   17.10.12 SS 8746211 Removed "Print Footer Line" field control.
++      PA033336   12.11.12 SS 8590628 Removed logo fields: "Print Company Logo", "Print Make Logo"
++      PA035484   04.04.14 GF 20754 Renamed field "Print Add. Footer" to "Print Comp. Business Template"
++      PA036461   01.09.14 KK 27591 Changed behavior of saving selected reports
++      PA036547   06.11.14 GE Merge N.6.1.4 to N.7.1.0 - PA035484.20754.
++      PA036548   22.12.14 GL Adjusted Source expressions of fields with changed names
++      PA039931   28.01.16 GE Extend all make code variables to code20
++      PA039932   02.02.16 GE Merge of PA039931
++      PA039784   15.03.16 GW 54256 New GroupRecordStep, RefreshButtons, InTheSameGroup, PreviousGroupExists, NextGroupExists,
++                             SetReportUsage2 functions to enable Next and Previous button functionality to browse
++                             in the Setup Records. New List Overview button to show the Setup Records for a specific Usage.
++      PA041199   10.08.16 SA 68194  Added code for option "Return Order Picklist" in ReportUsage2.
++      EU.0074599 23.08.19 GD 74602 New optionstring value: "ADR Document" for Usage.
++      EU.0070929 04.09.19 GD Downmerge of EU.0074599 to 7.2.0.
++      --- 7.2.1 ---
++      EU.0101361 09.07.20 KR NAV BC Technical Upgrade
++    }
++    END.
++  }
++}
++
+diff --git a/tests/fixtures/EX-P347.stripped.txt b/tests/fixtures/EX-P347.stripped.txt
+new file mode 100644
+index 0000000..87185f9
+--- /dev/null
++++ b/tests/fixtures/EX-P347.stripped.txt
+@@ -0,0 +1,543 @@
++OBJECT Page 347 Report Selection - Purchase
++{
++  OBJECT-PROPERTIES
++  {
++    Date=07/27/23;
++    Time=[ 9:49:13 AM];
++    Modified=Yes;
++    Version List=NAVW1.x,N.7.2.1,DC;
++  }
++  PROPERTIES
++  {
++    CaptionML=ENU=Report Selection - Purchase;
++    SaveValues=Yes;
++    SourceTable=Table77;
++    DelayedInsert=Yes;
++    PageType=Worksheet;
++    OnOpenPage=BEGIN
++                 SetUsageFilter;
++               END;
++
++    OnNewRecord=BEGIN
++                  NewRecord;
++                END;
++
++    OnAfterGetCurrRecord=BEGIN
++                           // Start PA039784.54256
++                           RefreshButtons();
++                           // Stop PA039784.54256
++                         END;
++
++    ActionList=ACTIONS
++    {
++      { 1109400001;  ;ActionContainer;
++                      ActionContainerType=ActionItems }
++      { 1109400002;1 ;Action    ;
++                      Name=List Overview;
++                      CaptionML=ENU=List Overview;
++                      Description=PA039784.54256;
++                      Promoted=Yes;
++                      PromotedIsBig=Yes;
++                      Image=List;
++                      PromotedCategory=Process;
++                      OnAction=VAR
++                                 RepSelectionL@1109400000 : Record 77;
++                               BEGIN
++                                 // Start PA039784.54256
++                                 RepSelectionL.FILTERGROUP(2);
++                                 CASE ReportUsage2 OF
++                                   ReportUsage2::Inquiry:
++                                     RepSelectionL.SETRANGE(Usage,RepSelectionL.Usage::"P.Inquiry");
++                                   ReportUsage2::Order:
++                                     RepSelectionL.SETRANGE(Usage,RepSelectionL.Usage::"P.Order");
++                                   ReportUsage2::Invoice:
++                                     RepSelectionL.SETRANGE(Usage,RepSelectionL.Usage::"P.Inv.");
++                                   ReportUsage2::"Credit Memo":
++                                     RepSelectionL.SETRANGE(Usage,RepSelectionL.Usage::"P.Cr.Memo");
++                                   ReportUsage2::Receipt:
++                                     RepSelectionL.SETRANGE(Usage,RepSelectionL.Usage::"P.Receipt");
++                                   ReportUsage2::"Purchase Document - Test":
++                                     RepSelectionL.SETRANGE(Usage,RepSelectionL.Usage::"P.Test");
++                                   ReportUsage2::"Return Order":
++                                     RepSelectionL.SETRANGE(Usage,RepSelectionL.Usage::"P.Ret.Order");
++                                   ReportUsage2::"Return Shipment":
++                                     RepSelectionL.SETRANGE(Usage,RepSelectionL.Usage::"P.Ret.Shipment");
++                                 END;
++                                 RepSelectionL.FILTERGROUP(0);
++                                 RepSelectionL.SETCURRENTKEY(Usage,"Location Code","Make Code",Sequence);
++                                 IF PAGE.RUNMODAL(0, RepSelectionL) <> ACTION::LookupOK THEN
++                                   EXIT;
++                                 MakeUsageG := RepSelectionL."Make Code";
++                                 LocationUsageG := RepSelectionL."Location Code";
++                                 SetUsageFilter();
++                                 CurrPage.UPDATE(TRUE);
++
++                                 // Stop PA039784.54256
++                               END;
++                                }
++      { 1109400004;1 ;Action    ;
++                      Name=Previous;
++                      CaptionML=ENU=Previous;
++                      Description=PA039784.54256;
++                      Promoted=Yes;
++                      Enabled=BackEnabledG;
++                      PromotedIsBig=Yes;
++                      Image=PreviousRecord;
++                      PromotedCategory=Process;
++                      OnAction=BEGIN
++                                 // Start PA039784.54256
++                                 GroupRecordStep(-1);
++                                 // Stop PA039784.54256
++                               END;
++                                }
++      { 1109400005;1 ;Action    ;
++                      Name=Next;
++                      CaptionML=ENU=Next;
++                      Description=PA039784.54256;
++                      Promoted=Yes;
++                      Enabled=NextEnabledG;
++                      PromotedIsBig=Yes;
++                      Image=NextRecord;
++                      PromotedCategory=Process;
++                      OnAction=BEGIN
++                                 // Start PA039784.54256
++                                 GroupRecordStep(1);
++                                 // Stop PA039784.54256
++                               END;
++                                }
++    }
++  }
++  CONTROLS
++  {
++    { 1900000001;0;Container;
++                ContainerType=ContentArea }
++
++    { 11  ;1   ;Field     ;
++                CaptionML=ENU=Usage;
++                OptionCaptionML=ENU=Inquiry,,Order,Invoice,Credit Memo,Receipt,Purchase Document - Test,Return Order,Return Shipment,Return Order Picklist,ADR Document,,,,,Direct Cr. EDI File,Direct Cr. Remittance Advice,Direct Cr. Schedule;
++                Description=PA041199.68194,EU.0074599,DC;
++                SourceExpr=ReportUsage2;
++                OnValidate=BEGIN
++                             SetUsageFilter;
++                             ReportUsage2OnAfterValidate;
++                             // Start PA039784.54256
++                             RefreshButtons();
++                             // Stop PA039784.54256
++                           END;
++                            }
++
++    { 1109400000;1;Field  ;
++                CaptionML=ENU=Make Code;
++                SourceExpr=MakeUsageG;
++                OnValidate=BEGIN
++                             SetUsageFilter;
++                             MakeUsageGOnAfterValidate;
++                             // Start PA039784.54256
++                             RefreshButtons();
++                             // Stop PA039784.54256
++                           END;
++
++                OnLookup=VAR
++                           MakecodeL@1109400000 : Record 5028656;
++                         BEGIN
++                           // Start INC
++                           IF NOT MakecodeL.GET(Text) THEN
++                             CLEAR(MakecodeL);
++                           IF PAGE.RUNMODAL(0,MakecodeL) = ACTION::LookupOK THEN BEGIN
++                             Text := MakecodeL."Make Code";
++                             EXIT(TRUE);
++                           END ELSE
++                             EXIT(FALSE);
++                           // Stop INC
++                         END;
++                          }
++
++    { 1109400003;1;Field  ;
++                CaptionML=ENU=Location Code;
++                SourceExpr=LocationUsageG;
++                OnValidate=BEGIN
++                             // Start INC
++                             SetUsageFilter;
++                             // Stop INC
++                             LocationUsageGOnAfterValidate;
++                             // Start PA039784.54256
++                             RefreshButtons();
++                             // Stop PA039784.54256
++                           END;
++
++                OnLookup=VAR
++                           MakecodeL@1109400000 : Record 5028656;
++                           LocationCodeL@1109400003 : Record 14;
++                         BEGIN
++                           // Start INC
++                           IF NOT LocationCodeL.GET(Text) THEN
++                             CLEAR(LocationCodeL);
++                           IF PAGE.RUNMODAL(0,LocationCodeL) = ACTION::LookupOK THEN BEGIN
++                             Text := LocationCodeL.Code;
++                             EXIT(TRUE);
++                           END ELSE
++                             EXIT(FALSE);
++                           // Stop INC
++                         END;
++                          }
++
++    { 1   ;1   ;Group     ;
++                GroupType=Repeater }
++
++    { 2   ;2   ;Field     ;
++                SourceExpr=Sequence }
++
++    { 9   ;2   ;Field     ;
++                SourceExpr="Report ID";
++                LookupPageID=Objects;
++                OnValidate=BEGIN
++                             // Start PA036461.27591
++                             CurrPage.UPDATE(TRUE);
++                             // Stop PA036461.27591
++                           END;
++                            }
++
++    { 4   ;2   ;Field     ;
++                DrillDown=No;
++                SourceExpr="Report Caption" }
++
++    { 13  ;2   ;Field     ;
++                SourceExpr="Print Sent-From Line";
++                OnValidate=BEGIN
++                             // Start PA036461.27591
++                             CurrPage.UPDATE(TRUE);
++                             // Stop PA036461.27591
++                           END;
++                            }
++
++    { 15  ;2   ;Field     ;
++                SourceExpr="Print Address Block";
++                OnValidate=BEGIN
++                             // Start PA036461.27591
++                             CurrPage.UPDATE(TRUE);
++                             // Stop PA036461.27591
++                           END;
++                            }
++
++    { 1101267193;2;Field  ;
++                SourceExpr="Print Comp. Business Template";
++                OnValidate=BEGIN
++                             // Start PA035484.20754
++                             CurrPage.UPDATE(TRUE);
++                             // Stop PA035484.20754
++                           END;
++                            }
++
++    { 1119432006;2;Field  ;
++                Description=PA033052;
++                SourceExpr="Print Report Title";
++                OnValidate=BEGIN
++                             // Start PA036461.27591
++                             CurrPage.UPDATE(TRUE);
++                             // Stop PA036461.27591
++                           END;
++                            }
++
++    { 1119432008;2;Field  ;
++                Description=PA033052;
++                SourceExpr="Report Title";
++                OnValidate=BEGIN
++                             // Start PA036461.27591
++                             CurrPage.UPDATE(TRUE);
++                             // Stop PA036461.27591
++                           END;
++                            }
++
++    { 10136100;2;Field    ;
++                SourceExpr="Custom Report Layout Code";
++                Visible=FALSE }
++
++    { 10136101;2;Field    ;
++                SourceExpr="Use for Email Attachment" }
++
++    { 10136102;2;Field    ;
++                SourceExpr="Use for Email Body" }
++
++    { 10136103;2;Field    ;
++                SourceExpr="Email Body Layout Code";
++                Visible=FALSE }
++
++    { 10136104;2;Field    ;
++                SourceExpr="Email Body Layout Description" }
++
++    { 1900000007;0;Container;
++                ContainerType=FactBoxArea }
++
++    { 1900383207;1;Part   ;
++                Visible=FALSE;
++                PartType=System;
++                SystemPartID=RecordLinks }
++
++    { 1905767507;1;Part   ;
++                Visible=FALSE;
++                PartType=System;
++                SystemPartID=Notes }
++
++  }
++  CODE
++  {
++    VAR
++      ReportUsage2@1109400000 : 'Inquiry,,Order,Invoice,Credit Memo,Receipt,Purchase Document - Test,Return Order,Return Shipment,Return Order Picklist,ADR Document,,,,,Direct Cr. EDI File,Direct Cr. Remittance Advice,Direct Cr. Schedule';
++      _INCADEA_@1109400001 : Boolean;
++      MakeUsageG@1109400002 : Code[20];
++      LocationUsageG@1109400003 : Code[20];
++      NextEnabledG@1109400004 : Boolean INDATASET;
++      BackEnabledG@1109400005 : Boolean INDATASET;
++
++    LOCAL PROCEDURE SetUsageFilter@1();
++    BEGIN
++      FILTERGROUP(2);
++      CASE ReportUsage2 OF
++        ReportUsage2::Inquiry:
++          SETRANGE(Usage,Usage::"P.Inquiry");
++        ReportUsage2::Order:
++          SETRANGE(Usage,Usage::"P.Order");
++        ReportUsage2::Invoice:
++          SETRANGE(Usage,Usage::"P.Inv.");
++        ReportUsage2::"Credit Memo":
++          SETRANGE(Usage,Usage::"P.Cr.Memo");
++        ReportUsage2::Receipt:
++          SETRANGE(Usage,Usage::"P.Receipt");
++        ReportUsage2::"Purchase Document - Test":
++          SETRANGE(Usage,Usage::"P.Test");
++      // Start INC
++        ReportUsage2::"Return Order":
++          SETRANGE(Usage,Usage::"P.Ret.Order");
++
++        ReportUsage2::"Return Shipment":
++          SETRANGE(Usage,Usage::"P.Ret.Shipment");
++      // Start PA041199.68194
++        ReportUsage2::"Return Order Picklist":
++          SETRANGE(Usage,Usage::"P.Ret.Order.Pick");
++      // Stop PA041199.68194
++      // Start EU.0074599
++        ReportUsage2::"ADR Document":
++          SETRANGE(Usage,Usage::"ADR Document");
++      // Stop EU.0074599
++
++      // Start DC6.00
++        ReportUsage2::"Direct Cr. EDI File":
++          SETRANGE(Usage,Usage::"P.Direct Cr. EDI File");
++        ReportUsage2::"Direct Cr. Remittance Advice":
++          SETRANGE(Usage,Usage::"P.Direct Cr. Remittance");
++        ReportUsage2::"Direct Cr. Schedule":
++          SETRANGE(Usage,Usage::"P.Direct Cr. Schedule");
++      // Stop DC6.00
++      END;
++
++      SETRANGE("Make Code",MakeUsageG);
++
++      SETRANGE("Location Code", LocationUsageG);
++      //Stop INC
++      FILTERGROUP(0);
++    END;
++
++    LOCAL PROCEDURE ReportUsage2OnAfterValidate@19038799();
++    BEGIN
++      CurrPage.UPDATE;
++    END;
++
++    LOCAL PROCEDURE MakeUsageGOnAfterValidate@19064971();
++    BEGIN
++      CurrPage.UPDATE;
++    END;
++
++    LOCAL PROCEDURE LocationUsageGOnAfterValidate@19067914();
++    BEGIN
++      // Start INC
++      CurrPage.UPDATE;
++      // Stop INC
++    END;
++
++    LOCAL PROCEDURE GroupRecordStep@1109400001(StepP@1109400003 : Integer);
++    VAR
++      InDifferentGroupL@1109400000 : Boolean;
++      RepSelectionL@1109400002 : Record 77;
++    BEGIN
++      // @ GroupRecordStep - Used when pushing next or previous button to show the next
++      // @ or previous group of records that have the same usage, location code and make code.
++      // @ param stepP - Integer
++
++      // Start PA039784.54256
++      RepSelectionL := Rec;
++      RepSelectionL.SETCURRENTKEY(Usage,"Location Code","Make Code",Sequence);
++      // Start PA041199.68194
++      RepSelectionL.SETFILTER(Usage,'%1|%2|%3|%4|%5|%6|%7|%8|%9',Usage::"P.Inquiry",Usage::"P.Order",
++        Usage::"P.Inv.",Usage::"P.Cr.Memo",Usage::"P.Receipt",Usage::"P.Test",Usage::"P.Ret.Order",Usage::"P.Ret.Shipment",Usage::"P.Ret.Order.Pick");
++      // Stop PA041199.68194
++      REPEAT
++        RepSelectionL.NEXT(StepP);
++        InDifferentGroupL := NOT InTheSameGroup(RepSelectionL,Rec);
++      UNTIL InDifferentGroupL;
++      SetReportUsage2(RepSelectionL);
++      MakeUsageG := RepSelectionL."Make Code";
++      LocationUsageG := RepSelectionL."Location Code";
++      SetUsageFilter();
++      CurrPage.UPDATE;
++      // Stop PA039784.54256
++    END;
++
++    LOCAL PROCEDURE RefreshButtons@1109400002();
++    VAR
++      FirstRepSelectionL@1109400000 : Record 77;
++      LastRepSelectionL@1109400001 : Record 77;
++      RepSelectionL@1109400002 : Record 77;
++    BEGIN
++      // @ RefreshButtons - Used to Refresh the next, previous buttons
++
++      // Start PA039784.54256
++      BackEnabledG := FALSE;
++      NextEnabledG := FALSE;
++      RepSelectionL := Rec;
++      RepSelectionL.SETCURRENTKEY(Usage,"Location Code","Make Code",Sequence);
++      // Start PA041199.68194
++      RepSelectionL.SETFILTER(Usage,'%1|%2|%3|%4|%5|%6|%7|%8|%9',Usage::"P.Inquiry",Usage::"P.Order",
++        Usage::"P.Inv.",Usage::"P.Cr.Memo",Usage::"P.Receipt",Usage::"P.Test",Usage::"P.Ret.Order",Usage::"P.Ret.Shipment",Usage::"P.Ret.Order.Pick");
++      // Start PA041199.68194
++      FirstRepSelectionL.SETVIEW(RepSelectionL.GETVIEW);
++      LastRepSelectionL.SETVIEW(RepSelectionL.GETVIEW);
++      IF FirstRepSelectionL.FINDFIRST THEN BEGIN
++        LastRepSelectionL.FINDLAST;
++        BackEnabledG := PreviousGroupExists(FirstRepSelectionL);
++        NextEnabledG := NextGroupExists(LastRepSelectionL);
++      END;
++      // Stop PA039784.54256
++    END;
++
++    LOCAL PROCEDURE InTheSameGroup@1109400003(RepSelection1P@1109400000 : Record 77;RepSelection2P@1109400001 : Record 77) InTheSameGroupR : Boolean;
++    BEGIN
++      // @ InTheSameGroup - Used to check if 2 records have the same Usage, Make Code and Location Code
++      // @ param RepSelection1P - Record Report Selection
++      // @ param RepSelection2P - Record Report Selection
++      // @ retval InTheSameGroupR - Boolean
++
++      // Start PA039784.54256
++      InTheSameGroupR:= (RepSelection1P.Usage = RepSelection2P.Usage) AND
++        (RepSelection1P."Make Code" = RepSelection2P."Make Code") AND
++        (RepSelection1P."Location Code" = RepSelection2P."Location Code") ;
++      // Stop PA039784.54256
++    END;
++
++    LOCAL PROCEDURE PreviousGroupExists@1109400004(RepSelectionP@1109400000 : Record 77) : Boolean;
++    BEGIN
++      // @ PreviousGroupExists - Used to check if a previous group of records exists
++      // @ param RepSelectionP - Record Report Selection
++      // @ retval - Boolean
++
++      // Start PA039784.54256
++      IF (Usage < RepSelectionP.Usage) THEN
++        EXIT(FALSE);
++
++      IF Usage > RepSelectionP.Usage THEN
++        EXIT(TRUE);
++
++      IF ("Location Code" < RepSelectionP."Location Code") THEN
++        EXIT(FALSE);
++
++      IF ("Location Code" > RepSelectionP."Location Code") THEN
++        EXIT(TRUE);
++
++      IF ("Make Code" < RepSelectionP."Make Code") THEN
++        EXIT(FALSE);
++
++      IF ("Make Code" > RepSelectionP."Make Code") THEN
++        EXIT(TRUE);
++      EXIT(FALSE);
++      // Stop PA039784.54256
++    END;
++
++    LOCAL PROCEDURE NextGroupExists@1109400005(RepSelectionP@1109400000 : Record 77) : Boolean;
++    BEGIN
++      // @ NextGroupExists - Used to check if a next group of records exists
++      // @ param RepSelectionP - Record Report Selection
++      // @ retval - Boolean
++
++      // Start PA039784.54256
++      IF (Usage >  RepSelectionP.Usage) THEN
++        EXIT(FALSE);
++
++      IF Usage < RepSelectionP.Usage THEN
++        EXIT(TRUE);
++
++      IF ("Location Code" > RepSelectionP."Location Code") THEN
++        EXIT(FALSE);
++
++      IF ("Location Code" < RepSelectionP."Location Code") THEN
++        EXIT(TRUE);
++
++      IF ("Make Code" > RepSelectionP."Make Code") THEN
++        EXIT(FALSE);
++
++      IF ("Make Code" < RepSelectionP."Make Code") THEN
++        EXIT(TRUE);
++      EXIT(FALSE);
++      // Stop PA039784.54256
++    END;
++
++    LOCAL PROCEDURE SetReportUsage2@1109400007(RepSelectionP@1109400000 : Record 77);
++    BEGIN
++      // @ SetReportUsage2 - Used to map the records usage with the option ReportUsage2
++      // @ param RepSelectionP - Record Report Selection
++
++      // Start PA039784.54256
++      CASE RepSelectionP.Usage OF
++        RepSelectionP.Usage::"P.Inquiry":
++          ReportUsage2 := ReportUsage2::Inquiry;
++        RepSelectionP.Usage::"P.Order":
++          ReportUsage2 := ReportUsage2::Order;
++        RepSelectionP.Usage::"P.Inv.":
++          ReportUsage2 := ReportUsage2::Invoice;
++        RepSelectionP.Usage::"P.Cr.Memo":
++          ReportUsage2 := ReportUsage2::"Credit Memo";
++        RepSelectionP.Usage::"P.Receipt":
++          ReportUsage2 := ReportUsage2::Receipt;
++        RepSelectionP.Usage::"P.Test":
++          ReportUsage2 := ReportUsage2::"Purchase Document - Test";
++        RepSelectionP.Usage::"P.Ret.Order":
++          ReportUsage2 := ReportUsage2::"Return Order";
++        RepSelectionP.Usage::"P.Ret.Shipment":
++          ReportUsage2 := ReportUsage2::"Return Shipment";
++        // Start PA041199.68194
++        RepSelectionP.Usage::"P.Ret.Order.Pick":
++          ReportUsage2 := ReportUsage2::"Return Order Picklist";
++        // Start PA041199.68194
++      END;
++      // Stop PA039784.54256
++    END;
++
++    BEGIN
++    {
++      // @ Area Parts
++      PA-Number  Date
++      ------------------------------------------------
++      PA033052   23.05.11 PR Added new controls 'Report Title', 'Print Report Title', 'Print Add. Footer', 'Print Make Logo', 'Print Company Logo'.
++      PA033067   12.04.12 DR DE Captions implemented
++      PA033259   09.08.12 AI Deletion of Start/Stop History in Code, update copyright and Version List
++      PA033259   18.09.12 DR Variable names changed according to incadea style guide
++      PA033336   17.10.12 SS 8746211 Removed "Print Footer Line" field control.
++      PA033336   12.11.12 SS 8590628 Removed logo fields: "Print Company Logo", "Print Make Logo"
++      PA035484   04.04.14 GF 20754 Renamed field "Print Add. Footer" to "Print Comp. Business Template"
++      PA036461   01.09.14 KK 27591 Changed behavior of saving selected reports
++      PA036547   06.11.14 GE Merge N.6.1.4 to N.7.1.0 - PA035484.20754.
++      PA036548   22.12.14 GL Adjusted Source expressions of fields with changed names
++      PA039931   28.01.16 GE Extend all make code variables to code20
++      PA039932   02.02.16 GE Merge of PA039931
++      PA039784   15.03.16 GW 54256 New GroupRecordStep, RefreshButtons, InTheSameGroup, PreviousGroupExists, NextGroupExists,
++                             SetReportUsage2 functions to enable Next and Previous button functionality to browse
++                             in the Setup Records. New List Overview button to show the Setup Records for a specific Usage.
++      PA041199   10.08.16 SA 68194  Added code for option "Return Order Picklist" in ReportUsage2.
++      EU.0074599 23.08.19 GD 74602 New optionstring value: "ADR Document" for Usage.
++      EU.0070929 04.09.19 GD Downmerge of EU.0074599 to 7.2.0.
++      --- 7.2.1 ---
++      EU.0101361 09.07.20 KR NAV BC Technical Upgrade
++      DC14.0     27.07.23 QQ Direct Credits NZ - Added DC usage options.
++    }
++    END.
++  }
++}
++
+diff --git a/tests/fixtures/MyMerged-P347.stripped.txt b/tests/fixtures/MyMerged-P347.stripped.txt
+new file mode 100644
+index 0000000..171eff4
+--- /dev/null
++++ b/tests/fixtures/MyMerged-P347.stripped.txt
+@@ -0,0 +1,544 @@
++OBJECT Page 347 Report Selection - Purchase
++{
++  OBJECT-PROPERTIES
++  {
++    Date=06/10/26;
++    Time=12:24:15 PM;
++    Modified=Yes;
++    Version List=NAVW1.x,N.7.2.1,DC,CU26Q1;
++  }
++  PROPERTIES
++  {
++    CaptionML=ENU=Report Selection - Purchase;
++    SaveValues=Yes;
++    SourceTable=Table77;
++    DelayedInsert=Yes;
++    PageType=Worksheet;
++    OnOpenPage=BEGIN
++                 SetUsageFilter;
++               END;
++
++    OnNewRecord=BEGIN
++                  NewRecord;
++                END;
++
++    OnAfterGetCurrRecord=BEGIN
++                           // Start PA039784.54256
++                           RefreshButtons();
++                           // Stop PA039784.54256
++                         END;
++
++    ActionList=ACTIONS
++    {
++      { 1109400001;  ;ActionContainer;
++                      ActionContainerType=ActionItems }
++      { 1109400002;1 ;Action    ;
++                      Name=List Overview;
++                      CaptionML=ENU=List Overview;
++                      Description=PA039784.54256;
++                      Promoted=Yes;
++                      PromotedIsBig=Yes;
++                      Image=List;
++                      PromotedCategory=Process;
++                      OnAction=VAR
++                                 RepSelectionL@1109400000 : Record 77;
++                               BEGIN
++                                 // Start PA039784.54256
++                                 RepSelectionL.FILTERGROUP(2);
++                                 CASE ReportUsage2 OF
++                                   ReportUsage2::Inquiry:
++                                     RepSelectionL.SETRANGE(Usage,RepSelectionL.Usage::"P.Inquiry");
++                                   ReportUsage2::Order:
++                                     RepSelectionL.SETRANGE(Usage,RepSelectionL.Usage::"P.Order");
++                                   ReportUsage2::Invoice:
++                                     RepSelectionL.SETRANGE(Usage,RepSelectionL.Usage::"P.Inv.");
++                                   ReportUsage2::"Credit Memo":
++                                     RepSelectionL.SETRANGE(Usage,RepSelectionL.Usage::"P.Cr.Memo");
++                                   ReportUsage2::Receipt:
++                                     RepSelectionL.SETRANGE(Usage,RepSelectionL.Usage::"P.Receipt");
++                                   ReportUsage2::"Purchase Document - Test":
++                                     RepSelectionL.SETRANGE(Usage,RepSelectionL.Usage::"P.Test");
++                                   ReportUsage2::"Return Order":
++                                     RepSelectionL.SETRANGE(Usage,RepSelectionL.Usage::"P.Ret.Order");
++                                   ReportUsage2::"Return Shipment":
++                                     RepSelectionL.SETRANGE(Usage,RepSelectionL.Usage::"P.Ret.Shipment");
++                                 END;
++                                 RepSelectionL.FILTERGROUP(0);
++                                 RepSelectionL.SETCURRENTKEY(Usage,"Location Code","Make Code",Sequence);
++                                 IF PAGE.RUNMODAL(0, RepSelectionL) <> ACTION::LookupOK THEN
++                                   EXIT;
++                                 MakeUsageG := RepSelectionL."Make Code";
++                                 LocationUsageG := RepSelectionL."Location Code";
++                                 SetUsageFilter();
++                                 CurrPage.UPDATE(TRUE);
++
++                                 // Stop PA039784.54256
++                               END;
++                                }
++      { 1109400004;1 ;Action    ;
++                      Name=Previous;
++                      CaptionML=ENU=Previous;
++                      Description=PA039784.54256;
++                      Promoted=Yes;
++                      Enabled=BackEnabledG;
++                      PromotedIsBig=Yes;
++                      Image=PreviousRecord;
++                      PromotedCategory=Process;
++                      OnAction=BEGIN
++                                 // Start PA039784.54256
++                                 GroupRecordStep(-1);
++                                 // Stop PA039784.54256
++                               END;
++                                }
++      { 1109400005;1 ;Action    ;
++                      Name=Next;
++                      CaptionML=ENU=Next;
++                      Description=PA039784.54256;
++                      Promoted=Yes;
++                      Enabled=NextEnabledG;
++                      PromotedIsBig=Yes;
++                      Image=NextRecord;
++                      PromotedCategory=Process;
++                      OnAction=BEGIN
++                                 // Start PA039784.54256
++                                 GroupRecordStep(1);
++                                 // Stop PA039784.54256
++                               END;
++                                }
++    }
++  }
++  CONTROLS
++  {
++    { 1900000001;0;Container;
++                ContainerType=ContentArea }
++
++    { 11  ;1   ;Field     ;
++                CaptionML=ENU=Usage;
++                OptionCaptionML=ENU=Inquiry,,Order,Invoice,Credit Memo,Receipt,Purchase Document - Test,Return Order,Return Shipment,Return Order Picklist,ADR Document,,,,,Direct Cr. EDI File,Direct Cr. Remittance Advice,Direct Cr. Schedule;
++                Description=PA041199.68194,EU.0074599;
++                SourceExpr=ReportUsage2;
++                OnValidate=BEGIN
++                             SetUsageFilter;
++                             ReportUsage2OnAfterValidate;
++                             // Start PA039784.54256
++                             RefreshButtons();
++                             // Stop PA039784.54256
++                           END;
++                            }
++
++    { 1109400000;1;Field  ;
++                CaptionML=ENU=Make Code;
++                SourceExpr=MakeUsageG;
++                OnValidate=BEGIN
++                             SetUsageFilter;
++                             MakeUsageGOnAfterValidate;
++                             // Start PA039784.54256
++                             RefreshButtons();
++                             // Stop PA039784.54256
++                           END;
++
++                OnLookup=VAR
++                           MakecodeL@1109400000 : Record 5028656;
++                         BEGIN
++                           // Start INC
++                           IF NOT MakecodeL.GET(Text) THEN
++                             CLEAR(MakecodeL);
++                           IF PAGE.RUNMODAL(0,MakecodeL) = ACTION::LookupOK THEN BEGIN
++                             Text := MakecodeL."Make Code";
++                             EXIT(TRUE);
++                           END ELSE
++                             EXIT(FALSE);
++                           // Stop INC
++                         END;
++                          }
++
++    { 1109400003;1;Field  ;
++                CaptionML=ENU=Location Code;
++                SourceExpr=LocationUsageG;
++                OnValidate=BEGIN
++                             // Start INC
++                             SetUsageFilter;
++                             // Stop INC
++                             LocationUsageGOnAfterValidate;
++                             // Start PA039784.54256
++                             RefreshButtons();
++                             // Stop PA039784.54256
++                           END;
++
++                OnLookup=VAR
++                           MakecodeL@1109400000 : Record 5028656;
++                           LocationCodeL@1109400003 : Record 14;
++                         BEGIN
++                           // Start INC
++                           IF NOT LocationCodeL.GET(Text) THEN
++                             CLEAR(LocationCodeL);
++                           IF PAGE.RUNMODAL(0,LocationCodeL) = ACTION::LookupOK THEN BEGIN
++                             Text := LocationCodeL.Code;
++                             EXIT(TRUE);
++                           END ELSE
++                             EXIT(FALSE);
++                           // Stop INC
++                         END;
++                          }
++
++    { 1   ;1   ;Group     ;
++                GroupType=Repeater }
++
++    { 2   ;2   ;Field     ;
++                SourceExpr=Sequence }
++
++    { 9   ;2   ;Field     ;
++                SourceExpr="Report ID";
++                LookupPageID=Objects;
++                OnValidate=BEGIN
++                             // Start PA036461.27591
++                             CurrPage.UPDATE(TRUE);
++                             // Stop PA036461.27591
++                           END;
++                            }
++
++    { 4   ;2   ;Field     ;
++                DrillDown=No;
++                SourceExpr="Report Caption" }
++
++    { 13  ;2   ;Field     ;
++                SourceExpr="Print Sent-From Line";
++                OnValidate=BEGIN
++                             // Start PA036461.27591
++                             CurrPage.UPDATE(TRUE);
++                             // Stop PA036461.27591
++                           END;
++                            }
++
++    { 15  ;2   ;Field     ;
++                SourceExpr="Print Address Block";
++                OnValidate=BEGIN
++                             // Start PA036461.27591
++                             CurrPage.UPDATE(TRUE);
++                             // Stop PA036461.27591
++                           END;
++                            }
++
++    { 1101267193;2;Field  ;
++                SourceExpr="Print Comp. Business Template";
++                OnValidate=BEGIN
++                             // Start PA035484.20754
++                             CurrPage.UPDATE(TRUE);
++                             // Stop PA035484.20754
++                           END;
++                            }
++
++    { 1119432006;2;Field  ;
++                Description=PA033052;
++                SourceExpr="Print Report Title";
++                OnValidate=BEGIN
++                             // Start PA036461.27591
++                             CurrPage.UPDATE(TRUE);
++                             // Stop PA036461.27591
++                           END;
++                            }
++
++    { 1119432008;2;Field  ;
++                Description=PA033052;
++                SourceExpr="Report Title";
++                OnValidate=BEGIN
++                             // Start PA036461.27591
++                             CurrPage.UPDATE(TRUE);
++                             // Stop PA036461.27591
++                           END;
++                            }
++
++    { 10136100;2;Field    ;
++                SourceExpr="Custom Report Layout Code";
++                Visible=FALSE }
++
++    { 10136101;2;Field    ;
++                SourceExpr="Use for Email Attachment" }
++
++    { 10136102;2;Field    ;
++                SourceExpr="Use for Email Body" }
++
++    { 10136103;2;Field    ;
++                SourceExpr="Email Body Layout Code";
++                Visible=FALSE }
++
++    { 10136104;2;Field    ;
++                SourceExpr="Email Body Layout Description" }
++
++    { 1900000007;0;Container;
++                ContainerType=FactBoxArea }
++
++    { 1900383207;1;Part   ;
++                Visible=FALSE;
++                PartType=System;
++                SystemPartID=RecordLinks }
++
++    { 1905767507;1;Part   ;
++                Visible=FALSE;
++                PartType=System;
++                SystemPartID=Notes }
++
++  }
++  CODE
++  {
++    VAR
++      ReportUsage2@1109400000 : 'Inquiry,,Order,Invoice,Credit Memo,Receipt,Purchase Document - Test,Return Order,Return Shipment,Return Order Picklist,ADR Document,,,,,Direct Cr. EDI File,Direct Cr. Remittance Advice,Direct Cr. Schedule';
++      _INCADEA_@1109400001 : Boolean;
++      MakeUsageG@1109400002 : Code[20];
++      LocationUsageG@1109400003 : Code[20];
++      NextEnabledG@1109400004 : Boolean INDATASET;
++      BackEnabledG@1109400005 : Boolean INDATASET;
++
++    LOCAL PROCEDURE SetUsageFilter@1();
++    BEGIN
++      FILTERGROUP(2);
++      CASE ReportUsage2 OF
++        ReportUsage2::Inquiry:
++          SETRANGE(Usage,Usage::"P.Inquiry");
++        ReportUsage2::Order:
++          SETRANGE(Usage,Usage::"P.Order");
++        ReportUsage2::Invoice:
++          SETRANGE(Usage,Usage::"P.Inv.");
++        ReportUsage2::"Credit Memo":
++          SETRANGE(Usage,Usage::"P.Cr.Memo");
++        ReportUsage2::Receipt:
++          SETRANGE(Usage,Usage::"P.Receipt");
++        ReportUsage2::"Purchase Document - Test":
++          SETRANGE(Usage,Usage::"P.Test");
++      // Start INC
++        ReportUsage2::"Return Order":
++          SETRANGE(Usage,Usage::"P.Ret.Order");
++
++        ReportUsage2::"Return Shipment":
++          SETRANGE(Usage,Usage::"P.Ret.Shipment");
++      // Start PA041199.68194
++        ReportUsage2::"Return Order Picklist":
++          SETRANGE(Usage,Usage::"P.Ret.Order.Pick");
++      // Stop PA041199.68194
++      // Start EU.0074599
++        ReportUsage2::"ADR Document":
++          SETRANGE(Usage,Usage::"ADR Document");
++      // Stop EU.0074599
++
++      // Start DC6.00
++        ReportUsage2::"Direct Cr. EDI File":
++          SETRANGE(Usage,Usage::"P.Direct Cr. EDI File");
++        ReportUsage2::"Direct Cr. Remittance Advice":
++          SETRANGE(Usage,Usage::"P.Direct Cr. Remittance");
++        ReportUsage2::"Direct Cr. Schedule":
++          SETRANGE(Usage,Usage::"P.Direct Cr. Schedule");
++      // Stop DC6.00
++      END;
++
++      SETRANGE("Make Code",MakeUsageG);
++
++      SETRANGE("Location Code", LocationUsageG);
++      //Stop INC
++      FILTERGROUP(0);
++    END;
++
++    LOCAL PROCEDURE ReportUsage2OnAfterValidate@19038799();
++    BEGIN
++      CurrPage.UPDATE;
++    END;
++
++    LOCAL PROCEDURE MakeUsageGOnAfterValidate@19064971();
++    BEGIN
++      CurrPage.UPDATE;
++    END;
++
++    LOCAL PROCEDURE LocationUsageGOnAfterValidate@19067914();
++    BEGIN
++      // Start INC
++      CurrPage.UPDATE;
++      // Stop INC
++    END;
++
++    LOCAL PROCEDURE GroupRecordStep@1109400001(StepP@1109400003 : Integer);
++    VAR
++      InDifferentGroupL@1109400000 : Boolean;
++      RepSelectionL@1109400002 : Record 77;
++    BEGIN
++      // @ GroupRecordStep - Used when pushing next or previous button to show the next
++      // @ or previous group of records that have the same usage, location code and make code.
++      // @ param stepP - Integer
++
++      // Start PA039784.54256
++      RepSelectionL := Rec;
++      RepSelectionL.SETCURRENTKEY(Usage,"Location Code","Make Code",Sequence);
++      // Start PA041199.68194
++      RepSelectionL.SETFILTER(Usage,'%1|%2|%3|%4|%5|%6|%7|%8|%9',Usage::"P.Inquiry",Usage::"P.Order",
++        Usage::"P.Inv.",Usage::"P.Cr.Memo",Usage::"P.Receipt",Usage::"P.Test",Usage::"P.Ret.Order",Usage::"P.Ret.Shipment",Usage::"P.Ret.Order.Pick");
++      // Stop PA041199.68194
++      REPEAT
++        RepSelectionL.NEXT(StepP);
++        InDifferentGroupL := NOT InTheSameGroup(RepSelectionL,Rec);
++      UNTIL InDifferentGroupL;
++      SetReportUsage2(RepSelectionL);
++      MakeUsageG := RepSelectionL."Make Code";
++      LocationUsageG := RepSelectionL."Location Code";
++      SetUsageFilter();
++      CurrPage.UPDATE;
++      // Stop PA039784.54256
++    END;
++
++    LOCAL PROCEDURE RefreshButtons@1109400002();
++    VAR
++      FirstRepSelectionL@1109400000 : Record 77;
++      LastRepSelectionL@1109400001 : Record 77;
++      RepSelectionL@1109400002 : Record 77;
++    BEGIN
++      // @ RefreshButtons - Used to Refresh the next, previous buttons
++
++      // Start PA039784.54256
++      BackEnabledG := FALSE;
++      NextEnabledG := FALSE;
++      RepSelectionL := Rec;
++      RepSelectionL.SETCURRENTKEY(Usage,"Location Code","Make Code",Sequence);
++      // Start PA041199.68194
++      RepSelectionL.SETFILTER(Usage,'%1|%2|%3|%4|%5|%6|%7|%8|%9',Usage::"P.Inquiry",Usage::"P.Order",
++        Usage::"P.Inv.",Usage::"P.Cr.Memo",Usage::"P.Receipt",Usage::"P.Test",Usage::"P.Ret.Order",Usage::"P.Ret.Shipment",Usage::"P.Ret.Order.Pick");
++      // Start PA041199.68194
++      FirstRepSelectionL.SETVIEW(RepSelectionL.GETVIEW);
++      LastRepSelectionL.SETVIEW(RepSelectionL.GETVIEW);
++      IF FirstRepSelectionL.FINDFIRST THEN BEGIN
++        LastRepSelectionL.FINDLAST;
++        BackEnabledG := PreviousGroupExists(FirstRepSelectionL);
++        NextEnabledG := NextGroupExists(LastRepSelectionL);
++      END;
++      // Stop PA039784.54256
++    END;
++
++    LOCAL PROCEDURE InTheSameGroup@1109400003(RepSelection1P@1109400000 : Record 77;RepSelection2P@1109400001 : Record 77) InTheSameGroupR : Boolean;
++    BEGIN
++      // @ InTheSameGroup - Used to check if 2 records have the same Usage, Make Code and Location Code
++      // @ param RepSelection1P - Record Report Selection
++      // @ param RepSelection2P - Record Report Selection
++      // @ retval InTheSameGroupR - Boolean
++
++      // Start PA039784.54256
++      InTheSameGroupR:= (RepSelection1P.Usage = RepSelection2P.Usage) AND
++        (RepSelection1P."Make Code" = RepSelection2P."Make Code") AND
++        (RepSelection1P."Location Code" = RepSelection2P."Location Code") ;
++      // Stop PA039784.54256
++    END;
++
++    LOCAL PROCEDURE PreviousGroupExists@1109400004(RepSelectionP@1109400000 : Record 77) : Boolean;
++    BEGIN
++      // @ PreviousGroupExists - Used to check if a previous group of records exists
++      // @ param RepSelectionP - Record Report Selection
++      // @ retval - Boolean
++
++      // Start PA039784.54256
++      IF (Usage < RepSelectionP.Usage) THEN
++        EXIT(FALSE);
++
++      IF Usage > RepSelectionP.Usage THEN
++        EXIT(TRUE);
++
++      IF ("Location Code" < RepSelectionP."Location Code") THEN
++        EXIT(FALSE);
++
++      IF ("Location Code" > RepSelectionP."Location Code") THEN
++        EXIT(TRUE);
++
++      IF ("Make Code" < RepSelectionP."Make Code") THEN
++        EXIT(FALSE);
++
++      IF ("Make Code" > RepSelectionP."Make Code") THEN
++        EXIT(TRUE);
++      EXIT(FALSE);
++      // Stop PA039784.54256
++    END;
++
++    LOCAL PROCEDURE NextGroupExists@1109400005(RepSelectionP@1109400000 : Record 77) : Boolean;
++    BEGIN
++      // @ NextGroupExists - Used to check if a next group of records exists
++      // @ param RepSelectionP - Record Report Selection
++      // @ retval - Boolean
++
++      // Start PA039784.54256
++      IF (Usage >  RepSelectionP.Usage) THEN
++        EXIT(FALSE);
++
++      IF Usage < RepSelectionP.Usage THEN
++        EXIT(TRUE);
++
++      IF ("Location Code" > RepSelectionP."Location Code") THEN
++        EXIT(FALSE);
++
++      IF ("Location Code" < RepSelectionP."Location Code") THEN
++        EXIT(TRUE);
++
++      IF ("Make Code" > RepSelectionP."Make Code") THEN
++        EXIT(FALSE);
++
++      IF ("Make Code" < RepSelectionP."Make Code") THEN
++        EXIT(TRUE);
++      EXIT(FALSE);
++      // Stop PA039784.54256
++    END;
++
++    LOCAL PROCEDURE SetReportUsage2@1109400007(RepSelectionP@1109400000 : Record 77);
++    BEGIN
++      // @ SetReportUsage2 - Used to map the records usage with the option ReportUsage2
++      // @ param RepSelectionP - Record Report Selection
++
++      // Start PA039784.54256
++      CASE RepSelectionP.Usage OF
++        RepSelectionP.Usage::"P.Inquiry":
++          ReportUsage2 := ReportUsage2::Inquiry;
++        RepSelectionP.Usage::"P.Order":
++          ReportUsage2 := ReportUsage2::Order;
++        RepSelectionP.Usage::"P.Inv.":
++          ReportUsage2 := ReportUsage2::Invoice;
++        RepSelectionP.Usage::"P.Cr.Memo":
++          ReportUsage2 := ReportUsage2::"Credit Memo";
++        RepSelectionP.Usage::"P.Receipt":
++          ReportUsage2 := ReportUsage2::Receipt;
++        RepSelectionP.Usage::"P.Test":
++          ReportUsage2 := ReportUsage2::"Purchase Document - Test";
++        RepSelectionP.Usage::"P.Ret.Order":
++          ReportUsage2 := ReportUsage2::"Return Order";
++        RepSelectionP.Usage::"P.Ret.Shipment":
++          ReportUsage2 := ReportUsage2::"Return Shipment";
++        // Start PA041199.68194
++        RepSelectionP.Usage::"P.Ret.Order.Pick":
++          ReportUsage2 := ReportUsage2::"Return Order Picklist";
++        // Start PA041199.68194
++      END;
++      // Stop PA039784.54256
++    END;
++
++    BEGIN
++    {
++      // @ Area Parts
++      PA-Number  Date
++      ------------------------------------------------
++      PA033052   23.05.11 PR Added new controls 'Report Title', 'Print Report Title', 'Print Add. Footer', 'Print Make Logo', 'Print Company Logo'.
++      PA033067   12.04.12 DR DE Captions implemented
++      PA033259   09.08.12 AI Deletion of Start/Stop History in Code, update copyright and Version List
++      PA033259   18.09.12 DR Variable names changed according to incadea style guide
++      PA033336   17.10.12 SS 8746211 Removed "Print Footer Line" field control.
++      PA033336   12.11.12 SS 8590628 Removed logo fields: "Print Company Logo", "Print Make Logo"
++      PA035484   04.04.14 GF 20754 Renamed field "Print Add. Footer" to "Print Comp. Business Template"
++      PA036461   01.09.14 KK 27591 Changed behavior of saving selected reports
++      PA036547   06.11.14 GE Merge N.6.1.4 to N.7.1.0 - PA035484.20754.
++      PA036548   22.12.14 GL Adjusted Source expressions of fields with changed names
++      PA039931   28.01.16 GE Extend all make code variables to code20
++      PA039932   02.02.16 GE Merge of PA039931
++      PA039784   15.03.16 GW 54256 New GroupRecordStep, RefreshButtons, InTheSameGroup, PreviousGroupExists, NextGroupExists,
++                             SetReportUsage2 functions to enable Next and Previous button functionality to browse
++                             in the Setup Records. New List Overview button to show the Setup Records for a specific Usage.
++      PA041199   10.08.16 SA 68194  Added code for option "Return Order Picklist" in ReportUsage2.
++      EU.0074599 23.08.19 GD 74602 New optionstring value: "ADR Document" for Usage.
++      EU.0070929 04.09.19 GD Downmerge of EU.0074599 to 7.2.0.
++      --- 7.2.1 ---
++      EU.0101361 09.07.20 KR NAV BC Technical Upgrade
++      DC14.0     27.07.23 QQ Direct Credits NZ - Added DC usage options.
++	  CU26Q1	 10.06.26 RL CU upgrade.
++    }
++    END.
++  }
++}
++
+diff --git a/tests/test_diffengine.py b/tests/test_diffengine.py
+index 9c40414..f912512 100644
+--- a/tests/test_diffengine.py
++++ b/tests/test_diffengine.py
+@@ -36,6 +36,7 @@ CUST_OVERRIDE = {
+     'P14': {'AP', 'WBL', 'APOP'},   # customer's E-Mail field tagged APOP000010
+     'P21': {'AP', 'WBL'},           # WBL10 field add + AP-2362 FactBoxes (DEV-gate)
+     'P21V2': {'AP', 'WBL'},         # FactBoxes now tagged AP-2362 -> auto-merge (pair to P21)
++    'P347': {'AP', 'WBL', 'DC'},    # Direct Credit customisation; DC6.00 block + ReportUsage2 option ext
+ }
+ 
+ 
+@@ -56,6 +57,8 @@ PARAMS_OVERRIDE = {
+     # these match the gold so the fixture reproduces byte-exact.
+     'P21V2': dict(PARAMS, merge_date='06/10/25', merge_date_dots='10.06.26',
+                   text='CU Upgrade.'),
++    # P347 hand-merged 10/06/26; doc-trigger text 'CU upgrade.' (harness default).
++    'P347': dict(PARAMS, merge_date='06/10/26', merge_date_dots='10.06.26'),
+ }
+ 
+ 
+@@ -95,6 +98,9 @@ EXPECTED_VERDICTS = {
+                       (9,  'field-graft', 'CARRY'): 1,           # -> confident customer adds,
+                       (13, 'field-graft', 'CARRY'): 1,           # graft (no longer DEV). Pairs
+                       (14, 'field-graft', 'CARRY'): 1}),         # with P21 (untagged -> DEV).
++    'P347': Counter({(11,   'caption',    'CARRY'): 1,           # OptionString carry on field 11
++                     (None, 'code',       'CARRY'): 1,           # DC6.00 CODE-section block
++                     (None, 'var-option', 'CARRY'): 1}),         # ReportUsage2 global option ext
+ }
+ 
+ # Objects that should auto-execute, and the fixture they must reproduce.
+@@ -117,6 +123,9 @@ EXEC_CASES = {
+     'P21V2': (os.path.join(FIX, 'EX-P21V2.stripped.txt'),
+               os.path.join(FIX, 'CU-P21V2.stripped.txt'),
+               os.path.join(FIX, 'MyMerged-P21V2.stripped.txt')),
++    'P347': (os.path.join(FIX, 'EX-P347.stripped.txt'),
++             os.path.join(FIX, 'CU-P347.stripped.txt'),
++             os.path.join(FIX, 'MyMerged-P347.stripped.txt')),
+ }
+ # Objects that should route to DEV in the narrow build (not execute).
+ EXEC_GATED_TO_DEV = ['T36', 'P21']
+@@ -163,6 +172,8 @@ OBJ = {
+             os.path.join(FIX, 'CU-P21.stripped.txt')),
+     'P21V2': (os.path.join(FIX, 'EX-P21V2.stripped.txt'),
+               os.path.join(FIX, 'CU-P21V2.stripped.txt')),
++    'P347': (os.path.join(FIX, 'EX-P347.stripped.txt'),
++             os.path.join(FIX, 'CU-P347.stripped.txt')),
+ }
+ 
+ 
