@@ -48,13 +48,12 @@ OBJTYPE = re.compile(r'^\s*OBJECT\s+([A-Za-z]+)\s+\d', re.I)
 HANDLERS = {
     'TABLE':    dict(validated=True,  fields=True,  code=True,  doc=True),
     'CODEUNIT': dict(validated=True,  fields=False, code=True,  doc=True),
-    # PAGE: handler is BUILT and proven on P14 (doc-graft control add reproduces
-    # gold byte-exact). Held validated=False until P21/P5025649 are verified
-    # against golds - flipping this to True auto-merges every Page, and those two
-    # carry caption-carry rows whose correctness is not yet confirmed on a Page
-    # gold. Flip to True once those golds pass. (Test gates P14 by temporarily
-    # enabling PAGE; see tests/test_diffengine.py.)
-    'PAGE':     dict(validated=False, fields=True,  code=True,  doc=True),
+    # PAGE: validated. Clean control adds auto-merge (P14, P21V2); vendor-driven
+    # caption renames take B; ambiguous vendor-tagged adds (P21) and property
+    # modifications (P5025440) still route the OBJECT to DEV via the whole-object
+    # gate - so flipping this on does NOT disable safety, it lets CONFIDENT Pages
+    # through while uncertain ones are still surfaced for manual merge.
+    'PAGE':     dict(validated=True,  fields=True,  code=True,  doc=True),
     'REPORT':   dict(validated=False, fields=True,  code=True,  doc=True),
     'XMLPORT':  dict(validated=False, fields=True,  code=True,  doc=True),
 }

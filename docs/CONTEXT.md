@@ -915,3 +915,26 @@ PAGE on, pending Rich's sign-off across more real objects.
 **Files:** cuupdate/execute.py (source_order tiebreaker on insertions),
 tests/test_diffengine.py (P21V2 across all layers),
 tests/fixtures/{EX,CU,MyMerged}-P21V2.stripped.txt (NEW).
+
+### 8.19 Session log — PAGE flipped to validated=True (production)
+**Outcome: PAGE is now `validated=True` in the production registry. Confident Pages auto-merge;
+uncertain ones still route to DEV via the whole-object gate. Rich is taking it for live testing.
+Suite green (scorer 20/20, diffengine PASS, census 5/5).**
+
+**What flipping PAGE on does:** every Page now ATTEMPTS auto-merge instead of being gated wholesale.
+The gate still protects uncertain cases - flipping does NOT disable safety:
+- AUTO-MERGE: clean doc-justified control add (P14); customer-tagged control add incl. multi-add
+  same-anchor ordering (P21V2); vendor-driven caption rename -> take B.
+- DEV (whole-object gate): ambiguous vendor-tagged add (P21 - vendor deletion vs customer add
+  wearing a vendor tag); customer property modification on a shared control (P5025440 property-
+  modify). Verified in production-path: P14 auto, P21V2 auto, P21 DEV, P5025440 DEV.
+
+**Harness change:** TYPE_CASES now expects PAGE `validated=True`; P14/P21V2 exec fixtures now run
+through the REAL production path (the `_validated` test helper is a no-op for Pages now but kept for
+any future gated-type fixture). P21 still asserted to gate to DEV - now via the production path, not
+an override. No behavioural test weakened.
+
+**Report/XMLport** remain `validated=False` (gate to DEV) - next handlers to build.
+
+**Files:** cuupdate/diffengine.py (PAGE validated=True + rationale comment),
+tests/test_diffengine.py (TYPE_CASES PAGE=True), docs/ARCHITECTURE.md (PAGE production status).

@@ -133,14 +133,15 @@ def _spair(stem):
             os.path.join(SAMPLES, f'20206Q1_{stem}.txt'))
 
 
-# stem -> (expected_type, expected_validated). Reflects the PRODUCTION registry:
-# Pages are gated (validated=False) pending P21/P5025440 sign-off, even though
-# the Page handler is built and P14 reproduces its gold (tested via _validated).
+# stem -> (expected_type, expected_validated). Reflects the PRODUCTION registry.
+# PAGE is now validated: confident Pages auto-merge, uncertain ones (ambiguous
+# vendor-tagged adds, property modifications) still gate to DEV via the
+# whole-object gate. Report/XMLport remain gated.
 TYPE_CASES = {
     'T14':      ('TABLE',    True),
     'C80':      ('CODEUNIT', True),
-    'P21':      ('PAGE',     False),
-    'P5025440': ('PAGE',     False),
+    'P21':      ('PAGE',     True),
+    'P5025440': ('PAGE',     True),
     'R790':     ('REPORT',   False),
 }
 

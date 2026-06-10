@@ -86,11 +86,13 @@ The intent above is now **enforced in code**, not just described.
       VENDOR-DRIVEN (the vendor renamed it) → take B, don't carry the customer's stale value;
       (c) an A-only control carrying only a vendor Description tag is AMBIGUOUS (genuine vendor
       deletion vs customer-added control wearing a vendor tag, e.g. P21's AP-2362 FactBoxes tagged
-      PA035597) → route the OBJECT to DEV, never silently take B. **Held `validated=False` in
-      production** pending sign-off: P14 auto-merges, but richer Pages (P21) correctly route to DEV,
-      and prose-justified Page changes are deliberately DEV-routed for now. Fixtures: P14 (auto-merge),
-      P21 (DEV-gate). Flip to `validated=True` once the Page DEV/auto split is signed off across more
-      real objects.
+      PA035597) → route the OBJECT to DEV, never silently take B; but once those FactBoxes carry a
+      customer tag (P21V2: AP-2362) they become confident field-grafts and the object auto-merges.
+      **`validated=True` in PRODUCTION** (signed off by Rich for live testing): confident Pages
+      auto-merge (P14, P21V2 — including correct ordering when multiple adds share an anchor),
+      uncertain ones still gate to DEV (P21 ambiguous adds; P5025440 property-modify). Validation
+      does NOT disable safety — the whole-object gate still surfaces uncertain Pages. Fixtures:
+      P14 + P21V2 (auto-merge), P21 (DEV-gate).
     - **Report / XMLport** — registered but **`validated=False`**: the WHOLE object routes to
       DEV (`type-unsupported`) before any rule runs. Each becomes `validated=True` only once its
       handler is built and a known-answer fixture passes.
