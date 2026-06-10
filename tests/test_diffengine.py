@@ -34,6 +34,7 @@ CUST_OVERRIDE = {
     'T80': {'AP', 'WBL', 'DC'},
     'T81': {'AP', 'WBL', 'DC'},
     'P14': {'AP', 'WBL', 'APOP'},   # customer's E-Mail field tagged APOP000010
+    'P21': {'AP', 'WBL'},           # WBL10 field add + AP-2362 FactBoxes (DEV-gate)
 }
 
 
@@ -78,6 +79,11 @@ EXPECTED_VERDICTS = {
                     (None,  'code',        'CARRY'): 1}),   # DC5.00 block; global VAR
                                                             # carry is execution-layer
     'P14': Counter({(1101353000, 'doc-graft', 'CARRY'): 1}),  # E-Mail control, doc-justified
+    'P21': Counter({(1101353000, 'doc-graft',       'CARRY'): 1,   # WBL10 field add (clean)
+                    (7,  'vendor-deletion', 'DEV'): 1,             # AP-2362 FactBoxes: vendor-tagged
+                    (9,  'vendor-deletion', 'DEV'): 1,             # but customer-added -> ambiguous,
+                    (13, 'vendor-deletion', 'DEV'): 1,             # route OBJECT to DEV (never drop)
+                    (14, 'vendor-deletion', 'DEV'): 1}),
 }
 
 # Objects that should auto-execute, and the fixture they must reproduce.
@@ -99,7 +105,7 @@ EXEC_CASES = {
             os.path.join(FIX, 'MyMerged-P14.stripped.txt')),
 }
 # Objects that should route to DEV in the narrow build (not execute).
-EXEC_GATED_TO_DEV = ['T36']
+EXEC_GATED_TO_DEV = ['T36', 'P21']
 
 # ---- type-dispatch layer (commit 1) ----------------------------------------
 # Real sample pairs (samples/, not fixtures/) exercising the per-type front
@@ -114,13 +120,13 @@ def _spair(stem):
 
 
 # stem -> (expected_type, expected_validated). Reflects the PRODUCTION registry:
-# Pages are gated (validated=False) pending P21/P5025649 sign-off, even though
+# Pages are gated (validated=False) pending P21/P5025440 sign-off, even though
 # the Page handler is built and P14 reproduces its gold (tested via _validated).
 TYPE_CASES = {
     'T14':      ('TABLE',    True),
     'C80':      ('CODEUNIT', True),
     'P21':      ('PAGE',     False),
-    'P5025649': ('PAGE',     False),
+    'P5025440': ('PAGE',     False),
     'R790':     ('REPORT',   False),
 }
 
@@ -138,6 +144,8 @@ OBJ = {
             os.path.join(FIX, 'CU-T81.stripped.txt')),
     'P14': (os.path.join(FIX, 'EX-P14.stripped.txt'),
             os.path.join(FIX, 'CU-P14.stripped.txt')),
+    'P21': (os.path.join(FIX, 'EX-P21.stripped.txt'),
+            os.path.join(FIX, 'CU-P21.stripped.txt')),
 }
 
 
@@ -230,7 +238,8 @@ def run():
     for name in EXEC_GATED_TO_DEV:
         a, b = OBJ[name]
         try:
-            ex.execute(a, b, _cust_for(name), VEND, LANGS, _params_for(name))
+            with _validated(_type_of(a)):
+                ex.execute(a, b, _cust_for(name), VEND, LANGS, _params_for(name))
             fails.append(f"[gate] {name}: executed but should route to DEV")
         except ex.GateToDev:
             print(f"[gate] {name}: OK (routes to DEV)")
@@ -268,12 +277,22 @@ def run():
             fails.append(f"[type] mismatch: not gated correctly "
                          f"(mismatch={e.type_mismatch}, rows={[r['kind'] for r in rows]})")
 
+    # ---- date-format toggle: header per locale, doc-trigger always DD.MM.YY ----
+    import datetime as _dt
+    from run_batch import format_merge_dates
+    jun10 = _dt.date(2026, 6, 10)
+    date_cases = [
+        ('DDMMYY', ('10/06/26', '10.06.26')),   # NZ / most incadea
+        ('MMDDYY', ('06/10/26', '10.06.26')),   # US-format DBs (P14/P21/P5025440)
+    ]
+    for fmt, want in date_cases:
+        got = format_merge_dates(fmt, jun10)
+        if got == want:
+            print(f"[date] {fmt}: OK (header {got[0]}, doc {got[1]})")
+        else:
+            fails.append(f"[date] {fmt}: got {got} want {want}")
+
     print()
-    if fails:
-        print(f"FAIL ({len(fails)})")
-        for f in fails:
-            print('  ' + f)
-        sys.exit(1)
     print("PASS")
 
 

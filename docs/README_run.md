@@ -45,14 +45,16 @@ e.g.  C:\CUtool\
 
 ### 4. Preview first (--dry-run: classifies, writes/moves NOTHING)
     python run_batch.py --root C:\jobs\CustX --cu CU26Q1 --initials RL \
-        --text "CU upgrade." --date 08/06/26 --dry-run
+        --text "CU upgrade." --date-format DDMMYY --dry-run
 
 ### 5. Real run (drop --dry-run)
     python run_batch.py --root C:\jobs\CustX --cu CU26Q1 --initials RL \
-        --text "CU upgrade." --date 08/06/26
+        --text "CU upgrade." --date-format DDMMYY
 
 Set the four values to your job: --cu = CU token, --initials = yours,
---text = doc-trigger boilerplate, --date = merge date DD/MM/YY.
+--text = doc-trigger boilerplate. --date-format = customer DB date locale
+(DDMMYY default / MMDDYY): the header Date= is written in that format; the
+merge date defaults to today. Doc-trigger date is always DD.MM.YY.
 Mac/Linux: use python3 and forward-slash paths (--root /path/to/job).
 
 ## What happens
@@ -74,4 +76,4 @@ wrong. (In production these come from Stage 0 census.)
 - Narrow path auto-merges field-grafts + clean code transplants only.
   Caption-carry and any DEV-scored code route to manual for now.
 - Single object:  python3 run_one.py A.txt B.txt out.txt --cu CU26Q1 \
-                      --initials RL --text "CU upgrade." --date 08/06/26
+                      --initials RL --text "CU upgrade." --date-format DDMMYY

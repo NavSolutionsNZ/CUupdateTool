@@ -807,3 +807,70 @@ verified on a Page gold; an auto-merge that RUNS is not yet an auto-merge that's
 validated=False with rationale), cuupdate/execute.py (doc-graft executable + leading-blank graft
 spacing), tests/test_diffengine.py (P14 across all layers + `_validated`/`_type_of`/PARAMS_OVERRIDE),
 tests/fixtures/{EX,CU,MyMerged}-P14.stripped.txt (NEW).
+
+### 8.17 Session log — Page DEV-routing (P21) + date-format toggle; P5025649 retired
+**Outcome: the Page handler now makes the right AUTO vs DEV call on richer Pages. P21 (vendor caption
+renames + customer FactBoxes wearing vendor tags + prose-only justification) correctly routes to DEV
+for the right reasons instead of making confident-but-wrong decisions. Header date format is now a
+per-customer toggle (DDMMYY default / MMDDYY). P5025649 retired, P5025440 added. Suite green (scorer
+20/20, diffengine PASS incl P14 auto + P21 DEV-gate + date asserts, census 5/5).**
+
+**Part A — Page DEV-routing (validated against P21).** P21 exposed three issues; all fixed, Table
+suite stayed green at each step (changes are shared but guarded):
+1. **Caption brace bug.** `_caption_base_differs`/`_opt_*` captured up to `; ] \n` but NOT `}`. A
+   Page single-value caption can be the LAST property before the closing brace with no trailing `;`
+   (`CaptionML=ENU=General }`), so `}` leaked into the value → 15 FALSE caption-carry positives on
+   P21. FIX: add `}` to the stop-class. (Table captions end at `;`, so unaffected — verified.)
+2. **Vendor caption rename mistaken for customer override (Issue 2).** P21 controls 1109400039/41:
+   the VENDOR renamed 'Quick Customer'→'New Quick Customer' and added tag EU.0200720.199642 in B;
+   the customer still had the old caption. The Table-era "always carry customer caption" rule would
+   CLOBBER the vendor rename. FIX: `_vendor_touched_node(a,b)` — True when B's Description carries a
+   vendor tag A lacks → the caption difference is vendor-driven → suppress the customer caption-carry
+   (take B). USER decision: "check the documentation trigger / dev notes and decide" — the new vendor
+   tag in B IS that signal.
+3. **A-only control with only a vendor tag silently dropped (Issue 3).** P21 FactBoxes 7/9/13/14 are
+   customer adds documented under AP-2362 but each control carries `Description=PA035597` (a VENDOR
+   tag). Old rule: vendor tag + A-only → silent TAKE_B → DROPPED the customer FactBoxes. From the
+   node alone we can't tell "vendor deletion" from "customer add wearing a vendor tag", and the doc
+   entry names them by caption (not present in the control props) so prose-matching is unreliable.
+   USER decision: route ambiguous-prose Page changes to DEV for now; never silently lose a customer
+   element. FIX: vendor-tagged A-only node → DEV (kind still 'vendor-deletion', verdict now DEV).
+   No existing fixture used the old silent-TAKE_B path (verified 0 across T14/T36/T77/T80/T81/P14),
+   so safe. Net P21: 1 clean doc-graft CARRY + 4 vendor-deletion DEV → whole object gates to DEV.
+
+**Part B — date-format toggle.** NAV writes the header `Date=` in the SOURCE DB's locale. All three
+new samples (P14/P21/P5025440) are MM/DD/YY DBs; other customers are DD/MM/YY. The doc-trigger date
+is ALWAYS DD.MM.YY (incadea convention, locale-independent — verified across all samples). FIX:
+`run_batch.format_merge_dates(date_format, when)` computes today and returns (header per format,
+doc-trigger always DD.MM.YY). `run()` gains `date_format='DDMMYY'` (default, NZ/most incadea) and
+`date` is now OPTIONAL (defaults to today; explicit override still accepted for fixtures). CLI:
+`--date-format {DDMMYY,MMDDYY}`, `--date` no longer required. GUI: radio button (DD/MM/YY default,
+MM/DD/YY), date field now blank=today. USER decisions: default DDMMYY; tool computes today (dev only
+picks the format). Verified P14 reproduces gold via computed-today MMDDYY.
+
+**Housekeeping (user):** P5025649 "can be deleted from history — not required in the update."
+Removed `samples/{Cust_,20206Q1_}P5025649.txt`; added `samples/{Cust_,20206Q1_}P5025440.txt`
+(uploaded as 2026Q1_, renamed to repo's 20206Q1_ convention). Type test swapped P5025649→P5025440.
+Historical session-log mentions of P5025649 left as a record; current-state refs updated.
+
+**P5025440 — HELD for a paired test (user).** It currently routes to DEV via `property-modify` (the
+customer flipped `Visible=FALSE`→`true` on a shared control, tagged WBL). User will add customer tags
+and send a tagged version; intent is to run tagged + untagged side by side and prove one FAILS
+(routes to DEV) and the other PASSES (auto-merges on the customer tag). Not wired into the harness
+yet — awaiting the tagged copy.
+
+**Fixtures:** `tests/fixtures/{EX,CU,MyMerged}-P21.stripped.txt` (NEW; DEV-gate — verdict asserts 1
+doc-graft CARRY + 4 vendor-deletion DEV, gate asserts routes to DEV). Harness: P21 in CUST_OVERRIDE
+({AP,WBL}), EXPECTED_VERDICTS, OBJ, EXEC_GATED_TO_DEV; `_validated` now also wraps the gate-test loop;
++date-format assertions.
+
+**Production state:** PAGE still `validated=False`. P14 auto-merges (proven); P21 routes to DEV
+(proven); date toggle live on CLI+GUI. Flip PAGE on once the Page AUTO/DEV split is signed off across
+more objects (incl. the P5025440 tagged/untagged pair).
+
+**Files:** cuupdate/diffengine.py (caption brace fix, `_vendor_touched_node` + caption-carry guard,
+vendor-deletion→DEV), cuupdate/run_batch.py (`format_merge_dates`, `date_format` param, optional
+`--date`, `--date-format`), cuupdate/cu_gui.py (date-format radio, blank=today, dropped unused
+datetime import), tests/test_diffengine.py (P21 DEV-gate across layers, P5025649→P5025440,
+date-format asserts), tests/fixtures/{EX,CU,MyMerged}-P21.stripped.txt (NEW),
+samples/{Cust_,20206Q1_}P5025440.txt (NEW), samples P5025649 removed, docs/README_run.md (date-format).

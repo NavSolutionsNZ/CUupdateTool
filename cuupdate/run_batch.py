@@ -61,9 +61,31 @@ def _moved(root, side, type_sub, src):
     shutil.move(src, os.path.join(dest_dir, os.path.basename(src)))
 
 
-def run(root, cu, initials, date, text='CU upgrade.',
+def format_merge_dates(date_format='DDMMYY', when=None):
+    """Build the two date strings the executor needs from a single date.
+
+    - header `Date=` follows the CUSTOMER DB's locale: DDMMYY or MMDDYY
+      (the dev declares which via the GUI radio button - NAV writes the header
+      in whatever format the source database uses, so the stamp must match).
+    - doc-trigger changelog date is ALWAYS DD.MM.YY (incadea convention,
+      locale-independent - verified across all sample objects).
+
+    `when` defaults to today. Returns (merge_date, merge_date_dots).
+    """
+    import datetime
+    d = when or datetime.date.today()
+    dd, mm, yy = f'{d.day:02d}', f'{d.month:02d}', f'{d.year % 100:02d}'
+    if date_format.upper() == 'MMDDYY':
+        merge_date = f'{mm}/{dd}/{yy}'
+    else:                                   # default DDMMYY (NZ / most incadea)
+        merge_date = f'{dd}/{mm}/{yy}'
+    merge_date_dots = f'{dd}.{mm}.{yy}'     # doc trigger: always DD.MM.YY
+    return merge_date, merge_date_dots
+
+
+def run(root, cu, initials, date=None, text='CU upgrade.',
         cust='AP,WBL', vend='PA,PPA,EU,INC,IMM,PS', langs='ENZ',
-        dry_run=False):
+        date_format='DDMMYY', dry_run=False):
     """Run the Stage 3 batch over <root>/A and <root>/B.
 
     Behaviour is identical to the CLI: auto-merged objects are written to
@@ -72,6 +94,12 @@ def run(root, cu, initials, date, text='CU upgrade.',
     where results_dict has keys merged/dev/errors/unmatched/pairs so callers
     (CLI, GUI) can both print the report and inspect counts. Accepts cust/vend/
     langs as comma strings or as iterables of prefixes.
+
+    Date handling: the tool computes TODAY's date and formats the header
+    `Date=` per `date_format` (the customer DB's locale: 'DDMMYY' default or
+    'MMDDYY'); the doc-trigger date is always DD.MM.YY. A `date` may still be
+    passed explicitly (DD/MM/YY for DDMMYY, MM/DD/YY for MMDDYY) to override
+    today - mainly for reproducible tests/fixtures.
 
     Mutates the filesystem under root (moves/writes) unless dry_run=True.
     """
@@ -82,8 +110,23 @@ def run(root, cu, initials, date, text='CU upgrade.',
 
     root = os.path.abspath(root)
     CUST, VEND, LANGS = _as_set(cust), _as_set(vend), _as_set(langs)
+    if date:
+        # explicit override: header takes it verbatim; doc-trigger needs DD.MM.YY.
+        # Re-derive dots from the chosen format so an MM/DD/YY input still yields
+        # a DD.MM.YY doc date.
+        parts = date.replace('.', '/').split('/')
+        if len(parts) == 3:
+            if date_format.upper() == 'MMDDYY':
+                mm, dd, yy = parts
+            else:
+                dd, mm, yy = parts
+            merge_date, merge_date_dots = date, f'{dd}.{mm}.{yy}'
+        else:
+            merge_date, merge_date_dots = date, date.replace('/', '.')
+    else:
+        merge_date, merge_date_dots = format_merge_dates(date_format)
     params = dict(cu_token=cu, initials=initials, text=text,
-                  merge_date=date, merge_date_dots=date.replace('/', '.'))
+                  merge_date=merge_date, merge_date_dots=merge_date_dots)
 
     pairs, unmatched = find_pairs(root)
     merged, dev, errors = [], [], []
@@ -152,7 +195,12 @@ def main():
     p.add_argument('--cu', required=True)
     p.add_argument('--initials', required=True)
     p.add_argument('--text', default='CU upgrade.')
-    p.add_argument('--date', required=True, help='DD/MM/YY')
+    p.add_argument('--date', default=None,
+                   help='override merge date (default: today). Header format '
+                        'follows --date-format.')
+    p.add_argument('--date-format', default='DDMMYY', choices=['DDMMYY', 'MMDDYY'],
+                   help="customer DB date locale for the header Date= field "
+                        "(default DDMMYY; doc-trigger date is always DD.MM.YY)")
     p.add_argument('--cust', default='AP,WBL')
     p.add_argument('--vend', default='PA,PPA,EU,INC,IMM,PS')
     p.add_argument('--langs', default='ENZ')
@@ -160,7 +208,8 @@ def main():
     a = p.parse_args()
 
     report, _ = run(a.root, a.cu, a.initials, a.date, text=a.text,
-                    cust=a.cust, vend=a.vend, langs=a.langs, dry_run=a.dry_run)
+                    cust=a.cust, vend=a.vend, langs=a.langs,
+                    date_format=a.date_format, dry_run=a.dry_run)
     print(report)
 
 

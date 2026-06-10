@@ -287,8 +287,19 @@ class DiffEngine:
                     rows.append(self._row(n, doc_tag, 'DEV', 'doc-graft',
                                           f'doc {doc_tag} ({"restructure" if restruct else "no anchor"}) -> human review'))
             elif vtags:
-                rows.append(self._row(n, vtags[0], 'TAKE_B', 'vendor-deletion',
-                                      f'A-only field {n["id"]} is vendor-tagged ({vtags[0]}) -> vendor removed it in B'))
+                # An A-only node carrying ONLY a vendor tag is ambiguous: it
+                # could be a genuine vendor deletion (vendor removed it in B) OR
+                # a customer-added control that happens to wear a vendor
+                # Description tag (seen on P21: customer FactBoxes 7/9/13/14 tagged
+                # PA035597 but documented under customer entry AP-2362). From the
+                # node alone we cannot tell these apart, and silently taking B
+                # would DROP a customer addition - violating "never silently lose
+                # a whole customer element". So route the OBJECT to DEV for a
+                # human to decide. (No current fixture exercised the old silent
+                # TAKE_B path; revisit if a real vendor-deletion case wants it.)
+                rows.append(self._row(n, vtags[0], 'DEV', 'vendor-deletion',
+                                      f'A-only field {n["id"]} carries only a vendor tag ({vtags[0]}) '
+                                      f'- ambiguous (vendor deletion vs customer add w/ vendor tag) -> human review'))
             else:
                 # whole untagged A-only field, no doc -> DEV (can fail silently; keep safe)
                 rows.append(self._row(n, None, 'DEV', 'untagged-A-only',
@@ -308,6 +319,14 @@ class DiffEngine:
             cap_changed = self._caption_base_differs(a, b)
             opt_changed = self._option_differs(a, b)
             other_changed = self._nonlang_noncaption_differs(a, b)
+            # If the vendor touched this node in the CU (B has a vendor tag A
+            # lacks), a caption/option difference is VENDOR-DRIVEN - the customer
+            # just has the older vendor text. Suppress the customer caption-carry
+            # so B's (renamed) caption is taken. Without this, the Table-era
+            # "always carry customer caption" rule clobbers vendor renames on
+            # Pages (P21: 'Quick Customer' -> vendor's 'New Quick Customer').
+            if (cap_changed or opt_changed) and self._vendor_touched_node(a, b):
+                cap_changed = opt_changed = False
 
             if has_codeblock:
                 # Customer code lives in this shared node's trigger. The
@@ -389,7 +408,11 @@ class DiffEngine:
 
     def _caption_base_differs(self, a, b):
         def cap(n):
-            m = re.search(r'(?<!Option)CaptionML=\[?([A-Z]{3})=([^;\]\n]+)', n['props'])
+            # stop the value at ; ] } or newline: on a Page control a single-
+            # value caption can be the LAST property before the closing brace
+            # with no trailing ';', so '}' must terminate the capture or the
+            # brace leaks into the value and falsely reads as a caption change.
+            m = re.search(r'(?<!Option)CaptionML=\[?([A-Z]{3})=([^;\]}\n]+)', n['props'])
             return (m.group(1), norm(m.group(2))) if m else None
         return cap(a) is not None and cap(a) != cap(b)
 
@@ -398,12 +421,27 @@ class DiffEngine:
         return (self._opt_caption(a) != self._opt_caption(b)
                 or self._opt_string(a) != self._opt_string(b))
 
+    def _vendor_touched_node(self, a, b):
+        """True when B's Description carries a VENDOR tag that A's does not -
+        i.e. the vendor modified this node in the CU. On a shared node this is
+        the signal that a caption/property difference is VENDOR-DRIVEN (the
+        vendor renamed it), not a customer override: the customer's value is
+        merely the older vendor text. Evidence: P21 control 1109400039/41 -
+        vendor renamed 'Quick Customer' -> 'New Quick Customer' and added tag
+        EU.0200720.199642 in B; the customer still has the old caption. Carrying
+        the customer caption there would CLOBBER the vendor rename, so we take B.
+        Compared by TAG (the @id/suffix can vary)."""
+        def vtags(n):
+            return {cf(t) for k, t in self._node_tags(n)
+                    if k == 'desc' and self._layer(t) == 'vendor'}
+        return bool(vtags(b) - vtags(a))
+
     def _opt_caption(self, n):
-        m = re.search(r'OptionCaptionML=\[?([A-Z]{3})=([^;\]\n]*)', n['props'])
+        m = re.search(r'OptionCaptionML=\[?([A-Z]{3})=([^;\]}\n]*)', n['props'])
         return norm(m.group(2)) if m else None
 
     def _opt_string(self, n):
-        m = re.search(r'OptionString=([^;\n]*)', n['props'])
+        m = re.search(r'OptionString=([^;}\n]*)', n['props'])
         return norm(m.group(1)) if m else None
 
     def _vendor_options_are_prefix(self, a, b):

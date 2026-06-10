@@ -19,7 +19,6 @@ Runs on any machine with Python (tkinter ships with CPython). Freeze to a
 standalone .exe with cu.spec (see BUILD.md) so it runs on the server with no
 Python installed.
 """
-import datetime
 import os
 import queue
 import threading
@@ -67,18 +66,30 @@ class App:
         ttk.Button(frm, text="Browse...", command=self.pick_root).grid(row=1, column=1, padx=4)
 
         # Params
-        today = datetime.date.today().strftime("%d/%m/%y")
         self.cu_var = tk.StringVar()
         self.initials_var = tk.StringVar()
         self.text_var = tk.StringVar(value="CU upgrade.")
-        self.date_var = tk.StringVar(value=today)
+        self.date_var = tk.StringVar(value="")            # blank = use today (per format)
+        self.date_fmt_var = tk.StringVar(value="DDMMYY")  # customer DB date locale
 
         grid = ttk.Frame(master)
         grid.pack(fill='x', **pad)
         self._field(grid, "CU token (e.g. CU26Q1):", self.cu_var, 0)
         self._field(grid, "Initials (e.g. RL):", self.initials_var, 1)
         self._field(grid, "Changelog text:", self.text_var, 2)
-        self._field(grid, "Date (DD/MM/YY):", self.date_var, 3)
+        self._field(grid, "Date (blank = today):", self.date_var, 3)
+
+        # Customer DB date format: NAV writes the header Date= in the source
+        # database's locale, so the dev declares which it is. Doc-trigger date is
+        # always DD.MM.YY regardless.
+        ttk.Label(grid, text="Customer DB date format:", width=22).grid(
+            row=4, column=0, sticky='w', pady=2)
+        fmt = ttk.Frame(grid)
+        fmt.grid(row=4, column=1, sticky='w')
+        ttk.Radiobutton(fmt, text="DD/MM/YY", variable=self.date_fmt_var,
+                        value="DDMMYY").pack(side='left')
+        ttk.Radiobutton(fmt, text="MM/DD/YY", variable=self.date_fmt_var,
+                        value="MMDDYY").pack(side='left', padx=8)
 
         # Buttons
         btns = ttk.Frame(master)
@@ -135,6 +146,7 @@ class App:
         initials = self.initials_var.get().strip()
         text = self.text_var.get().strip() or "CU upgrade."
         date = self.date_var.get().strip()
+        date_format = self.date_fmt_var.get()
 
         if not root or not os.path.isdir(root):
             messagebox.showerror("Missing", "Pick a valid job folder.")
@@ -150,11 +162,12 @@ class App:
         self._set_busy(True)
         self.log.delete('1.0', 'end')
         t = threading.Thread(target=self._work,
-                             args=(root, cu, initials, date, text, self.dry_var.get()),
+                             args=(root, cu, initials, date, text, date_format,
+                                   self.dry_var.get()),
                              daemon=True)
         t.start()
 
-    def _work(self, root, cu, initials, date, text, dry):
+    def _work(self, root, cu, initials, date, text, date_format, dry):
         try:
             cust, summary = derive_cust(root)
             self.q.put(summary + "\n")
@@ -163,7 +176,8 @@ class App:
                 self.q.put(("DONE", None))
                 return
             report, results = run_batch.run(
-                root, cu, initials, date, text=text, cust=cust, dry_run=dry)
+                root, cu, initials, date, text=text, cust=cust,
+                date_format=date_format, dry_run=dry)
             self.q.put(report + "\n")
             self.q.put(("DONE", results))
         except Exception:
