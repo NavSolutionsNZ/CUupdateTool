@@ -1,0 +1,2044 @@
+OBJECT Page 21 Customer Card
+{
+  OBJECT-PROPERTIES
+  {
+    Date=04/15/26;
+    Time=[ 5:45:09 PM];
+    Modified=Yes;
+    Version List=N.7.2.1,WBL10,AP-2362;
+  }
+  PROPERTIES
+  {
+    CaptionML=ENU=Customer Card;
+    SourceTable=Table18;
+    PageType=Card;
+    RefreshOnActivate=Yes;
+    OnInit=BEGIN
+             DisableAppliestoDocNoEnable := TRUE;
+             GlobalDimension1CodeEnableG := TRUE;
+             // Start PA038224
+             // Stop PA038224
+             ContactEditableG := TRUE;
+             // Start PA035901
+             MapPointVisible := TRUE;
+             // Stop PA035901
+             // Start EU.0071195
+             TireHotelDetailsVisibleG := UserSessionG.TireHotelLicensePermissionCheck();
+             // Stop EU.0071195
+           END;
+
+    OnOpenPage=VAR
+                 MapMgt@1000 : Codeunit 802;
+               BEGIN
+                 // Start INC
+                 EnableImporterTab;
+                 // Stop INC
+                 // Start PA036373
+                 DataPrivSetupG.RESET;
+                 DataPrivSetupG.SETRANGE(Active, TRUE);
+                 DataPrivSetupG.SETFILTER("Data Privacy Codeunit ID", '>0');
+                 EnableDataPrivacyG := NOT DataPrivSetupG.ISEMPTY;
+                 // Stop PA036373
+                 // Start PA035901
+                 IF NOT MapMgt.TestSetup THEN
+                   MapPointVisible := FALSE;
+                 // Stop PA035901
+                 // Start PA038456.44408
+                 RecRefG.GETTABLE(Rec);
+                 UserSessionG.SetMake("Global Dimension 2 Code", RecRefG);
+                 // Stop PA038456.44408
+                 // Start EU.0083120
+                 CheckValidVATRegNo();
+                 // Stop EU.0083120
+               END;
+
+    OnClosePage=BEGIN
+                  // Start PA044429
+                  ExitPoint(ExitPointSetupG.Trigger::OnClosePage,ExitPointSetupG.Type::Post,'');
+                  // Stop PA044429
+                END;
+
+    OnAfterGetRecord=VAR
+                       RelatedVehiclesTL@1109400000 : TEMPORARY Record 5207815;
+                     BEGIN
+                       // Start PA044429
+                       ExitPoint(ExitPointSetupG.Trigger::OnAfterGetRecord,ExitPointSetupG.Type::Pre,'');
+                       // Stop PA044429
+
+                       ActivateFields;
+                       // Start PA036373
+                       // Stop PA036373
+                       // Start PA032665
+                       // Start PA038224
+                       CheckMessageButtonEditable();
+                       // Stop PA038224
+                       // Stop PA032665
+                       // Start PA036869
+                       // Stop PA036869
+
+                       // Start EU.0004649
+                       CALCFIELDS("Address Source");
+                       AddressSourceCodeG := "Address Source";
+                       // Stop EU.0004649
+
+                       // Start EU.0006288
+                       CALCFIELDS("Exclude from Data Privacy");
+                       ExcludeDataPrivacyG := "Exclude from Data Privacy";
+                       // Stop EU.0006288
+                       // Start EU.0083120
+                       CheckValidVATRegNo();
+                       // Stop EU.0083120
+                       // Start PA044429
+                       ExitPoint(ExitPointSetupG.Trigger::OnAfterGetRecord,ExitPointSetupG.Type::Post,'');
+                       // Stop PA044429
+                     END;
+
+    OnNewRecord=VAR
+                  DataTemplateHdrL@1109400001 : Record 5210218;
+                  TemplateMgmtL@1119427002 : Codeunit 5210206;
+                  RecRefL@1119427001 : RecordRef;
+                  TemplateCodeL@1119427003 : Code[10];
+                BEGIN
+                  // Start INC
+                  // Start PA038224
+                  // Stop PA038224
+                  // Stop INC
+                  // Start PA035597
+                  // @ The list of templates should be displayed for the user when a new record is getting created
+                  // @ This feature is available only in RTC
+                  RecRefL.OPEN(DATABASE::Customer);
+
+                  // Start PA041187.90242
+                  // If templates exist FillDefaults is used, otherwise it is used in table Customer onInsert trigger
+                  // Previously in Customer Card were populated just fields of Template, the others were empty
+                  // Now are first populated default fields from Customer Setup and then are modified just existing fields in Template
+                  DataTemplateHdrL.SETRANGE(TableID, RecRefL.NUMBER);
+                  IF DataTemplateHdrL.FINDFIRST THEN
+                    FillDefaults();
+                  // Stop PA041187.90242
+
+                  RecRefL.GETTABLE(Rec);
+                  TemplateCodeL := TemplateMgmtL.ApplyTemplate(RecRefL);
+                  RecRefL.SETTABLE(Rec);
+                  "Template Code" := TemplateCodeL;
+                  // Stop PA035597
+                END;
+
+    OnModifyRecord=VAR
+                     LastNamePageL@1109400000 : Page 5025369;
+                   BEGIN
+                     // Start PA044774
+                     ExitPoint(ExitPointSetupG.Trigger::OnModify,ExitPointSetupG.Type::Pre,'');
+                     // Stop PA044774
+
+
+                     // Start INC
+                     IF "Last Name" = '' THEN BEGIN
+                       LastNamePageL.Customer(Rec);
+                       LastNamePageL.LOOKUPMODE(TRUE);
+                     // Start PA043734
+                       IF LastNamePageL.RUNMODAL = ACTION::LookupOK THEN BEGIN
+                     // Start EU.0040227
+                         MODIFY;
+                         xRec.GET("No.");
+                     // Stop EU.0040227
+                         VALIDATE("First Name", LastNamePageL.GetFirstName());
+                         VALIDATE("Last Name", LastNamePageL.GetLastName());
+                       END;
+                     // Stop PA043734
+                     END;
+                     CreateAddress(TRUE);
+
+                     // Start PA044774
+                     ExitPoint(ExitPointSetupG.Trigger::OnModify,ExitPointSetupG.Type::Post,'');
+                     // Stop PA044774
+                     EXIT(TRUE);
+                     // Stop INC
+                   END;
+
+    OnDeleteRecord=BEGIN
+                     // Start INC
+                     "Action triggered by Card Page" := TRUE;
+                     // Stop INC
+                   END;
+
+    OnQueryClosePage=BEGIN
+                       // Start PA044429
+                       ExitPoint(ExitPointSetupG.Trigger::OnAction,ExitPointSetupG.Type::Pre,'');
+                                                           // Stop PA044429
+
+                       // Start EU.0006288
+                       // Start EU.0026544
+                       IF NOT GDPRAnonymizationLogEntryG.ContactIsFullyAnonymized(GetContact("No.")) THEN
+                       // Stop Eu.0026544
+                         IF CloseAction IN [ACTION::OK, ACTION::LookupOK] THEN
+                           DataPrivManagementG.ShowAvailableDataPrivList(DataPrivSetupG."Check Modus"::CheckQuery, TRUE, DATABASE::Customer, "No.", TRUE);
+                       // Stop EU.0006288
+
+                       // Start PA044429
+                       ExitPoint(ExitPointSetupG.Trigger::OnAction,ExitPointSetupG.Type::Post,'');
+                       // Stop PA044429
+                     END;
+
+    OnAfterGetCurrRecord=BEGIN
+                           // Start PA038456.44408
+                           RecRefG.GETTABLE(Rec);
+                           UserSessionG.SetMake("Global Dimension 2 Code", RecRefG);
+                           CurrPage.SpecialFunctionFactBox.PAGE.Refresh("Global Dimension 2 Code");
+                           // Stop PA038456.44408
+                           // Start PA041187.89458
+                           FirstNameEditableG := AddressMgtG.EditFirstName("Customer Type" = "Customer Type"::Business, "First Name", "Search Name");
+                           // Stop PA041187.89458
+                         END;
+
+    ActionList=ACTIONS
+    {
+      { 1900000003;  ;ActionContainer;
+                      ActionContainerType=ActionItems }
+      { 1109400001;1 ;ActionGroup;
+                      CaptionML=ENU=General }
+      { 1109400002;2 ;Action    ;
+                      CaptionML=ENU=Customer Cash Registers;
+                      RunObject=Page 5208350;
+                      RunPageLink=Source No.=FIELD(No.);
+                      Image=CashReceiptJournal;
+                      RunPageMode=Edit }
+      { 1109400004;1 ;ActionGroup;
+                      CaptionML=ENU=Parts }
+      { 1109400008;2 ;Action    ;
+                      CaptionML=ENU=Parts Sales Quote;
+                      Image=Quote;
+                      OnAction=BEGIN
+                                 // Start PA032473
+                                 // Start PA041187.88726
+                                 CreatePartsSalesDocument(DocTypeG::Quote, "No.", '');
+                                 // Start PA041187.88726
+                                 // Stop PA032473
+                               END;
+                                }
+      { 1109400006;2 ;Action    ;
+                      CaptionML=ENU=Parts Sales Order;
+                      Image=Document;
+                      OnAction=BEGIN
+                                 // Start PA032473
+                                 // Start PA041187.88726
+                                 CreatePartsSalesDocument(DocTypeG::Order, "No.", '');
+                                 // Stop PA041187.88726
+                                 // Stop PA032473
+                               END;
+                                }
+      { 1109400011;1 ;ActionGroup;
+                      CaptionML=ENU=Vehicles }
+      { 1109400013;2 ;Action    ;
+                      CaptionML=ENU=&Vehicle Sales Quote;
+                      Image=Document;
+                      RunPageMode=Create;
+                      OnAction=BEGIN
+                                 // Start PA032473
+                                 VehicleCollectionUnitG.CreateVehicleSalesDocument(DocTypeG::Quote, "No.", FALSE);
+                                 // Stop PA032473
+                               END;
+                                }
+      { 1109400012;2 ;Action    ;
+                      CaptionML=ENU=Vehicle Sales Order;
+                      Image=Document;
+                      OnAction=BEGIN
+                                 // Start PA032473
+                                 VehicleCollectionUnitG.CreateVehicleSalesDocument(DocTypeG::Order, "No.", FALSE);
+                                 // Stop PA032473
+                               END;
+                                }
+      { 1109400016;1 ;ActionGroup;
+                      CaptionML=ENU=Service }
+      { 1109400021;2 ;Action    ;
+                      CaptionML=ENU=Service &Quote;
+                      Image=Quote;
+                      OnAction=BEGIN
+                                 // Start PA032473
+                                 ServMgmtG.CreateServDocfromCustInterface(ServDocTypeG::Quote, "No.", FALSE);
+                                 // Stop PA032473
+                               END;
+                                }
+      { 1109400022;2 ;Action    ;
+                      CaptionML=ENU=&Scheduling Order;
+                      Image=WorkCenterLoad;
+                      OnAction=BEGIN
+                                 // Start PA032473
+                                 ServMgmtG.CreateServDocfromCustInterface(ServDocTypeG::Scheduling, "No.", FALSE);
+                                 // Stop PA032473
+                               END;
+                                }
+      { 1109400020;2 ;Action    ;
+                      CaptionML=ENU=Service &Order;
+                      Image=Document;
+                      RunPageMode=Create;
+                      OnAction=BEGIN
+                                 // Start PA032473
+                                 ServMgmtG.CreateServDocfromCustInterface(ServDocTypeG::Order, "No.", FALSE);
+                                 // Stop PA032473
+                               END;
+                                }
+      { 1109400009;1 ;ActionGroup;
+                      CaptionML=ENU=&Customer }
+      { 1109400010;2 ;Action    ;
+                      CaptionML=ENU=&Bank Accounts;
+                      RunObject=Page 423;
+                      RunPageLink=Customer No.=FIELD(No.);
+                      Image=NewBank }
+      { 1109400014;2 ;Action    ;
+                      CaptionML=ENU=Ship-to &Addresses;
+                      Description=EU.0000048;
+                      RunObject=Page 301;
+                      RunPageLink=Customer No.=FIELD(No.);
+                      Image=AddToHome }
+      { 243     ;2   ;Action    ;
+                      Name=Document Layouts;
+                      CaptionML=ENU=Document Layouts;
+                      ToolTipML=ENU=Set up a layout for different types of documents such as invoices, quotes, and credit memos.;
+                      Description=EU.0101361;
+                      Promoted=Yes;
+                      Image=Quote;
+                      PromotedCategory=Process;
+                      PromotedOnly=Yes;
+                      OnAction=VAR
+                                 CustomReportSelection@1000 : Record 9657;
+                               BEGIN
+                                 CustomReportSelection.SETRANGE("Source Type", DATABASE::Customer);
+                                 CustomReportSelection.SETRANGE("Source No.", "No.");
+                                 PAGE.RUNMODAL(PAGE::"Customer Report Selections", CustomReportSelection);
+                               END;
+                                }
+      { 1109400043;1 ;ActionGroup;
+                      CaptionML=ENU=New Document;
+                      Visible=FALSE }
+      { 1109400042;2 ;Action    ;
+                      CaptionML=ENU=Special &Functions;
+                      Description=PA033895,PA036549.33440;
+                      Image=ImportExport;
+                      OnAction=VAR
+                                 RecordReferenceL@1101221269 : RecordRef;
+                                 PageSpecialFunctionsL@1101221268 : Page 5206814;
+                               BEGIN
+                                 // Start PA033895
+                                 // Start PA036867
+                                 CLEAR(RecordReferenceL);
+                                 // Stop PA036867
+                                 RecordReferenceL.GETTABLE(Rec);
+                                 // Start PA036867
+                                 CLEAR(PageSpecialFunctionsL);
+                                 // Stop PA036867
+                                 // Start PA035597
+                                 PageSpecialFunctionsL.SetParameters(PAGE::"Customer Card", RecordReferenceL, '', '');
+                                 // Stop PA035597
+                                 PageSpecialFunctionsL.RUNMODAL;
+                                 // Stop PA033895
+                               END;
+                                }
+      { 1109400041;2 ;Action    ;
+                      CaptionML=ENU=Quick Customer;
+                      Description=PA032651;
+                      RunObject=Page 5206880;
+                      Image=AddAction;
+                      RunPageMode=Create }
+      { 1109400040;2 ;Action    ;
+                      CaptionML=ENU=Quick Item Inquiry;
+                      Description=PA032651;
+                      RunObject=Page 5205322;
+                      RunPageLink=Customer No.=FIELD(No.);
+                      Promoted=Yes;
+                      Visible=FALSE;
+                      Image=AddAction;
+                      RunPageMode=Create }
+      { 1109400039;2 ;Action    ;
+                      CaptionML=ENU=Quick Vehicle;
+                      Description=PA032651;
+                      RunObject=Page 5205881;
+                      RunPageLink=Customer No.=FIELD(No.);
+                      Promoted=Yes;
+                      Visible=FALSE;
+                      PromotedIsBig=Yes;
+                      Image=AddAction;
+                      RunPageMode=Create }
+      { 1109400038;2 ;Action    ;
+                      CaptionML=ENU=Vehicle Sales Invoice;
+                      Image=Invoice;
+                      OnAction=BEGIN
+                                 // Start PA032473
+                                 VehicleCollectionUnitG.CreateVehicleSalesDocument(DocTypeG::Invoice, "No.", FALSE);
+                                 // Stop PA032473
+                               END;
+                                }
+      { 1109400037;2 ;Action    ;
+                      CaptionML=ENU=Vehicle Sales Return Order;
+                      Image=ReturnOrder;
+                      OnAction=BEGIN
+                                 // Start PA032473
+                                 VehicleCollectionUnitG.CreateVehicleSalesDocument(DocTypeG::"Return Order", "No.", FALSE);
+                                 // Stop PA032473
+                               END;
+                                }
+      { 1109400036;2 ;Action    ;
+                      CaptionML=ENU=Vehicle Sales Credit Memo;
+                      Image=CreditMemo;
+                      OnAction=BEGIN
+                                 // Start PA032473
+                                 VehicleCollectionUnitG.CreateVehicleSalesDocument(DocTypeG::"Credit Memo", "No.", FALSE);
+                                 // Stop PA032473
+                               END;
+                                }
+      { 1109400035;2 ;Action    ;
+                      CaptionML=ENU=Service Credit Memo;
+                      Image=CreditMemo;
+                      OnAction=BEGIN
+                                 // Start PA032473
+                                 ServMgmtG.CreateServiceCreditMemoDoc(DocTypeG::"Credit Memo", "No.");
+                                 // Stop PA032473
+                               END;
+                                }
+      { 1109400034;2 ;Action    ;
+                      CaptionML=ENU=Parts Sales Invoice;
+                      Image=Invoice;
+                      OnAction=BEGIN
+                                 // Start PA032473
+                                 // Start PA041187.88726
+                                 CreatePartsSalesDocument(DocTypeG::Invoice, "No.", '');
+                                 // Stop PA041187.88726
+                                 // Stop PA032473
+                               END;
+                                }
+      { 1109400033;2 ;Action    ;
+                      CaptionML=ENU=Parts Sales Return Order;
+                      Image=ReturnOrder;
+                      OnAction=BEGIN
+                                 // Start PA032473
+                                 // Start PA041187.88726
+                                 CreatePartsSalesDocument(DocTypeG::"Return Order", "No.", '');
+                                 // Stop PA041187.88726
+                                 // Stop PA032473
+                               END;
+                                }
+      { 1109400032;2 ;Action    ;
+                      CaptionML=ENU=Parts Sales Credit Memo;
+                      Image=CreditMemo;
+                      OnAction=BEGIN
+                                 // Start PA032473
+                                 // Start PA041187.88726
+                                 CreatePartsSalesDocument(DocTypeG::"Credit Memo", "No.", '');
+                                 // Stop PA041187.88726
+                                 // Stop PA032473
+                               END;
+                                }
+      { 1109400031;2 ;Action    ;
+                      CaptionML=ENU=Cash Register Customer;
+                      Description=PA034252.I000071;
+                      Image=CashReceiptJournal;
+                      OnAction=BEGIN
+                                 // Start PA034252.I000071
+                                 CashRegisterFunctionsG.CreateCustVendCashRegister("No.", TRUE);
+                                 // Stop PA034252.I000071
+                               END;
+                                }
+      { 1109400055;1 ;ActionGroup;
+                      CaptionML=ENU=Functions }
+      { 1109400058;2 ;Action    ;
+                      Name=Contact / Vehicle Search;
+                      CaptionML=ENU=Contact / Vehicle Search;
+                      Description=PA042814;
+                      RunObject=Page 5205917;
+                      Promoted=Yes;
+                      PromotedIsBig=Yes;
+                      Image=Find;
+                      PromotedCategory=Process }
+      { 1109400054;2 ;Action    ;
+                      Name=Vehicle Locator;
+                      ShortCutKey=Ctrl+Q;
+                      CaptionML=ENU=Vehicle Locator;
+                      Description=PA038126.50429,PA042814;
+                      Image=FindCreditMemo;
+                      OnAction=BEGIN
+                                 // Start PA038126
+                                 AddressLnkG.RESET;
+                                 AddressLnkG.SETRANGE(AddressLnkG."Address No.", Rec."Address No.");
+                                 AddressLnkG.SETRANGE(AddressLnkG.Type, AddressLnkG.Type::Contact);
+                                 IF AddressLnkG.FINDFIRST THEN
+                                   ContactG.GET(AddressLnkG."No.");
+                                 CLEAR(VehicleSearchG);
+                                 VehicleSearchG.SetCutomerContactInfo("No.", ContactG."No.");
+                                 VehicleSearchG.RUNMODAL;
+                                 // Stop PA038126
+                               END;
+                                }
+      { 1055600 ;2   ;Action    ;
+                      Name=Tire Hotel Order;
+                      AccessByPermission=Codeunit 5208840=X;
+                      CaptionML=ENU=Tire Hotel Order;
+                      Description=EU.0000046;
+                      Image=SpecialOrder;
+                      PromotedCategory=Process;
+                      OnAction=VAR
+                                 THOrderListPageL@1055601 : Page 5208847;
+                                 THMngtCuL@1055600 : Codeunit 5208840;
+                               BEGIN
+                                 // Start EU.0000046
+                                 THMngtCuL.OpenOrderListPage(THOrderListPageL, '', "No.");
+                                 // Stop EU.0000046
+                               END;
+                                }
+      { 1900000004;  ;ActionContainer;
+                      ActionContainerType=RelatedInformation }
+      { 1109400091;1 ;ActionGroup;
+                      CaptionML=ENU=&Customer }
+      { 1109400090;2 ;Action    ;
+                      ShortCutKey=Shift+Ctrl+D;
+                      CaptionML=ENU=Dimensions;
+                      Description=PA035597;
+                      RunObject=Page 540;
+                      RunPageLink=Table ID=CONST(18),
+                                  No.=FIELD(No.);
+                      Visible=FALSE;
+                      Image=Dimensions }
+      { 1109400056;2 ;Action    ;
+                      Name=<Page SEPA Direct Debit Mandates>;
+                      CaptionML=ENU=Direct Debit Mandates;
+                      Description=PA036549.33440;
+                      RunObject=Page 1230;
+                      RunPageLink=Customer No.=FIELD(No.);
+                      Visible=FALSE;
+                      Image=MakeAgreement }
+      { 1109400085;2 ;Action    ;
+                      CaptionML=ENU=Co&ntact;
+                      Description=INC,PA036549.33440;
+                      RunObject=Page 5052;
+                      RunPageView=SORTING(Address No.);
+                      RunPageLink=Address No.=FIELD(Address No.),
+                                  Customer No.=FIELD(No.);
+                      Image=ExportSalesPerson }
+      { 1109400089;2 ;Action    ;
+                      ShortCutKey=Ctrl+F7;
+                      CaptionML=ENU=Ledger E&ntries;
+                      Description=Defect8582610;
+                      RunObject=Page 25;
+                      RunPageView=SORTING(Customer No.,Posting Date,Currency Code);
+                      RunPageLink=Customer No.=FIELD(No.);
+                      Image=MaintenanceLedgerEntries }
+      { 1109400088;2 ;Action    ;
+                      CaptionML=ENU=Co&mments;
+                      RunObject=Page 124;
+                      RunPageLink=Table Name=CONST(Customer),
+                                  No.=FIELD(No.);
+                      Visible=FALSE;
+                      Image=ViewComments }
+      { 218     ;2   ;Action    ;
+                      CaptionML=ENU=Online Map;
+                      Description=PA035901,PA036549.33440;
+                      Visible=FALSE;
+                      Image=Map;
+                      OnAction=BEGIN
+                                 // Start PA035901
+                                 DisplayMap;
+                                 // Stop PA035901
+                               END;
+                                }
+      { 1101140603;2 ;Action    ;
+                      CaptionML=ENU=Manufacturer Relations;
+                      Description=PA036549.33440;
+                      RunObject=Page 5029057;
+                      RunPageLink=Address No.=FIELD(Address No.);
+                      Visible=FALSE;
+                      Image=AddToHome }
+      { 1109400062;2 ;Action    ;
+                      CaptionML=ENU=Interface Customer No. Mapping;
+                      Description=EU.0000048;
+                      RunObject=Page 5204498;
+                      RunPageLink=Customer No.=FIELD(No.);
+                      Visible=FALSE;
+                      Image=Account }
+      { 1109400084;2 ;Separator  }
+      { 1109400083;2 ;Action    ;
+                      CaptionML=ENU=Send Message;
+                      Description=PA036549.33440,PA038224;
+                      Promoted=Yes;
+                      Enabled=EnableMessageG;
+                      PromotedIsBig=Yes;
+                      Image=SendTo;
+                      PromotedCategory=Process;
+                      OnAction=BEGIN
+                                 // Start PA032665
+                                 // Start PA038224
+                                 CLEAR(MessageMgmtG);
+                                 MessageMgmtG.OpenSendMessagePage(
+                                   MessageListG.Area::CRM,
+                                 // Start EU.0032067
+                                   MessageListG."Document Type"::Master,
+                                 // Stop EU.0032067
+                                   "No.",
+                                   MessageListG."Sender/Recipient Type"::Person,
+                                   FALSE,
+                                   "Message Notification",
+                                   "Message Type",
+                                 // Start PA038224.47832
+                                 // Start EU.0129713.132441
+                                   "Message Notification App Type",
+                                   FALSE);
+                                 // Start EU.0129713.132441
+                                 // Stop PA038224.47832
+                                 // Stop PA038224
+                                 // Stop PA032665
+                               END;
+                                }
+      { 1109400082;2 ;Action    ;
+                      CaptionML=ENU=Message List;
+                      Description=PA038224;
+                      Promoted=Yes;
+                      Enabled=EnableMessageG;
+                      PromotedIsBig=Yes;
+                      Image=List;
+                      PromotedCategory=Process;
+                      OnAction=BEGIN
+                                 // Start PA032665
+                                 // Start PA038224
+                                 MessageMgmtG.ShowSentMessageGeneral(MessageListG."Sender/Recipient Type"::Person, "No.");
+                                 // Stop PA038224
+                                 // Stop PA032665
+                               END;
+                                }
+      { 1109400081;2 ;Separator  }
+      { 1109400080;2 ;Action    ;
+                      ShortCutKey=F7;
+                      CaptionML=ENU=&Statistics;
+                      Description=PA036549.33440;
+                      RunObject=Page 151;
+                      RunPageLink=No.=FIELD(No.),
+                                  Date Filter=FIELD(Date Filter),
+                                  Global Dimension 1 Filter=FIELD(Global Dimension 1 Filter),
+                                  Global Dimension 2 Filter=FIELD(Global Dimension 2 Filter);
+                      Visible=FALSE;
+                      Image=Statistics }
+      { 1109400079;2 ;Action    ;
+                      CaptionML=ENU=Statistics by C&urrencies;
+                      RunObject=Page 481;
+                      RunPageLink=No.=FIELD(No.),
+                                  Global Dimension 1 Filter=FIELD(Global Dimension 1 Filter),
+                                  Global Dimension 2 Filter=FIELD(Global Dimension 2 Filter),
+                                  Date Filter=FIELD(Date Filter);
+                      Visible=FALSE;
+                      Image=Statistics }
+      { 1109400078;2 ;Action    ;
+                      CaptionML=ENU=Entr&y Statistics;
+                      RunObject=Page 302;
+                      RunPageLink=No.=FIELD(No.),
+                                  Date Filter=FIELD(Date Filter),
+                                  Global Dimension 1 Filter=FIELD(Global Dimension 1 Filter),
+                                  Global Dimension 2 Filter=FIELD(Global Dimension 2 Filter);
+                      Visible=FALSE;
+                      Image=Statistics }
+      { 1109400076;2 ;Separator  }
+      { 1109400074;2 ;Action    ;
+                      CaptionML=ENU=Driver's Lice&nces;
+                      RunObject=Page 5029075;
+                      RunPageLink=Address No.=FIELD(Address No.);
+                      Visible=FALSE;
+                      Image=Agreement }
+      { 1109400049;2 ;Action    ;
+                      CaptionML=ENU=&Remarks;
+                      RunObject=Page 5025403;
+                      RunPageLink=Table Name=CONST(Customer),
+                                  No.=FIELD(No.);
+                      Visible=FALSE;
+                      Image=Alerts }
+      { 1109400048;2 ;Action    ;
+                      CaptionML=ENU=Cust&omer Instructions;
+                      RunObject=Page 5045302;
+                      RunPageLink=Sell-to Customer No.=FIELD(No.);
+                      Visible=FALSE;
+                      Image=Note }
+      { 1109400047;2 ;Separator  }
+      { 1109400046;2 ;Action    ;
+                      Name=DPQuery;
+                      CaptionML=ENU=Data Privacy &Query;
+                      Visible=FALSE;
+                      Enabled=EnableDataPrivacyG;
+                      Image=CarryOutActionMessage;
+                      OnAction=BEGIN
+                                 // Start PA036373
+                                 DataPrivManagementG.ShowAvailableDataPrivList(
+                                   DataPrivSetupG."Check Modus"::CheckQuery,
+                                   FALSE,
+                                   DATABASE::Customer,
+                                   "No.",
+                                   FALSE);
+                                 // Stop PA036373
+                               END;
+                                }
+      { 1109400045;2 ;Action    ;
+                      Name=DPQueryLog;
+                      CaptionML=ENU=Data Privac&y Log File;
+                      Visible=FALSE;
+                      Enabled=EnableDataPrivacyG;
+                      Image=Track;
+                      OnAction=BEGIN
+                                 // Start PA036373
+                                 DataPrivManagementG.ShowAvailableDataPrivList(
+                                   DataPrivSetupG."Check Modus"::CheckLog,
+                                   FALSE,
+                                   DATABASE::Customer,
+                                   "No.",
+                                   FALSE);
+                                 // Stop PA036373
+                               END;
+                                }
+      { 1109400044;2 ;Action    ;
+                      CaptionML=ENU=Preferred Ways of Contact;
+                      Description=PA033305;
+                      Visible=FALSE;
+                      OnAction=BEGIN
+                                 // Start PA033305
+                                 PrefWayOfContactG.DrilldownPrefWayOfContact(GetContact("No."), "No.");
+                                 CurrPage.UPDATE(FALSE);
+                                 // Stop PA033305
+                               END;
+                                }
+      { 1109400019;2 ;Separator  }
+      { 1109400018;2 ;Action    ;
+                      CaptionML=ENU=Installment &Terms;
+                      RunObject=Page 5025364;
+                      RunPageView=SORTING(Customer No.,Valid-From Date);
+                      RunPageLink=Customer No.=FIELD(No.);
+                      Visible=FALSE;
+                      Image=ChangeDates }
+      { 1109400017;2 ;Action    ;
+                      CaptionML=ENU=&Installments;
+                      RunObject=Page 5025353;
+                      RunPageView=SORTING(Customer No.);
+                      RunPageLink=Customer No.=FIELD(No.);
+                      Visible=FALSE;
+                      Image=AmountByPeriod }
+      { 1109400050;1 ;ActionGroup;
+                      CaptionML=ENU=Vehicles }
+      { 1109400051;2 ;Action    ;
+                      CaptionML=ENU=Ve&hicles;
+                      RunObject=Page 5025404;
+                      RunPageLink=Customer No.=FIELD(No.);
+                      Image=LinkWithExisting }
+      { 1101382983;2 ;Action    ;
+                      CaptionML=ENU=Model/Vehicles of Interest;
+                      Image=ResourceLedger;
+                      OnAction=VAR
+                                 ModelVehofInterestL@1101382983 : Record 5207809;
+                               BEGIN
+                                 // Start PA036869
+                                 ModelVehofInterestL.RESET;
+                                 ModelVehofInterestL.SETCURRENTKEY("Address No.");
+                                 ModelVehofInterestL.FILTERGROUP(2);
+                                 ModelVehofInterestL.SETRANGE("Address No.", "Address No.");
+                                 ModelVehofInterestL.FILTERGROUP(0);
+                                 PAGE.RUN(0, ModelVehofInterestL);
+                                 // Stop PA036869
+                               END;
+                                }
+      { 1109400057;2 ;Action    ;
+                      CaptionML=ENU=Related Vehicles;
+                      Image=ResourceLedger;
+                      OnAction=VAR
+                                 RelatedVehiclesL@1101382983 : Page 5207815;
+                                 RelatedVehiclesTL@1109400000 : TEMPORARY Record 5207815;
+                               BEGIN
+                                 // Start PA041856
+                                 CLEAR(RelatedVehiclesL);
+                                 RelatedVehiclesL.SetAddressNo("Address No.");
+                                 RelatedVehiclesL.PrepareRecords(RelatedVehiclesTL);
+                                 PAGE.RUN(PAGE::"Related Vehicles", RelatedVehiclesTL);
+                                 // Stop PA041856
+                               END;
+                                }
+      { 1109400030;1 ;ActionGroup;
+                      CaptionML=ENU=S&ales }
+      { 1109400052;2 ;Action    ;
+                      CaptionML=ENU=S&ales;
+                      RunObject=Page 155;
+                      RunPageLink=No.=FIELD(No.),
+                                  Global Dimension 1 Filter=FIELD(Global Dimension 1 Filter),
+                                  Global Dimension 2 Filter=FIELD(Global Dimension 2 Filter);
+                      Image=Statistics;
+                      PromotedCategory=Process }
+      { 1109400029;2 ;Action    ;
+                      CaptionML=ENU=Invoice &Discounts;
+                      RunObject=Page 23;
+                      RunPageLink=Code=FIELD(Invoice Disc. Code);
+                      Visible=FALSE;
+                      Image=ActivateDiscounts }
+      { 1109400028;2 ;Action    ;
+                      CaptionML=ENU=&Quotes;
+                      RunObject=Page 41;
+                      RunPageView=SORTING(Document Type,Sell-to Customer No.,No.);
+                      RunPageLink=Sell-to Customer No.=FIELD(No.);
+                      Visible=FALSE;
+                      Image=Quote }
+      { 1109400027;2 ;Action    ;
+                      CaptionML=ENU=Blanket Orders;
+                      RunObject=Page 507;
+                      RunPageView=SORTING(Document Type,Sell-to Customer No.,No.);
+                      RunPageLink=Sell-to Customer No.=FIELD(No.);
+                      Visible=FALSE;
+                      Image=BlanketOrder }
+      { 1109400026;2 ;Action    ;
+                      CaptionML=ENU=&Orders;
+                      RunObject=Page 42;
+                      RunPageView=SORTING(Document Type,Sell-to Customer No.,No.);
+                      RunPageLink=Sell-to Customer No.=FIELD(No.);
+                      Visible=FALSE;
+                      Image=Document }
+      { 1109400025;2 ;Separator  }
+      { 1109400024;2 ;Action    ;
+                      CaptionML=ENU=&Where-Used;
+                      Description=PA036542;
+                      Image=Where-Used;
+                      OnAction=VAR
+                                 TrackDocsL@1109400001 : Page 5028668;
+                               BEGIN
+                                 TrackDocsL.SetCustomer(Rec);
+                                 // Start INC
+                                 TrackDocsL.SetName(Rec.Name);
+                                 TrackDocsL.SetShowDocFilter(ShowDocFilterG::Customer);
+                                 AddressLnkG.RESET;
+                                 AddressLnkG.SETRANGE(AddressLnkG."Address No.", Rec."Address No.");
+                                 AddressLnkG.SETRANGE(AddressLnkG.Type, AddressLnkG.Type::Vendor);
+                                 IF AddressLnkG.FINDFIRST THEN BEGIN
+                                   VendG."No." := AddressLnkG."No.";
+                                   VendG.GET(VendG."No.");
+                                   TrackDocsL.SetVendor(VendG);
+                                 END ELSE
+                                   TrackDocsL.ClearVendor;
+
+                                 AddressLnkG.RESET;
+                                 AddressLnkG.SETRANGE(AddressLnkG."Address No.", Rec."Address No.");
+                                 AddressLnkG.SETRANGE(AddressLnkG.Type, AddressLnkG.Type::Contact);
+                                 IF AddressLnkG.FINDFIRST THEN BEGIN
+                                   ContactG."No." := AddressLnkG."No.";
+                                   ContactG.GET(ContactG."No.");
+                                   TrackDocsL.SetContact(ContactG);
+                                 END ELSE
+                                   TrackDocsL.ClearContact;
+
+                                 // Stop INC
+                                 TrackDocsL.RUN;
+                                 CLEAR(TrackDocsL);
+                               END;
+                                }
+      { 1109400060;2 ;Action    ;
+                      CaptionML=ENU=&Parts Legacy History;
+                      Description=PA041681,PA041187.90998;
+                      RunObject=Page 5210181;
+                      RunPageView=SORTING(Sell-to/Buy-from No.,VIN,Order No.,Document No.)
+                                  WHERE(Main Area=FILTER(Parts Sales));
+                      RunPageLink=Sell-to/Buy-from No.=FIELD(No.);
+                      Visible=FALSE;
+                      Image=History }
+      { 1109400059;2 ;Action    ;
+                      CaptionML=ENU=&Vehicle Legacy History;
+                      Description=PA041681,PA041187.90998;
+                      RunObject=Page 5210185;
+                      RunPageView=SORTING(Sell-to/Buy-from No.,VIN,Order No.,Document No.)
+                                  WHERE(Main Area=CONST(Vehicle Sales));
+                      RunPageLink=Sell-to/Buy-from No.=FIELD(No.);
+                      Visible=FALSE;
+                      Image=History }
+      { 1109400023;2 ;Action    ;
+                      CaptionML=ENU=&Service Legacy History;
+                      Description=PA041681,PA041187.90998;
+                      RunObject=Page 5210187;
+                      RunPageView=SORTING(Sell-to/Buy-from No.,VIN,Order No.,Document No.)
+                                  WHERE(Main Area=CONST(Service Sales));
+                      RunPageLink=Sell-to/Buy-from No.=FIELD(No.);
+                      Visible=FALSE;
+                      Image=History }
+    }
+  }
+  CONTROLS
+  {
+    { 1900000001;0;Container;
+                ContainerType=ContentArea }
+
+    { 1   ;1   ;Group     ;
+                CaptionML=ENU=General }
+
+    { 2   ;2   ;Field     ;
+                SourceExpr="No.";
+                Importance=Promoted;
+                OnValidate=BEGIN
+                             // Start EU.0132549.132759
+                             TESTFIELD("No.");
+                             IF ("No." <> xRec."No.") AND (GETFILTER("No.") > '') THEN
+                               SETRANGE("No.");
+                             // Stop EU.0132549.132759
+                           END;
+
+                OnAssistEdit=BEGIN
+                               IF AssistEdit(xRec) THEN
+                                 CurrPage.UPDATE;
+                             END;
+                              }
+
+    { 4   ;2   ;Field     ;
+                SourceExpr="Address Salutation Code";
+                AutoFormatExpr='JMD';
+                OnValidate=BEGIN
+                             // Start PA041187.89458
+                             FirstNameEditableG := AddressMgtG.EditFirstName("Customer Type" = "Customer Type"::Business, "First Name", "Search Name");
+                             // Stop PA041187.89458
+                           END;
+                            }
+
+    { 133 ;2   ;Field     ;
+                SourceExpr="Title Code";
+                AutoFormatExpr='JMD';
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 129 ;2   ;Field     ;
+                Description=PA041187.89458;
+                SourceExpr="First Name";
+                Importance=Promoted;
+                Editable=FirstNameEditableG }
+
+    { 127 ;2   ;Field     ;
+                SourceExpr="Last Name";
+                Importance=Promoted;
+                OnValidate=BEGIN
+                             // Start EU.0004649
+                             IF "Last Name" <> xRec."Last Name" THEN BEGIN
+                               CALCFIELDS("Address Source");
+                               AddressSourceCodeG := "Address Source";
+                             END;
+                             // Stop EU.0004649
+                           END;
+                            }
+
+    { 138 ;2   ;Field     ;
+                SourceExpr="Name 2";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 6   ;2   ;Field     ;
+                SourceExpr=Address }
+
+    { 8   ;2   ;Field     ;
+                SourceExpr="Address 2";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 90  ;2   ;Field     ;
+                SourceExpr="Post Code";
+                AutoFormatExpr='JMD' }
+
+    { 10  ;2   ;Field     ;
+                SourceExpr=City;
+                Importance=Promoted }
+
+    { 91  ;2   ;Field     ;
+                SourceExpr="Country/Region Code";
+                AutoFormatExpr='JMD';
+                Importance=Additional;
+                OnValidate=BEGIN
+                             // Start EU.0083120
+                             CheckValidVATRegNo();
+                             // Stop EU.0083120
+                           END;
+
+                QuickEntry=FALSE }
+
+    { 136 ;2   ;Field     ;
+                SourceExpr="Letter Salutation Code";
+                AutoFormatExpr='JMD';
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 1000000000;2;Field  ;
+                SourceExpr="Primary Contact No.";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 1109400015;2;Field  ;
+                Description=PA032811;
+                SourceExpr="Date of Birth";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 16  ;2   ;Field     ;
+                SourceExpr=Contact;
+                Importance=Additional;
+                Editable=ContactEditableG;
+                QuickEntry=FALSE }
+
+    { 1101277136;2;Field  ;
+                SourceExpr="Disable Remarks" }
+
+    { 18  ;2   ;Field     ;
+                SourceExpr="Search Name";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 24  ;2   ;Field     ;
+                SourceExpr="Salesperson Code";
+                AutoFormatExpr='JMD';
+                Importance=Promoted }
+
+    { 23  ;2   ;Field     ;
+                SourceExpr="Document Sending Profile" }
+
+    { 10136103;2;Field    ;
+                SourceExpr="eDoc. Exchange Profile" }
+
+    { 118 ;2   ;Field     ;
+                SourceExpr="Service Advisor No.";
+                Importance=Promoted }
+
+    { 26  ;2   ;Field     ;
+                SourceExpr=Blocked;
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 142 ;2   ;Field     ;
+                SourceExpr="Customer Type";
+                Importance=Additional;
+                OnValidate=BEGIN
+                             // Start PA041187.89458
+                             FirstNameEditableG := AddressMgtG.EditFirstName("Customer Type" = "Customer Type"::Business, "First Name", "Search Name");
+                             // Stop PA041187.89458
+                             // Start EU.0083120
+                             CheckValidVATRegNo();
+                             // Stop EU.0083120
+                           END;
+
+                QuickEntry=FALSE }
+
+    { 182 ;2   ;Field     ;
+                SourceExpr="Customer Group Code";
+                AutoFormatExpr='JMD';
+                Importance=Promoted }
+
+    { 20  ;2   ;Field     ;
+                SourceExpr="Balance (LCY)";
+                Visible=FALSE;
+                OnDrillDown=VAR
+                              DtldCustLedgEntry@1001 : Record 379;
+                              CustLedgEntry@1002 : Record 21;
+                            BEGIN
+                              DtldCustLedgEntry.SETRANGE("Customer No.", "No.");
+                              COPYFILTER("Global Dimension 1 Filter", DtldCustLedgEntry."Initial Entry Global Dim. 1");
+                              COPYFILTER("Global Dimension 2 Filter", DtldCustLedgEntry."Initial Entry Global Dim. 2");
+                              COPYFILTER("Currency Filter", DtldCustLedgEntry."Currency Code");
+                              CustLedgEntry.DrillDownOnEntries(DtldCustLedgEntry);
+                            END;
+                             }
+
+    { 140 ;2   ;Field     ;
+                SourceExpr="Sales (LCY)";
+                Visible=FALSE }
+
+    { 144 ;2   ;Field     ;
+                SourceExpr="No. of Documents";
+                Visible=FALSE }
+
+    { 22  ;2   ;Field     ;
+                SourceExpr="Credit Limit (LCY)";
+                Visible=FALSE }
+
+    { 1101286982;2;Field  ;
+                SourceExpr="Credit Limit After Sales (LCY)" }
+
+    { 1101286984;2;Field  ;
+                SourceExpr="Credit Limit Vehicles (LCY)" }
+
+    { 186 ;2   ;Field     ;
+                SourceExpr="Creation Date";
+                Importance=Additional;
+                Visible=FALSE }
+
+    { 28  ;2   ;Field     ;
+                SourceExpr="Last Date Modified";
+                Importance=Additional;
+                Visible=FALSE }
+
+    { 1109400003;2;Field  ;
+                Description=INC;
+                SourceExpr="Date of Update";
+                Importance=Additional;
+                Visible=FALSE;
+                Editable=FALSE }
+
+    { 464900;2 ;Field     ;
+                Name=AddressSourceCodeG;
+                SourceExpr=AddressSourceCodeG;
+                CaptionClass=FIELDCAPTION("Address Source");
+                TableRelation="Address Source".Code;
+                Importance=Additional;
+                OnValidate=BEGIN
+                             // Start EU.0004649
+                             AddressMgtG.UpdateAddressSource("Address No.", AddressSourceCodeG);
+                             // Start EU.0004649
+                           END;
+                            }
+
+    { 5452600;2;Field     ;
+                Description=EU.0056707;
+                SourceExpr="Tour Code";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 1101353000;2;Field  ;
+                SourceExpr="Purchase Order No. Mandatory" }
+
+    { 628801;2 ;Field     ;
+                Name=ExcludeDataPrivacyG;
+                SourceExpr=ExcludeDataPrivacyG;
+                CaptionClass=FIELDCAPTION("Exclude from Data Privacy");
+                Importance=Additional;
+                Visible=EnableDataPrivacyG;
+                OnValidate=BEGIN
+                             // Start EU.0006288
+                             ContactG.UpdateExcludeDataPrivacy("No.", ExcludeDataPrivacyG, TRUE);
+                             EnableDataPrivacy();
+                             // Stop EU.0006288
+                           END;
+                            }
+
+    { 1119432010;1;Part   ;
+                SubPageLink=Vehicle Status=FILTER(<>Prospect Vehicle),
+                            Customer No.=FIELD(No.),
+                            Address No.=FILTER(<>0);
+                PagePartID=Page5205832;
+                Visible=FALSE }
+
+    { 1902768601;1;Group  ;
+                CaptionML=ENU=Communication }
+
+    { 103 ;2   ;Field     ;
+                SourceExpr="Phone No.";
+                Importance=Promoted }
+
+    { 104 ;2   ;Field     ;
+                SourceExpr="Fax No.";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 122 ;2   ;Field     ;
+                SourceExpr="Mobile Phone No.";
+                Importance=Promoted }
+
+    { 107 ;2   ;Field     ;
+                SourceExpr="E-Mail";
+                Importance=Promoted }
+
+    { 109 ;2   ;Field     ;
+                SourceExpr="Home Page" }
+
+    { 120 ;2   ;Field     ;
+                SourceExpr="Home Phone No.";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 12  ;2   ;Field     ;
+                SourceExpr="Home Fax No.";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 146 ;2   ;Field     ;
+                SourceExpr="Home Mobile Phone No.";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 148 ;2   ;Field     ;
+                SourceExpr="Home E-Mail";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 1109400007;2;Field  ;
+                Description=PA038224;
+                SourceExpr="Messaging App ID" }
+
+    { 1109400005;2;Field  ;
+                CaptionML=ENU=Message Notification;
+                Description=PA038224;
+                SourceExpr="Message Notification";
+                Importance=Additional;
+                Editable=TRUE;
+                OnValidate=BEGIN
+                             // Start PA038224
+                             // Start PA040256.60880
+                             CurrPage.UPDATE(TRUE);
+                             // Stop PA040256.60880
+                             // Start PA038224.47832
+                             SetMessageNotification(TRUE);
+                             // Stop PA038224.47832
+                             CurrPage.UPDATE(TRUE);
+                             CheckMessageButtonEditable();
+                             // Stop PA038224
+                           END;
+
+                OnLookup=BEGIN
+                           // Start PA040256.60880
+                           CurrPage.UPDATE(TRUE);
+                           // Stop PA040256.60880
+                           // Start PA038224
+                           // Start PA038224.47832
+                           // Start EU.0046364
+                           // Start EU.0122714.123625
+                           IF NOT SetMessageNotification(FALSE) THEN BEGIN
+                             CurrPage.UPDATE(TRUE);
+                             EXIT(FALSE);
+                           END;
+                           // Stop EU.0122714.123625
+                           // Stop EU.0046364
+                           // Stop PA038224.47832
+                           // Start PA038224.47253
+                           CurrPage.UPDATE(TRUE);
+                           CheckMessageButtonEditable();
+                           // Stop PA038224.47253
+                           // Stop PA038224
+                         END;
+
+                OnDrillDown=VAR
+                              SelectedMultipleChannelL@1109400000 : Record 5207890;
+                              ContactL@1109400001 : Record 5050;
+                            BEGIN
+                              // Start EU.0032067
+                              ContactL.SETRANGE("Address No.", "Address No.");
+                              ContactL.SETRANGE("Customer No.", "No.");
+                              ContactL.SETRANGE(Type, ContactL.Type::Company);
+                              // Start EU.0046364
+                              ContactL.FINDFIRST;
+                              SelectedMultipleChannelL.ShowSelectedChannels('', SelectedMultipleChannelL."Source Type"::Master, SelectedMultipleChannelL.Area::CRM, ContactL."No.");
+                              // Stop EU.0046364
+                              // Stop EU.0032067
+                            END;
+
+                QuickEntry=FALSE }
+
+    { 150 ;2   ;Field     ;
+                SourceExpr="Home Page 2";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 1101314647;2;Field  ;
+                CaptionML=ENU=No. of Preferred Ways of Contact;
+                SourceExpr=PrefWayOfContactG.CountPrefWayOfContact(GetContact("No."),"No.");
+                Importance=Additional;
+                Editable=FALSE;
+                OnDrillDown=BEGIN
+                              // Start PA033305.I000822
+                              CurrPage.SAVERECORD;
+                              COMMIT;
+                              // Stop PA033305.I000822
+                              // Start PA033305
+                              PrefWayOfContactG.DrilldownPrefWayOfContact(GetContact("No."), "No.");
+                              CurrPage.UPDATE(FALSE);
+                              // Stop PA033305
+                            END;
+
+                QuickEntry=FALSE }
+
+    { 1154;2   ;Field     ;
+                SourceExpr="IC Partner Code";
+                AutoFormatExpr='JMD';
+                Importance=Additional;
+                OnValidate=BEGIN
+                             ICPartnerCodeOnAfterValidate;
+                           END;
+
+                QuickEntry=FALSE }
+
+    { 1905885101;1;Group  ;
+                CaptionML=ENU=Invoicing }
+
+    { 70  ;2   ;Field     ;
+                SourceExpr="Gen. Bus. Posting Group";
+                Importance=Promoted }
+
+    { 58  ;2   ;Field     ;
+                SourceExpr="VAT Bus. Posting Group";
+                Importance=Promoted }
+
+    { 61  ;2   ;Field     ;
+                SourceExpr=GLN }
+
+    { 38  ;2   ;Field     ;
+                SourceExpr="Customer Posting Group";
+                Importance=Promoted }
+
+    { 34  ;2   ;Field     ;
+                SourceExpr="Bill-to Customer No.";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 1109400053;2;Field  ;
+                Description=PA037425;
+                SourceExpr="Global Dimension 1 Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 30  ;2   ;Field     ;
+                SourceExpr="Shipment Method Code";
+                AutoFormatExpr='JMD';
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 191 ;2   ;Field     ;
+                SourceExpr="Transfer Method";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 36  ;2   ;Field     ;
+                Description=PA043099.90574;
+                SourceExpr="Invoice Copies";
+                MinValue=0;
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 193 ;2   ;Field     ;
+                SourceExpr="Partner Code";
+                AutoFormatExpr='JMD';
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 42  ;2   ;Field     ;
+                SourceExpr="Labor Price Group";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 44  ;2   ;Field     ;
+                SourceExpr="Item Sales Price Group";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 46  ;2   ;Field     ;
+                SourceExpr="Ext. Service Price Group";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 64  ;2   ;Field     ;
+                SourceExpr="Vehicle Sales Price Group";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 181 ;2   ;Field     ;
+                SourceExpr="Option Sales Price Group";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 176 ;2   ;Field     ;
+                SourceExpr="Inv. Discount %";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 184 ;2   ;Field     ;
+                SourceExpr="Add Service Surcharges";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 178 ;2   ;Field     ;
+                SourceExpr="Show Discount";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 95  ;2   ;Field     ;
+                SourceExpr="Location Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE }
+
+    { 101 ;2   ;Field     ;
+                SourceExpr="Shipping Agent Code";
+                AutoFormatExpr='JMD';
+                Importance=Additional;
+                Visible=FALSE }
+
+    { 32  ;2   ;Field     ;
+                Description=PA036461.27606;
+                SourceExpr="Combine Shipments";
+                Importance=Additional;
+                Visible=TRUE }
+
+    { 158 ;2   ;Field     ;
+                SourceExpr=Reserve;
+                Visible=FALSE }
+
+    { 40  ;2   ;Field     ;
+                SourceExpr="Bulk Customer No.";
+                Importance=Additional;
+                Visible=FALSE }
+
+    { 189 ;2   ;Field     ;
+                SourceExpr="Respect Inv. Buffer Quantity";
+                Visible=FALSE }
+
+    { 1109400000;2;Field  ;
+                Description=PA036549.32563;
+                SourceExpr="Proposal for Alternative Part" }
+
+    { 124 ;2   ;Field     ;
+                SourceExpr="Branch Posting Group";
+                Importance=Additional;
+                Visible=FALSE }
+
+    { 203 ;2   ;Field     ;
+                SourceExpr="Apply Remaining Cust. Amount";
+                Visible=FALSE }
+
+    { 1109400061;2;Field  ;
+                Description=PA041187.90640;
+                SourceExpr="Consider Price Calculation" }
+
+    { 1101175180;2;Field  ;
+                SourceExpr="Disable for Requisition";
+                Visible=FALSE }
+
+    { 5   ;2   ;Field     ;
+                Description=EU.0104306;
+                SourceExpr="VAT Calculation Logic" }
+
+    { 1901677601;1;Group  ;
+                CaptionML=ENU=Payments }
+
+    { 50  ;2   ;Field     ;
+                SourceExpr="Payment Terms Code";
+                AutoFormatExpr='JMD';
+                Importance=Promoted }
+
+    { 11  ;2   ;Field     ;
+                SourceExpr="Payment Method Code";
+                AutoFormatExpr='JMD';
+                Importance=Promoted }
+
+    { 15  ;2   ;Field     ;
+                SourceExpr="Reminder Terms Code";
+                AutoFormatExpr='JMD' }
+
+    { 52  ;2   ;Field     ;
+                SourceExpr="Fin. Charge Terms Code";
+                AutoFormatExpr='JMD' }
+
+    { 3   ;2   ;Field     ;
+                SourceExpr="Cash Flow Payment Terms Code" }
+
+    { 48  ;2   ;Field     ;
+                SourceExpr="Application Method";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 202 ;2   ;Field     ;
+                SourceExpr="Our Account No.";
+                Importance=Additional;
+                QuickEntry=FALSE }
+
+    { 54  ;2   ;Field     ;
+                SourceExpr="Print Statements";
+                Visible=FALSE }
+
+    { 60  ;2   ;Field     ;
+                SourceExpr="Last Statement No.";
+                Visible=FALSE }
+
+    { 198 ;2   ;Field     ;
+                CaptionML=ENU=Unsettled Deposits;
+                SourceExpr=DepositItemG.NoOfOpenCustDeposits(Rec);
+                Visible=FALSE;
+                OnDrillDown=BEGIN
+                              // Start INC
+                              DepositItemG.ShowOpenCustDeposit(Rec);
+                              // Stop INC
+                            END;
+                             }
+
+    { 1143;2   ;Field     ;
+                SourceExpr="Block Payment Tolerance";
+                Visible=FALSE;
+                OnValidate=BEGIN
+                             IF "Block Payment Tolerance" THEN BEGIN
+                               IF CONFIRM(Text002, FALSE) THEN
+                                 PaymentToleranceMgtG.DelTolCustLedgEntry(Rec);
+                             END ELSE BEGIN
+                               IF CONFIRM(Text001, FALSE) THEN
+                                 PaymentToleranceMgtG.CalcTolCustLedgEntry(Rec);
+                             END;
+                           END;
+                            }
+
+    { 25  ;2   ;Field     ;
+                SourceExpr="Preferred Bank Account" }
+
+    { 21  ;2   ;Field     ;
+                SourceExpr="Partner Type" }
+
+    { 1907468901;1;Group  ;
+                CaptionML=ENU=Foreign Trade }
+
+    { 62  ;2   ;Field     ;
+                SourceExpr="Currency Code";
+                AutoFormatExpr='JMD';
+                Importance=Promoted }
+
+    { 66  ;2   ;Field     ;
+                SourceExpr="Language Code";
+                AutoFormatExpr='JMD' }
+
+    { 68  ;2   ;Field     ;
+                Description=EU.0083120;
+                SourceExpr="VAT Registration No.";
+                Style=Favorable;
+                StyleExpr=VatRegistrationStyleExpressionG;
+                OnValidate=BEGIN
+                             // Start EU.0083120
+                             CheckValidVATRegNo();
+                             // Stop EU.0083120
+                           END;
+
+                OnAssistEdit=VAR
+                               VATRegistrationLogMgt@72000 : Codeunit 249;
+                             BEGIN
+                               VATRegistrationLogMgt.AssistEditCustomerVATReg(Rec);
+                             END;
+                              }
+
+    { 1119432005;2;Field  ;
+                Description=INC;
+                SourceExpr="EU Business Customer" }
+
+    { 1905866701;1;Group  ;
+                CaptionML=ENU=Free;
+                Visible=FALSE }
+
+    { 93  ;2   ;Field     ;
+                SourceExpr="Date 1" }
+
+    { 154 ;2   ;Field     ;
+                SourceExpr="Date 2" }
+
+    { 156 ;2   ;Field     ;
+                SourceExpr="Extra Code 1" }
+
+    { 160 ;2   ;Field     ;
+                SourceExpr="Extra Code 2" }
+
+    { 162 ;2   ;Field     ;
+                SourceExpr="Extra Code 3" }
+
+    { 164 ;2   ;Field     ;
+                SourceExpr="Text 1" }
+
+    { 166 ;2   ;Field     ;
+                SourceExpr="Text 2" }
+
+    { 168 ;2   ;Field     ;
+                SourceExpr="Text 3" }
+
+    { 170 ;2   ;Field     ;
+                SourceExpr="Text 4" }
+
+    { 172 ;2   ;Field     ;
+                SourceExpr="Text 5" }
+
+    { 174 ;2   ;Field     ;
+                SourceExpr="Text 6" }
+
+    { 1901004601;1;Group  ;
+                CaptionML=ENU=Importer;
+                Visible=FALSE }
+
+    { 1101353002;2;Field  ;
+                SourceExpr="Disable Applies-to Doc. No.";
+                Enabled=DisableAppliestoDocNoEnable }
+
+    { 1900000007;0;Container;
+                ContainerType=FactBoxArea }
+
+    { 1170000000;1;Part   ;
+                Name=SpecialFunctionFactBox;
+                CaptionML=ENU=Special &Functions;
+                Description=PA038456,PA039901;
+                SubPageLink=Source Table ID=CONST(18),
+                            Source Page=CONST(21),
+                            Code 1=FIELD(No.);
+                PagePartID=Page5206800;
+                PartType=Page }
+
+    { 1903223507;1;Part   ;
+                Description=PA035597;
+                SubPageLink=No.=FIELD(No.),
+                            Date Filter=FIELD(FILTER(Date Filter)),
+                            Global Dimension 1 Filter=FIELD(FILTER(Global Dimension 1 Filter)),
+                            Global Dimension 2 Filter=FIELD(FILTER(Global Dimension 2 Filter)),
+                            Currency Filter=FIELD(FILTER(Currency Filter)),
+                            Ship-to Filter=FIELD(FILTER(Ship-to Filter)),
+                            Item Filter=FIELD(FILTER(Item Filter)),
+                            Location Filter=FIELD(FILTER(Location Filter)),
+                            Bin Filter=FIELD(FILTER(Bin Filter));
+                PagePartID=Page5207260;
+                PartType=Page }
+
+    { 1903720907;1;Part   ;
+                Description=PA035597;
+                SubPageLink=No.=FIELD(No.),
+                            Date Filter=FIELD(FILTER(Date Filter)),
+                            Global Dimension 1 Filter=FIELD(FILTER(Global Dimension 1 Filter)),
+                            Global Dimension 2 Filter=FIELD(FILTER(Global Dimension 2 Filter)),
+                            Currency Filter=FIELD(FILTER(Currency Filter)),
+                            Ship-to Filter=FIELD(FILTER(Ship-to Filter)),
+                            Item Filter=FIELD(FILTER(Item Filter)),
+                            Location Filter=FIELD(FILTER(Location Filter)),
+                            Bin Filter=FIELD(FILTER(Bin Filter));
+                PagePartID=Page9080;
+                PartType=Page }
+
+    { 7   ;1   ;Part      ;
+                Description=PA035597,AP-2362;
+                SubPageLink=No.=FIELD(No.),
+                            Date Filter=FIELD(FILTER(Date Filter)),
+                            Global Dimension 1 Filter=FIELD(FILTER(Global Dimension 1 Filter)),
+                            Global Dimension 2 Filter=FIELD(FILTER(Global Dimension 2 Filter)),
+                            Currency Filter=FIELD(FILTER(Currency Filter)),
+                            Ship-to Filter=FIELD(FILTER(Ship-to Filter)),
+                            Item Filter=FIELD(FILTER(Item Filter)),
+                            Location Filter=FIELD(FILTER(Location Filter)),
+                            Bin Filter=FIELD(FILTER(Bin Filter));
+                PagePartID=Page50014;
+                PartType=Page }
+
+    { 9   ;1   ;Part      ;
+                Description=PA035597,AP-2362;
+                SubPageLink=No.=FIELD(No.),
+                            Date Filter=FIELD(FILTER(Date Filter)),
+                            Global Dimension 1 Filter=FIELD(FILTER(Global Dimension 1 Filter)),
+                            Global Dimension 2 Filter=FIELD(FILTER(Global Dimension 2 Filter)),
+                            Currency Filter=FIELD(FILTER(Currency Filter)),
+                            Ship-to Filter=FIELD(FILTER(Ship-to Filter)),
+                            Item Filter=FIELD(FILTER(Item Filter)),
+                            Location Filter=FIELD(FILTER(Location Filter)),
+                            Bin Filter=FIELD(FILTER(Bin Filter));
+                PagePartID=Page50015;
+                Visible=FALSE;
+                PartType=Page }
+
+    { 7119500;1;Part      ;
+                Description=EU.0071195;
+                SubPageLink=Sell-to Customer No.=FIELD(No.),
+                            Order Status=FILTER(New|Active),
+                            Customer Filter=FIELD(No.);
+                PagePartID=Page5208850;
+                Visible=TireHotelDetailsVisibleG;
+                PartType=Page }
+
+    { 1902018507;1;Part   ;
+                Description=PA035597;
+                SubPageLink=No.=FIELD(No.),
+                            Date Filter=FIELD(FILTER(Date Filter)),
+                            Global Dimension 1 Filter=FIELD(FILTER(Global Dimension 1 Filter)),
+                            Global Dimension 2 Filter=FIELD(FILTER(Global Dimension 2 Filter)),
+                            Currency Filter=FIELD(FILTER(Currency Filter)),
+                            Ship-to Filter=FIELD(FILTER(Ship-to Filter)),
+                            Item Filter=FIELD(FILTER(Item Filter)),
+                            Location Filter=FIELD(FILTER(Location Filter)),
+                            Bin Filter=FIELD(FILTER(Bin Filter));
+                PagePartID=Page9082;
+                Visible=FALSE;
+                PartType=Page }
+
+    { 1907234507;1;Part   ;
+                Description=PA035597;
+                SubPageLink=No.=FIELD(No.),
+                            Date Filter=FIELD(FILTER(Date Filter)),
+                            Global Dimension 1 Filter=FIELD(FILTER(Global Dimension 1 Filter)),
+                            Global Dimension 2 Filter=FIELD(FILTER(Global Dimension 2 Filter)),
+                            Currency Filter=FIELD(FILTER(Currency Filter)),
+                            Ship-to Filter=FIELD(FILTER(Ship-to Filter)),
+                            Item Filter=FIELD(FILTER(Item Filter)),
+                            Location Filter=FIELD(FILTER(Location Filter)),
+                            Bin Filter=FIELD(FILTER(Bin Filter));
+                PagePartID=Page9081;
+                Visible=FALSE;
+                PartType=Page }
+
+    { 13  ;1   ;Part      ;
+                Description=PA035597,AP-2362;
+                SubPageLink=No.=FIELD(No.),
+                            Date Filter=FIELD(FILTER(Date Filter)),
+                            Global Dimension 1 Filter=FIELD(FILTER(Global Dimension 1 Filter)),
+                            Global Dimension 2 Filter=FIELD(FILTER(Global Dimension 2 Filter)),
+                            Currency Filter=FIELD(FILTER(Currency Filter)),
+                            Ship-to Filter=FIELD(FILTER(Ship-to Filter)),
+                            Item Filter=FIELD(FILTER(Item Filter)),
+                            Location Filter=FIELD(FILTER(Location Filter)),
+                            Bin Filter=FIELD(FILTER(Bin Filter));
+                PagePartID=Page50016;
+                Visible=FALSE;
+                PartType=Page }
+
+    { 14  ;1   ;Part      ;
+                Description=PA035597,AP2362;
+                SubPageLink=No.=FIELD(No.),
+                            Date Filter=FIELD(FILTER(Date Filter)),
+                            Global Dimension 1 Filter=FIELD(FILTER(Global Dimension 1 Filter)),
+                            Global Dimension 2 Filter=FIELD(FILTER(Global Dimension 2 Filter)),
+                            Currency Filter=FIELD(FILTER(Currency Filter)),
+                            Ship-to Filter=FIELD(FILTER(Ship-to Filter)),
+                            Item Filter=FIELD(FILTER(Item Filter)),
+                            Location Filter=FIELD(FILTER(Location Filter)),
+                            Bin Filter=FIELD(FILTER(Bin Filter));
+                PagePartID=Page50017;
+                Visible=FALSE;
+                PartType=Page }
+
+    { 1904237407;1;Part   ;
+                SubPageLink=Customer No.=FIELD(No.),
+                            Department Filter=FIELD(FILTER(Global Dimension 1 Filter)),
+                            Make Filter=FIELD(FILTER(Global Dimension 2 Filter)),
+                            Date Filter=FIELD(FILTER(Date Filter)),
+                            Currency Filter=FIELD(FILTER(Currency Filter));
+                PagePartID=Page5207281;
+                Visible=FALSE;
+                PartType=Page }
+
+    { 1901312607;1;Part   ;
+                Description=PA035597;
+                SubPageLink=No.=FIELD(No.),
+                            Date Filter=FIELD(FILTER(Date Filter)),
+                            Global Dimension 1 Filter=FIELD(FILTER(Global Dimension 1 Filter)),
+                            Global Dimension 2 Filter=FIELD(FILTER(Global Dimension 2 Filter)),
+                            Currency Filter=FIELD(FILTER(Currency Filter)),
+                            Ship-to Filter=FIELD(FILTER(Ship-to Filter)),
+                            Item Filter=FIELD(FILTER(Item Filter)),
+                            Location Filter=FIELD(FILTER(Location Filter)),
+                            Bin Filter=FIELD(FILTER(Bin Filter));
+                PagePartID=Page5208833;
+                Visible=FALSE;
+                PartType=Page }
+
+    { 1900383207;1;Part   ;
+                Visible=FALSE;
+                PartType=System;
+                SystemPartID=RecordLinks }
+
+    { 1905767507;1;Part   ;
+                Visible=TRUE;
+                PartType=System;
+                SystemPartID=Notes }
+
+  }
+  CODE
+  {
+    VAR
+      Mail@1000 : Codeunit 397;
+      MapPointVisible@19022708 : Boolean INDATASET;
+      Text001@1119432303 : TextConst 'ENU=Do you want to allow payment tolerance for entries that are currently open?';
+      Text002@1119432302 : TextConst 'ENU=Do you want to remove payment tolerance from entries that are currently open?';
+      _INCADEA_@1109400001 : Boolean;
+      __START_EXIT_POINT___@1109400019 : Integer;
+      ExitPointSetupG@1109400018 : Record 5207300;
+      ExitPointParamG@1109400017 : TEMPORARY Record 5207301;
+      ExitPointUnitG@1109400016 : Codeunit 5207300;
+      EPRecRef2G@1109400014 : RecordRef;
+      __STOP_EXIT_POINT___@1109400010 : Integer;
+      CompanyInfoG@1101342645 : Record 79;
+      DataPrivSetupG@1101342644 : Record 5060978;
+      DepositItemG@1109400002 : Record 27;
+      GDPRAnonymizationLogEntryG@1055600 : Record 5046873;
+      ContactG@1109400006 : Record 5050;
+      AddressLnkG@1109400005 : Record 5029112;
+      VendG@1109400004 : Record 23;
+      MessageListG@1109400015 : Record 5047002;
+      PrefWayOfContactG@1101314645 : Record 5060975;
+      VehicleSearchG@1109400000 : Page 5205930;
+      DataPrivManagementG@1101342643 : Codeunit 5060978;
+      PaymentToleranceMgtG@1109400013 : Codeunit 426;
+      ServMgmtG@1119432001 : Codeunit 5025614;
+      VehicleCollectionUnitG@1119432003 : Codeunit 5025409;
+      MessageMgmtG@1109400012 : Codeunit 5047001;
+      CashRegisterFunctionsG@1101314646 : Codeunit 5028760;
+      UserSessionG@1000000001 : Codeunit 5028665;
+      AddressMgtG@1109400009 : Codeunit 5029101;
+      InternatDataPrivacyCheckG@628801 : Codeunit 5060971;
+      ServDocTypeG@1119432004 : 'Quote,Order,,,,,,Scheduling';
+      DocTypeG@1119432002 : 'Quote,Order,Invoice,Credit Memo,Blanket Order,Return Order';
+      ShowDocFilterG@1109400003 : 'All,Contact,Customer,Vendor';
+      EnableDataPrivacyG@1109400011 : Boolean INDATASET;
+      EnableMessageG@1109400007 : Boolean INDATASET;
+      ContactEditableG@19051436 : Boolean INDATASET;
+      GlobalDimension1CodeEnableG@19057401 : Boolean INDATASET;
+      DisableAppliestoDocNoEnable@19051836 : Boolean INDATASET;
+      FirstNameEditableG@1109400008 : Boolean;
+      RecRefG@1000000000 : RecordRef;
+      AddressSourceCodeG@464900 : Code[10];
+      ExcludeDataPrivacyG@628800 : Boolean;
+      VatRegistrationStyleExpressionG@8312000 : Boolean;
+      TireHotelDetailsVisibleG@7119500 : Boolean;
+
+    PROCEDURE ActivateFields@3();
+    BEGIN
+      ContactEditableG := "Primary Contact No." = '';
+      // Start EU.0006288
+      EnableDataPrivacy();
+      // Stop EU.0006288
+    END;
+
+    LOCAL PROCEDURE __INCADEA__@1101353000();
+    BEGIN
+    END;
+
+    LOCAL PROCEDURE __START_EXITPOINT__@5025300();
+    BEGIN
+    END;
+
+    LOCAL PROCEDURE ExitPointCall@5025380(MakeCodeP@1109400003 : Code[20];TriggerP@1109400002 : Integer;TypeP@1109400001 : Integer;ExitPointIDP@1109400000 : Text[50];VAR EPRecRefP@1109400005 : RecordRef) : Boolean;
+    BEGIN
+      // @ param MakeCodeP - Code 20
+      // @ param TriggerP - Integer
+      // @ param TypeP - Integer
+      // @ param ExitPointIDP - Text 50
+      // @ param EPRecRefP - RecordRef ByVAR
+
+      // Start PA044429
+      EXIT(ExitPointUnitG.RunExitPoint(
+        ExitPointSetupG."Object Type"::Page,
+        PAGE::"Customer Card",
+        MakeCodeP, TriggerP, TypeP, ExitPointIDP, EPRecRefP, EPRecRef2G, ExitPointParamG));
+      // Stop PA044429
+    END;
+
+    LOCAL PROCEDURE ExitPoint@5025450(TriggerP@1119452001 : Integer;TypeP@1119432000 : Integer;ExitPointIDP@1119432001 : Text[50]) ReturnR : Boolean;
+    VAR
+      EPRecRefL@1109400004 : RecordRef;
+    BEGIN
+      // @ This local function works as ExitPoint wrapper function. It will control the ExitPointCheck function call.
+      // @ It passes thru all the handshake parameter values.
+      // @ It takes care to provide the processing records as RecordReference to the ExitPointCheck function.
+      // @ When possible a Make Code is also identified and passed to the called ExitPointCheck function.
+      // @ param TriggerP - Integer
+      // @ param TypeP - Integer
+      // @ param ExitPointIDP - Text 50
+
+      // Start PA044429
+      EPRecRefL.GETTABLE(Rec);
+      EPRecRef2G.GETTABLE(xRec);
+      ReturnR := ExitPointCall("Global Dimension 2 Code", TriggerP, TypeP, ExitPointIDP, EPRecRefL);
+      EPRecRefL.SETTABLE(Rec);
+      CLEAR(EPRecRef2G);
+      // Stop PA044429
+    END;
+
+    LOCAL PROCEDURE __STOP_EXITPOINT__@5025451();
+    BEGIN
+    END;
+
+    LOCAL PROCEDURE EnableImporterTab@1101353001();
+    BEGIN
+      // Start INC
+      IF NOT CompanyInfoG.IMSCheck() THEN BEGIN
+      // Start PA037425
+      // Stop PA037425
+        DisableAppliestoDocNoEnable := FALSE;
+      END;
+      // Stop INC
+    END;
+
+    PROCEDURE CheckMessageButtonEditable@1109400001();
+    BEGIN
+      // Start PA032665
+      // Start PA038224
+      CLEAR(MessageMgmtG);
+      // @ EnableSMSG variable is also used in Pages to control the Action Create Message
+      EnableMessageG := MessageMgmtG.AllowSendMessage("No.", MessageListG."Sender/Recipient Type"::Person);
+      // Stop PA038224
+      // Stop PA032665
+    END;
+
+    LOCAL PROCEDURE ICPartnerCodeOnAfterValidate@19032922();
+    BEGIN
+      CurrPage.UPDATE;
+    END;
+
+    LOCAL PROCEDURE EnableDataPrivacy@628800();
+    BEGIN
+      // @ this function enables Data Privacy Actions
+      // Start EU.0006288
+      IF NOT InternatDataPrivacyCheckG.CheckIncludeBusinessContacts("Customer Type") THEN
+        EnableDataPrivacyG := FALSE
+      ELSE BEGIN
+        CALCFIELDS("Exclude from Data Privacy");
+        EnableDataPrivacyG := NOT "Exclude from Data Privacy";
+      END;
+      // Stop EU.0006288
+    END;
+
+    LOCAL PROCEDURE CheckValidVATRegNo@8312000();
+    VAR
+      VATRegistrationLogL@8312000 : Record 249;
+    BEGIN
+      // Start EU.0083120
+      VATRegistrationLogL.SETRANGE("Account No.", "No.");
+      VATRegistrationLogL.SETRANGE("Country/Region Code", "Country/Region Code");
+      VATRegistrationLogL.SETRANGE(Status, VATRegistrationLogL.Status::Valid);
+      VATRegistrationLogL.SETRANGE("VAT Registration No.", "VAT Registration No.");
+      IF VATRegistrationLogL.FINDFIRST THEN
+        VatRegistrationStyleExpressionG := TRUE
+      ELSE
+        VatRegistrationStyleExpressionG := FALSE;
+      // Stop EU.0083120
+    END;
+
+    BEGIN
+    {
+      // @ Area PartsSales, VehicleSales, Service
+      PA-Number  Date
+      ------------------------------------------------
+      PA031883   17.05.10 Code added in OnNewRecord to use the template function in RTC
+      PA032111   12.08.10 (BRL): Object renumbering changes due to Microsoft Agreement.
+      PA032144   30.08.10 SS Merge of 3.2.3.0
+      PA031550   08.09.10 SS Added Vehicle List SubPage (only visible RTC)
+      PA032178   13.12.10 DD 1606137 SubPageLink of Vehicle List SubPage modified
+      PA032473   18.02.11 PR 2776050:
+                             Added new menubutton 'Functions' to open the card Page
+                             in 'NewDocument' action group(of Customer card) through C/AL code.
+      PA032519   21.03.11 SS New FactBox - Contact Data Privacy FactBox attached
+                             New Menu Items in Customer - Data Privacy Query and Data Privacy Log File.
+                             Code Added on OnOpenPage() & OnAfterGetRecord() triggers.
+      PA032473   29.04.11 GM 3043723:
+                             Changed Parent Control Property for PostCode/City caption to avoid redundant captions in the RTC
+      PA032473   14.06.11 AA 3637477: Vehicle List SubPage removed - to be added using Configurator
+      PA032441   01.07.11 GC NAV 2009 SP1 W1 General Ledger Integration
+      PA032842   27.07.11 GL Quick Item Inquiry added to New document menubutton
+      PA032665   14.10.11 SS - SMS-Messaging: New Button called "Button_SendSMS" placed next to "No."
+                             - Added Code in Page - OnAfterGetRecord
+                             - New Function "CheckSMSButtonEditable" - called from Trigger OnAfterGetRecord, SMS Notification - OnPush
+                             - Added Code in New Button - OnPush
+                             - New MenuItem -> Order -> "Send SMS"
+      PA032811   04.11.11 DR Show new Field 5025415 "Date of Birth".
+      PA032651   23.01.12 SS 4052179 - Regrouping Menu Items under "New Document" Menu Button.
+                             - Moved "Quick Item Inquiry", "Quick Vehicle" under "New Document" Menu Button.
+                             - Created " Quick Customer" under "New Document" Menu Button.
+      PA033082   30.03.12 DR All available FlowFilter fields from the SourceTable added to the SubPageLink of attached FactBox Pages
+      PA033067   12.04.12 DR DE Captions implemented
+      PA032651   25.04.12 DR 6012646: DEU and ENU Captions corrected
+      PA033019   22.06.12 GC 7357298 In the action pane, area "New" actions "Service Order" & "Vehicle Sales Quote" added
+      PA033259   09.08.12 AI Deletion of Start/Stop History in Code, update copyright and Version List
+      PA033019   10.09.12 GD 8582610: Fix for Item-> 'Ledger Entries' RunPageView Property.
+      PA033259   18.09.12 DR Variable names changed according to incadea style guide
+      PA033733   10.12.12 DR DE Captions added for version: N.6.1.2
+      PA033305   11.04.13 DD New field added "No. of Pref. Ways of Contact" added to Communication Tab
+                             New Menu Item "Preferred Ways of Contact" added to button Customer
+      PA033983   16.04.13 MA New field "Apply Remaining Cust. Amount" for Customer Split Up queried in Service Line Customer.
+      PA033305   18.04.13 DD I000822 OnDrillDown of field "No. of Pref. Ways of Contact" updated to first store the record for not to
+                             loose the data
+      PA033895   18.04.13 GC Special Functions button added
+                             External Systems functionality replaced with Special Functions
+                             Functions LaunchService, SendDataService, ReceiveDataService removed
+      PA034252   05.07.13 DD I000071: Menu "Cash Register Customer" in function button for RTC enabled to create a new Customer Cash
+                             Register defaulted with the "Customer No."
+      PA034291   08.10.13 SM Added new factbox Customer Prepmt. Statistics
+      PA035333   02.12.13 GM New Menu Item 'Manufacturer Relations' added
+      PA036160   02.09.14 CH New fields in tab General "Credit Limit After Sales (LCY)","Credit Limit Vehicles (LCY)".
+      PA036373   23.09.14 DR Call DataPrivacy over new Data Privacy Managament CU
+      PA036373   23.09.14 DR CheckDataPrivacyEnabled changed.
+                             - All FIND(-) changed to FINDFIRST, FINDSET
+      PA036373   23.09.14 DR Boolean DisableDataPrivacyG changed to EnabledDataPrivacyG
+      PA036773   24.09.14 LR Set Property IsFilter to TRUE in filters of the FactBoxes
+      PA036867   14.10.14 GI Added the CLEAR() function on the Record Ref and on the Special Function Page used in the Special Functions menu button.
+      PA036542   26.11.14 CH Documents action renamed to "Where-Used".
+      PA036868   12.01.15 CH Merge PA036542.
+      PA036842   16.01.15 GD New field "Disable Remarks" added on General Tab.
+      PA036868   12.01.15 CH Add Image for Where-Used action.
+      PA035597   10.02.14 GC NAV 2013 R2 Technical Upgrade
+      PA035903   25.08.14 CH NAV 2013 UI Enhancement
+      PA036461   29.08.14 KK 27606 Set property visible to true for Combine Shipments field
+      PA036547   06.11.14 GE Merge N.6.1.4 to N.7.1.0: PA035333, PA036160.
+      PA035901   14.11.14 CH NAV 2013 R2 General Ledger Integration.
+      PA035962   17.11.14 TS New Field - Cash Flow Payment Terms Code.
+      PA036547   24.09.14 LR Merge PA036373
+      PA036966   25.11.14 TS NAV 2013 R2 General Ledger Integration - SEPA Credit Transfer, Direct Debit.
+                             New Fields Preferred Bank Account, Partner Type, New Action SEPA Direct Debit Mandates.
+      PA036548   16.12.14 GL Merge of PA036160
+      PA036548   16.12.14 DR Merge of PA036373
+      PA036549   13.01.14 LR 32563 Display "Proposal for Alternative Part" by default
+      PA037341   20.01.15 GL Merge of PA036867
+      PA036549   03.02.15 LR 33443 Display Foregin Trade Fast Tab
+      PA036549   04.02.15 LR 33440 Display correctly Navigation tab in Ribbon
+      PA036543   24.02.15 WZ Changed the reference object to the new object moved in incadea range
+      PA036869   16.01.15 GE New Menu Button Added - "Model/Vehicles of Interest"
+                             - Related Vehicles Subform added
+      PA036869   12.02.15 GE 11:25:04 Vehicle List  Subpage removed
+      PA036869   25.02.15    34433 13:22:52 Image added on Vehicle of Interest
+      PA037758   06.04.15 GE Merge PA036869
+      PA037425   03.04.15 GD 35902 10:00:38 Removed Visible property for Global Dimension 1 Code
+      PA037800   20.04.15 GE Merge PA037425
+      PA037800   22.04.15 GP 36721 Field Department Code removed from FastTab Importer and added to FastTab Invoicing.
+      PA038456   12.08.15 SR Special Function FactBox has been added
+      PA038456   03.09.15 SR 44384 Left Space between the Special Function Caption
+      PA038456   04.09.15 SR 44408 Code has been added to apply the Make Code Filter while using Special Function FactBox.
+      PA038224   26.08.15 SV Removed "SMS Notification" field. Updated Reference of "SMS Phone No.". Code cleanup
+      PA038224   08.10.15 DR 46899 Bugfix
+      PA037937   14.10.15 SM 45596 Page action Page Cust./Veh. History (Legacy) is made Visible (TRUE).
+      PA038224   20.10.15 WZ 47253 Call CheckMessageButtonEditable to set the buttons
+      PA038224   26.10.15 WZ 47832 Changed Parameter to set the "Message Notification App Type" instead.
+                             Call the SetMessageNotification function
+      PA037937   14.10.15 SM 45596 Page action Page Cust./Veh. History (Legacy) List is made Visible (TRUE).
+      PA038126   12.11.15 SM Added new page action Vehicle Search.
+      PA038126   01.12.15 LR 50429 Move Vehicle Search to Action --> Functions
+      PA039901   22.01.16 KR Changed the Source Page Id inSubPageLink property of SpecialFunctionFactBox.
+      PA039902   22.01.16 KR Merge of PA039901.
+      PA040256   17.05.16 LR 60880 Update page before set the Message Notification
+      PA041856   16.11.16 VF Factbox 'Related Vehicles' removed.
+                             Action 'Related Vehicles' added.
+      PA042814   31.01.17 SD New action "Contact / Vehicle Search", rename of action from "Vehicle Search" to "Vehicle Locator"
+      PA041681   23.12.16 AN Action Legacy History readapted to open under the new Legacy structure, splitted by Parts, Vehicles and Services.
+      PA041187   02.03.17 KR 88726 Call of CreatePartsSalesDocument modified. Customer No and Contact No are own parameters.
+      PA041187   08.03.17 ER 90242 Function FillDefaults added in onNewRecord trigger.
+      PA043099   08.03.17 GY 90574 "Invoice Copies" changed property MinValue to 0.
+      PA043100   15.03.17 GW 90911 Merge of PA043099.90574.
+      PA041187   16.03.17 GI 90998 Legacy buttons had their visibility changed.
+      PA041187   01.03.17 MS 89458 Provide "First Name" field editable logic according to "Customer Type" field.
+      PA041187   04.04.17 GL 90640 New field Consider Price Calculation
+      PA043734   10.05.17 LL Changed code on OnModifyRecord() trigger to validate also value for "First Name"
+      PA044429   26.07.17 GD Exit Points functions created.
+      PA044774   26.09.17 GD New Exit Point for OnModifyRecord.
+      EU.0040227 04.10.18 GP OnModifyRecord() modified to modify and get the xRec in order to change also the name field
+                             after the validation of last name
+      --- 7.1.6 ---
+      EU.0002138 22.06.17 LL 2069 Merge of PA043734
+      EU.0004649 18.08.17 ER Field "Address Source" was added
+      --- 7.2.0 ---
+      EU.0005837 06.09.17 GV 4362 Merge of PA044429
+      EU.0000046 05.09.17 S4 TireHotel: New Action Button "TireHotel Order"
+      EU.0000048 25.07.17 AN New Action Added: Interface Customer No. Mapping
+                             Action Ship-to Addresses changed in order to open the List instead the Card page.
+      EU.0006767 28.09.17 DG 7215 Merge of PA044774.
+      EU.0006288 27.09.17 JM Field "Exclude from Data Privacy Query" was added
+      EU.0006288 29.09.17 JM Added new function EnableDataPrivacy to enable Data Privacy Actions
+      EU.0006288 05.10.17 JM Added code on OnQueryClosePage() trigger to show Data Privacy Query Page
+      EU.0000039 18.10.17 UX 6348 Docu trigger correction.
+      EU.0001175 18.10.17 UX 8305 Missing docu trigger for EU.0000039.6348
+      EU.0026544 18.05.18 DG If the contact is fully anonymized avoid displaying automatically the Data Privacy Query.
+      EU.0040696 04.10.18 GP Merge of EU.0040227
+      EU.0083611 11.12.19 UU Merge of EU.0083120
+                             - VAT Registration Validation Integration
+      EU.0032067 17.07.18 JV Added code to Show Selected Messaging Channels on Assist Edit
+                             Changed Parameter from 0 to Master on Action of "Send Message"
+      --- 7.3.0 --- downmerge
+      EU.0056707          GE 56709 Field "Tour Code" added
+      EU.0071195 14.07.19 RE FactBox "Tire Hotel Details FactBox" added
+      EU.0046364 18.12.18 DR Consider Return boolean from function SetMessageNotification
+      --- 7.2.1 ---
+      EU.0090125 21.02.20 UU Downmerge of EU.0056707
+      EU.0101361 09.07.20 KR "Document Sending Profile" field added from NAV BC ,and enabled eDoc. Exchange Profile
+      EU.0110918 15.12.20 JV Downmerge of EU.0071195
+      EU.0120797 17.06.21 PS Merge of EU.0032067
+      EU.0120797 18.06.21 PS Downmerge of EU.0046364
+      EU.0104306 17.09.20 DR New option field "VAT Calculation Logic" added.
+      EU.0122714 29.07.21 PS Added code to update the page on lookup of "Message Notification"
+      EU.0132549 21.01.22 AD 132759 Modified OnValidate() trigger of "No." field in order to release a field filter in case of a rename.
+      EU.0129713 28.01.22 KR 132441 passing new FALSE into new parameter of OpenSendMessagePage
+      WBL10      07.08.23 RL Add field 'Purchase Order No. Mandatory'.
+      AP-2362    09.04.26 LU Created and Added the FactBox "Sales Hist. Sell-to FactBox2", "Sales Hist. Sell-to FactBox3", "Sales Hist. Bill-to FactBox2" and "Sales Hist. Bill-to FactBox3"
+                             - Divided the fields from "Sales Hist. Sell-to FactBox" and "Sales Hist. Bill-to FactBox" into "Sales Hist. Sell-to FactBox2", "Sales Hist. Sell-to FactBox3", "Sales Hist. Bill-to FactBox2" and "Sales Hist. Bill-to FactBox3"
+    }
+    END.
+  }
+}
+

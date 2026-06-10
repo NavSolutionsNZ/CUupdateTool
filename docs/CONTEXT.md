@@ -874,3 +874,44 @@ vendor-deletion→DEV), cuupdate/run_batch.py (`format_merge_dates`, `date_forma
 datetime import), tests/test_diffengine.py (P21 DEV-gate across layers, P5025649→P5025440,
 date-format asserts), tests/fixtures/{EX,CU,MyMerged}-P21.stripped.txt (NEW),
 samples/{Cust_,20206Q1_}P5025440.txt (NEW), samples P5025649 removed, docs/README_run.md (date-format).
+
+### 8.18 Session log — P21V2 (tagged FactBoxes) auto-merges; same-anchor ordering fix
+**Outcome: the P21 pass/fail PAIR is complete and locked. Untagged P21 routes to DEV; P21V2 (same
+object, FactBoxes 7/9/13/14 now tagged AP-2362) AUTO-MERGES byte-exact to its gold. Fixing this
+exposed a same-anchor graft-ordering bug, now fixed. Suite green (scorer 20/20, diffengine PASS,
+census 5/5).**
+
+**P21V2 (user-supplied):** the original Cust_P21 with two deliberate changes — (1) language layer
+stripped to cmdlet-clean ENU form, and (2) the four customer FactBoxes given a customer tag:
+`Description=PA035597` -> `PA035597,AP-2362` (control 14 is `AP2362`, no hyphen — a typo, but still
+resolves to prefix AP so it classifies fine). With the customer tag present, the FactBoxes flip from
+`vendor-deletion -> DEV` (ambiguous, Issue 3) to `field-graft -> CARRY` (confident customer adds).
+This is the proof the tag does its job: the SAME object routes to DEV untagged, auto-merges tagged.
+
+**Same-anchor ordering bug (found + fixed):** the four FactBoxes graft in two same-anchor pairs
+(7 & 9 both anchor after one surviving B sibling; 13 & 14 after another). The executor applied
+insertions high-to-low keyed only on the anchor index; when two blocks shared an anchor the high-to-
+low pass INVERTED them (output order was 9,7,14,13 instead of 7,9,13,14). FIX: each insertion now
+carries a `source_order` (its A line); the sort key is `(after, source_order)` reverse, so same-
+anchor blocks land in A-order. The global-VAR insertion uses `source_order=inf` (applies last within
+its anchor). No existing fixture has >1 graft per anchor, so the tiebreaker is a no-op for them
+(verified suite-green); P21V2 is the case that needed it.
+
+**Gold note:** MyMerged-P21 (V2 gold) has header `Date=06/10/25` (hand-typed year-25 slip) but
+doc-trigger `10.06.26` — internally inconsistent on the year. The tool stamps consistently from its
+params; the fixture's PARAMS_OVERRIDE matches the gold's literal values so it reproduces byte-exact.
+Another small slip the tool would standardise away in practice.
+
+**Fixtures:** `tests/fixtures/{EX,CU,MyMerged}-P21V2.stripped.txt` (NEW; auto-merge fixture). Harness:
+P21V2 in CUST_OVERRIDE ({AP,WBL}), PARAMS_OVERRIDE (header 06/10/25, doc 10.06.26, 'CU Upgrade.'),
+EXPECTED_VERDICTS (1 doc-graft + 4 field-graft CARRY), EXEC_CASES, OBJ. P21 (DEV) + P21V2 (auto) now
+stand as the canonical tagged/untagged pair.
+
+**Production state:** PAGE still `validated=False`. The Page handler now has: clean control add
+(P14 auto), vendor caption rename -> take B, ambiguous vendor-tagged add -> DEV (P21), and tagged
+add -> auto-merge with correct multi-FactBox ordering (P21V2). Strong basis to consider flipping
+PAGE on, pending Rich's sign-off across more real objects.
+
+**Files:** cuupdate/execute.py (source_order tiebreaker on insertions),
+tests/test_diffengine.py (P21V2 across all layers),
+tests/fixtures/{EX,CU,MyMerged}-P21V2.stripped.txt (NEW).

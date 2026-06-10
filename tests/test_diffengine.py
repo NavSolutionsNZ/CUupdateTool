@@ -35,6 +35,7 @@ CUST_OVERRIDE = {
     'T81': {'AP', 'WBL', 'DC'},
     'P14': {'AP', 'WBL', 'APOP'},   # customer's E-Mail field tagged APOP000010
     'P21': {'AP', 'WBL'},           # WBL10 field add + AP-2362 FactBoxes (DEV-gate)
+    'P21V2': {'AP', 'WBL'},         # FactBoxes now tagged AP-2362 -> auto-merge (pair to P21)
 }
 
 
@@ -50,6 +51,11 @@ PARAMS = dict(cu_token='CU26Q1', initials='RL', text='CU upgrade.',
 # else - cu_token/initials/text - is shared.) P14's gold was merged 10/06/26.
 PARAMS_OVERRIDE = {
     'P14': dict(PARAMS, merge_date='06/10/26', merge_date_dots='10.06.26'),
+    # P21V2 gold: header date 06/10/25 (hand-typed in the gold), doc-trigger
+    # 10.06.26, text 'CU Upgrade.'. The tool stamps exactly what it's given;
+    # these match the gold so the fixture reproduces byte-exact.
+    'P21V2': dict(PARAMS, merge_date='06/10/25', merge_date_dots='10.06.26',
+                  text='CU Upgrade.'),
 }
 
 
@@ -84,6 +90,11 @@ EXPECTED_VERDICTS = {
                     (9,  'vendor-deletion', 'DEV'): 1,             # but customer-added -> ambiguous,
                     (13, 'vendor-deletion', 'DEV'): 1,             # route OBJECT to DEV (never drop)
                     (14, 'vendor-deletion', 'DEV'): 1}),
+    'P21V2': Counter({(1101353000, 'doc-graft',   'CARRY'): 1,   # WBL10 field add
+                      (7,  'field-graft', 'CARRY'): 1,           # FactBoxes now tagged AP-2362
+                      (9,  'field-graft', 'CARRY'): 1,           # -> confident customer adds,
+                      (13, 'field-graft', 'CARRY'): 1,           # graft (no longer DEV). Pairs
+                      (14, 'field-graft', 'CARRY'): 1}),         # with P21 (untagged -> DEV).
 }
 
 # Objects that should auto-execute, and the fixture they must reproduce.
@@ -103,6 +114,9 @@ EXEC_CASES = {
     'P14': (os.path.join(FIX, 'EX-P14.stripped.txt'),
             os.path.join(FIX, 'CU-P14.stripped.txt'),
             os.path.join(FIX, 'MyMerged-P14.stripped.txt')),
+    'P21V2': (os.path.join(FIX, 'EX-P21V2.stripped.txt'),
+              os.path.join(FIX, 'CU-P21V2.stripped.txt'),
+              os.path.join(FIX, 'MyMerged-P21V2.stripped.txt')),
 }
 # Objects that should route to DEV in the narrow build (not execute).
 EXEC_GATED_TO_DEV = ['T36', 'P21']
@@ -146,6 +160,8 @@ OBJ = {
             os.path.join(FIX, 'CU-P14.stripped.txt')),
     'P21': (os.path.join(FIX, 'EX-P21.stripped.txt'),
             os.path.join(FIX, 'CU-P21.stripped.txt')),
+    'P21V2': (os.path.join(FIX, 'EX-P21V2.stripped.txt'),
+              os.path.join(FIX, 'CU-P21V2.stripped.txt')),
 }
 
 

@@ -207,8 +207,12 @@ def execute(custfn, vendfn, cust, vend, langs, params):
         b_lines = _carry_caption(b_lines, e, r['node'])
 
     # --- build merged body: start from B, insert each customer block ------
-    # Each insertion: (after_b_line_idx, [verbatim A lines]). We collect all,
-    # then apply high-to-low so earlier indices don't drift.
+    # Each insertion: (after_b_line_idx, source_order, [verbatim A lines]).
+    # source_order is the block's position in A (1-based line) so that when two
+    # grafts share the SAME anchor (e.g. P21 FactBoxes 7 & 9 both anchor after
+    # the same surviving B sibling) they are emitted in A-order rather than
+    # being inverted by the high-to-low application. Non-graft inserts get a
+    # source_order too (their A position) so the global ordering stays sane.
     insertions = []
     for r in grafts:
         # field-graft (explicit customer tag) and doc-graft (doc-trigger
@@ -231,6 +235,7 @@ def execute(custfn, vendfn, cust, vend, langs, params):
             a_line = e.Aby[r['node']]['line']           # 1-based first line of node in A
             if a_line - 2 >= 0 and e.A[a_line - 2].strip() == '':
                 block = [''] + block
+            src = a_line
         elif r['kind'] == 'code':
             chosen = r.get('chosen')
             if not chosen:
@@ -248,19 +253,25 @@ def execute(custfn, vendfn, cust, vend, langs, params):
             if hi + 1 < len(e.A) and e.A[hi + 1].strip() == '':
                 hi += 1
             block = e.A[lo:hi + 1]
+            src = start
         else:
             raise GateToDev([f"unexpected executable kind {r['kind']}"])
-        insertions.append((after, block))
+        insertions.append((after, src, block))
 
     # --- carry customer global VAR declarations (e.g. a Record var a carried
     # code block depends on). Present in A's global VAR, absent from B's. Rides
     # the same insertion list so the high-to-low application keeps indices sane.
     var_ins = _carry_global_vars(e)
     if var_ins is not None:
-        insertions.append(var_ins)
+        after_v, block_v = var_ins
+        insertions.append((after_v, float('inf'), block_v))   # VAR section: apply last within its anchor
 
     out = list(b_lines)                                 # caption-carried B (LF)
-    for after, block in sorted(insertions, key=lambda x: x[0], reverse=True):
+    # Apply high-to-low by anchor so earlier indices don't drift. For grafts
+    # SHARING an anchor, the inner sort by source_order DESC + the reverse outer
+    # pass means: at a given anchor we insert the LATER-in-A block first, then
+    # the earlier one in front of it -> final on-page order matches A-order.
+    for after, _src, block in sorted(insertions, key=lambda x: (x[0], x[1]), reverse=True):
         out[after:after] = block
 
     # --- header bookkeeping ------------------------------------------------
