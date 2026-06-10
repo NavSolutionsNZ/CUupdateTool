@@ -744,3 +744,66 @@ Then Report (incl. RDLDATA §8.5.2) and XMLport.
 **Rough-edge update:** §8.5.2 (RDLC report layout) now sits behind the Report handler — Report gates
 to DEV wholesale until that handler is built, so the RDLC blind-spot is no longer a silent-loss risk
 (the whole Report is surfaced for manual merge).
+
+### 8.16 Session log — Page handler (Commit 2): doc-graft control add, proven on P14
+**Outcome: the Page handler is BUILT and reproduces the P14 hand-merge byte-exact. Two engine/
+executor changes (both shared, both Table-suite-green) + doc-graft made executable + the leading-
+blank graft spacing Pages need. P14 added as the first Page known-answer fixture (verdict +
+execution). PAGE held `validated=False` in PRODUCTION pending P21/P5025649 sign-off (user decision);
+the harness temporarily enables PAGE to test P14. Suite green (scorer 20/20, diffengine PASS incl
+P14, census 5/5).**
+
+**The P14 example (real pair: Cust_P14 / 2026Q1_P14 / MyMerged-P14):** customer added field
+"E-Mail" as Page control `1101353000`, justified ONLY by the doc-trigger entry
+`APOP000010 ... Added E-Mail field` (no Description tag on the control itself). Vendor (B)
+separately added control `19853700` (EU-tagged) — pure vendor upgrade, taken from B. Merge = B +
+E-Mail control grafted after its anchor (control `12` "Phone No.") + header bookkeeping + doc-trigger
+carry (APOP000010 + CU26Q1 stamp). Structurally identical to a Table field-graft; only the
+node shape (Page control) and inter-node spacing (Pages blank-separate controls) differ.
+
+**Root cause it exposed + fix (shared, Table-green):**
+1. `_doc_justifies` only matched names QUOTED IN THE DOC desc against the node. P14's name is quoted
+   on the CONTROL (`SourceExpr="E-Mail"`) and bare in the doc ("Added E-Mail field"), so it missed →
+   E-Mail wrongly went `untagged-A-only → DEV`. This was a latent Table bug too (a field documented
+   "Added Foo field" with no quotes in the changelog would miss identically). FIX: widened the
+   matcher to ALSO match a node's own identifier (Field control `SourceExpr` value, or Table field
+   Name — the 3rd `;`-column) against the doc text. Added `_node_identifiers()` (len>=2 guard so a
+   bare `Code` SourceExpr can't spuriously match). USER-CONFIRMED to widen the SHARED matcher
+   (option 1) after verifying the full Table suite stayed green first.
+2. `doc-graft` was classified `CARRY` but NOT executable (not in `_EXECUTABLE_KINDS`, no merge-loop
+   branch). field-graft and doc-graft are mechanically IDENTICAL (insert whole customer node after
+   surviving anchor; only the justification differs — explicit tag vs doc entry). FIX: added
+   `doc-graft` to `_EXECUTABLE_KINDS` and folded it into the field-graft branch.
+3. Page graft spacing: Pages blank-separate sibling controls; the bare node block produced no blank
+   between the anchor and the grafted control. FIX: carry a LEADING blank line on a graft when A had
+   one immediately before the node. Guarded on A's actual layout (`e.A[a_line-2]` blank), so Tables
+   — which pack fields with NO blank between them — get nothing added (verified suite-green).
+
+**File-convention fixes (user uploaded with a couple of slips — "good reason this tool matters"):**
+- First gold `MyMerged-T14.txt` was actually the P14 Page merge mislabelled, AND stamped `CU2601`
+  (typo) — discarded. Corrected gold `MyMerged-P14.txt` supplied (stamps `CU26Q1`).
+- `Cust-P14.txt` (hyphen) was a copy of the VENDOR object mislabelled as customer — discarded.
+- Canonical trio used: `Cust_P14.txt` (A), `2026Q1_P14.txt` (B), `MyMerged-P14.txt` (C).
+- Mislabelled files live in the read-only uploads dir; not brought into the repo.
+
+**Customer prefix:** P14's tag is `APOP` (`prefix_of('APOP000010')='APOP'`, not 'AP'); census
+classifies it customer, `EU.0200720` vendor. Harness uses `CUST_OVERRIDE['P14']={AP,WBL,APOP}`.
+
+**Fixtures:** `tests/fixtures/{EX,CU,MyMerged}-P14.stripped.txt` (P14 has no ENZ language layer, so
+"stripped" == raw normalised). P14 wired into EXPECTED_VERDICTS (1 doc-graft CARRY), EXEC_CASES, OBJ.
+New harness machinery: `_validated(type)` context manager + `_type_of(path)` to exercise a
+production-gated type's fixture; `PARAMS_OVERRIDE`/`_params_for` (P14's gold was merged 10/06/26, a
+different day than the T-fixtures' 08/06/26 — a fixture bakes in its merge date).
+
+**Production state:** PAGE stays gated to DEV (all of P14/P21/P21 verified gating in prod). User
+decision: HOLD PAGE-validated until P21 and P5025649 are confirmed against golds — they auto-merge
+without error today (18 and 14 caption/doc-graft rows resp.) but carry caption-carry rows not yet
+verified on a Page gold; an auto-merge that RUNS is not yet an auto-merge that's RIGHT.
+
+**Next:** obtain P21 + P5025649 golds → verify Page caption-carry on a real gold → flip PAGE to
+`validated=True`. Then Report (incl. RDLDATA §8.5.2) and XMLport.
+
+**Files:** cuupdate/diffengine.py (widened `_doc_justifies` + `_node_identifiers`; PAGE stays
+validated=False with rationale), cuupdate/execute.py (doc-graft executable + leading-blank graft
+spacing), tests/test_diffengine.py (P14 across all layers + `_validated`/`_type_of`/PARAMS_OVERRIDE),
+tests/fixtures/{EX,CU,MyMerged}-P14.stripped.txt (NEW).

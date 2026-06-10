@@ -48,6 +48,12 @@ OBJTYPE = re.compile(r'^\s*OBJECT\s+([A-Za-z]+)\s+\d', re.I)
 HANDLERS = {
     'TABLE':    dict(validated=True,  fields=True,  code=True,  doc=True),
     'CODEUNIT': dict(validated=True,  fields=False, code=True,  doc=True),
+    # PAGE: handler is BUILT and proven on P14 (doc-graft control add reproduces
+    # gold byte-exact). Held validated=False until P21/P5025649 are verified
+    # against golds - flipping this to True auto-merges every Page, and those two
+    # carry caption-carry rows whose correctness is not yet confirmed on a Page
+    # gold. Flip to True once those golds pass. (Test gates P14 by temporarily
+    # enabling PAGE; see tests/test_diffengine.py.)
     'PAGE':     dict(validated=False, fields=True,  code=True,  doc=True),
     'REPORT':   dict(validated=False, fields=True,  code=True,  doc=True),
     'XMLPORT':  dict(validated=False, fields=True,  code=True,  doc=True),
@@ -157,16 +163,50 @@ class DiffEngine:
         return None
 
     def _doc_justifies(self, node):
-        """For an untagged A-only node, find a CUSTOMER doc entry whose quoted name(s) appear
-        in the node's props (pages have zero body tags; the doc trigger is the justification).
-        Returns (entry, tag) or (None, None)."""
+        """For an untagged A-only node, find a CUSTOMER doc entry that names it.
+        The doc trigger is the justification when the node carries no body tag
+        (Page controls, Table field-adds documented only in the changelog).
+
+        Matched two ways (either direction is sufficient):
+          1. a name QUOTED IN THE DOC desc appears in the node props
+             (e.g. doc: Added "Foo Bar" -> node has SourceExpr="Foo Bar"); or
+          2. the node's own identifier (a Page/Table Field's SourceExpr value,
+             or a field's Name) appears BARE in the doc desc
+             (e.g. node SourceExpr="E-Mail" -> doc: Added E-Mail field).
+        Direction 2 is the common Page form: the customer quotes the field on
+        the control, not in the changelog line. Returns (entry, tag) or
+        (None, None)."""
+        node_names = self._node_identifiers(node)
         for e in self.doc:
             if self._layer(e['tag']) != 'customer':
                 continue
-            names = [x or y for x, y in re.findall(r"'([^']+)'|\"([^\"]+)\"", e['desc'])]
-            if any(nm and nm.lower() in node['props'].lower() for nm in names):
+            desc = e['desc']
+            # direction 1: names quoted in the doc appear in the node
+            quoted = [x or y for x, y in re.findall(r"'([^']+)'|\"([^\"]+)\"", desc)]
+            if any(nm and nm.lower() in node['props'].lower() for nm in quoted):
+                return e, e['tag']
+            # direction 2: the node's identifier appears (bare) in the doc text
+            dl = desc.lower()
+            if any(nm and nm.lower() in dl for nm in node_names):
                 return e, e['tag']
         return None, None
+
+    def _node_identifiers(self, node):
+        """Distinctive name(s) that identify a node for doc-justification:
+        a Field control's SourceExpr value (Pages) and the field Name token
+        (Tables - the 3rd ;-delimited column of the node header). Quotes are
+        stripped; only reasonably distinctive (len>=2) names are returned so a
+        bare 'Code' SourceExpr can't spuriously match unrelated doc prose."""
+        names = []
+        for m in re.finditer(r'SourceExpr=("([^"]+)"|[^\s;}\n]+)', node['props']):
+            v = (m.group(2) or m.group(1)).strip()
+            if len(v) >= 2:
+                names.append(v)
+        # Table field Name: `{ N ; ; Name ; Type ; ... }` - 3rd column
+        m = re.match(r'^\s*\{\s*\d+\s*;\s*\d?\s*;\s*([^;]+?)\s*;', node['props'])
+        if m and m.group(1) and len(m.group(1).strip()) >= 2:
+            names.append(m.group(1).strip())
+        return names
 
     def _insertion_anchor(self, node):
         idx = next((k for k, n in enumerate(self.Anodes) if n['id'] == node['id']), None)

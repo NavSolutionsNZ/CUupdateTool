@@ -1,0 +1,381 @@
+OBJECT Page 14 Salespeople/Purchasers
+{
+  OBJECT-PROPERTIES
+  {
+    Date=06/10/26;
+    Time=[ 1:32:02 PM];
+    Modified=Yes;
+    Version List=NAVW1.x,N.7.2.1,APOP000010,CU26Q1;
+  }
+  PROPERTIES
+  {
+    CaptionML=ENU=Salespeople/Purchasers;
+    SourceTable=Table13;
+    PageType=List;
+    CardPageID=Salesperson/Purchaser Card;
+    OnOpenPage=BEGIN
+                 // Start INC
+                 DealerCheckRunForm;
+                 // Stop INC
+               END;
+
+    ActionList=ACTIONS
+    {
+      { 1900000003;0 ;ActionContainer;
+                      ActionContainerType=RelatedInformation }
+      { 11      ;1   ;ActionGroup;
+                      CaptionML=ENU=&Salesperson }
+      { 14      ;2   ;Action    ;
+                      CaptionML=ENU=Tea&ms;
+                      RunObject=Page 5107;
+                      RunPageView=SORTING(Salesperson Code);
+                      RunPageLink=Salesperson Code=FIELD(Code);
+                      Image=TeamSales }
+      { 15      ;2   ;Action    ;
+                      CaptionML=ENU=Con&tacts;
+                      RunObject=Page 5052;
+                      RunPageView=SORTING(Salesperson Code);
+                      RunPageLink=Salesperson Code=FIELD(Code);
+                      Image=ExportSalesPerson }
+      { 21      ;2   ;Action    ;
+                      CaptionML=ENU=S&egments;
+                      RunObject=Page 5093;
+                      RunPageView=SORTING(Salesperson Code);
+                      RunPageLink=Salesperson Code=FIELD(Code);
+                      Image=Segment }
+      { 26      ;2   ;ActionGroup;
+                      CaptionML=ENU=Dimensions;
+                      Description=PA035597;
+                      Image=Dimensions }
+      { 18      ;3   ;Action    ;
+                      ShortCutKey=Shift+Ctrl+D;
+                      CaptionML=ENU=Dimensions-Single;
+                      Description=PA036549.33714;
+                      RunObject=Page 540;
+                      RunPageLink=Table ID=CONST(13),
+                                  No.=FIELD(Code);
+                      Visible=FALSE;
+                      Image=Dimensions }
+      { 27      ;3   ;Action    ;
+                      CaptionML=ENU=Dimensions-&Multiple;
+                      Description=PA036549.33714;
+                      Visible=FALSE;
+                      Image=DimensionSets;
+                      OnAction=VAR
+                                 SalespersonPurchaser@1001 : Record 13;
+                                 DefaultDimMultiple@1002 : Page 542;
+                               BEGIN
+                                 CurrPage.SETSELECTIONFILTER(SalespersonPurchaser);
+                                 DefaultDimMultiple.SetMultiSalesperson(SalespersonPurchaser);
+                                 DefaultDimMultiple.RUNMODAL;
+                               END;
+                                }
+      { 1109400000;1 ;ActionGroup;
+                      CaptionML=ENU=Statistics }
+      { 19      ;2   ;Action    ;
+                      ShortCutKey=F7;
+                      CaptionML=ENU=Statistics;
+                      Description=PA036549.33714;
+                      RunObject=Page 5117;
+                      RunPageLink=Code=FIELD(Code);
+                      Image=Statistics }
+      { 22      ;2   ;Separator ;
+                      CaptionML=ENU="" }
+      { 23      ;2   ;Action    ;
+                      ShortCutKey=Ctrl+F7;
+                      CaptionML=ENU=Interaction Log E&ntries;
+                      RunObject=Page 5076;
+                      RunPageView=SORTING(Salesperson Code);
+                      RunPageLink=Salesperson Code=FIELD(Code);
+                      Image=History }
+      { 29      ;2   ;Action    ;
+                      CaptionML=ENU=Postponed &Interactions;
+                      RunObject=Page 5082;
+                      RunPageView=SORTING(Salesperson Code);
+                      RunPageLink=Salesperson Code=FIELD(Code);
+                      Image=CalendarChanged }
+      { 20      ;1   ;Action    ;
+                      CaptionML=ENU=C&ampaigns;
+                      RunObject=Page 5087;
+                      RunPageView=SORTING(Salesperson Code);
+                      RunPageLink=Salesperson Code=FIELD(Code);
+                      Image=SelectEntries }
+      { 24      ;1   ;Action    ;
+                      CaptionML=ENU=T&o-dos;
+                      Description=PA036549.33714;
+                      RunObject=Page 5096;
+                      RunPageView=SORTING(Salespers./Purch. Code);
+                      RunPageLink=Salespers./Purch. Code=FIELD(Code),
+                                  System To-do Type=FILTER(Organizer|Salesperson Attendee);
+                      Image=TaskList }
+      { 25      ;1   ;Action    ;
+                      CaptionML=ENU=Oppo&rtunities;
+                      Description=PA036549.33714;
+                      RunObject=Page 5123;
+                      RunPageView=SORTING(Salesperson Code);
+                      RunPageLink=Salesperson Code=FIELD(Code);
+                      Image=FileContract }
+      { 1900000004;0 ;ActionContainer;
+                      ActionContainerType=ActionItems }
+      { 17      ;1   ;Action    ;
+                      Ellipsis=Yes;
+                      CaptionML=ENU=Create &Interact;
+                      Description=PA036549.33714;
+                      Image=CreateInteraction;
+                      OnAction=BEGIN
+                                 CreateInteraction;
+                               END;
+                                }
+      { 1119427000;1 ;Action    ;
+                      CaptionML=ENU=&Create To-Do;
+                      Description=PA032651.Defect2559014,PA036549.33714;
+                      Image=ExportToDo;
+                      OnAction=VAR
+                                 TodoL@1119427000 : Record 5080;
+                               BEGIN
+                                 // Start PA031550
+                                 TodoL.SETRANGE("Salespers./Purch. Code",Code);
+                                 // Start PA038127
+                                 TodoL.VALIDATE("Origin Type", TodoL."Origin Type"::"Salesperson/Purchasers");
+                                 // Stop PA038127
+                                 TodoL.CreateTodo();
+                                 // Stop PA031550
+                               END;
+                                }
+      { 1119427002;1 ;Action    ;
+                      CaptionML=ENU=Create &Opportunity;
+                      Description=PA036549.33714,PA040025,PA040025.83488;
+                      Image=NewOpportunity;
+                      OnAction=VAR
+                                 OpportunityL@1119427000 : Record 5092;
+                               BEGIN
+                                 // Start PA031550
+                                 // Start PA040025.83488
+                                 // Stop PA040025.83488
+                                 OpportunityL.CreateOpportunity();
+                                 // Stop PA031550
+                               END;
+                                }
+      { 1109400001;1 ;ActionGroup;
+                      CaptionML=ENU=Salesperson }
+      { 1109400006;2 ;Action    ;
+                      CaptionML=ENU=Opportunity Templates;
+                      Description=PA040025;
+                      RunObject=Page 5207859;
+                      RunPageLink=Salesperson Code=FIELD(Code);
+                      Promoted=Yes;
+                      Enabled="Use Opportunity Templates";
+                      PromotedIsBig=Yes;
+                      Image=Template;
+                      PromotedCategory=Process }
+      { 1900000006;0 ;ActionContainer;
+                      ActionContainerType=Reports }
+      { 1903241106;1 ;Action    ;
+                      CaptionML=ENU=Salesperson - To-Dos;
+                      Description=PA036549.33714;
+                      RunObject=Report 5057;
+                      Image=Report }
+      { 1902318806;1 ;Action    ;
+                      CaptionML=ENU=Salesperson - Opportunities;
+                      Description=PA036549.33714;
+                      RunObject=Report 5058;
+                      Image=Report }
+    }
+  }
+  CONTROLS
+  {
+    { 1900000001;0;Container;
+                ContainerType=ContentArea }
+
+    { 1   ;1   ;Group     ;
+                GroupType=Repeater }
+
+    { 2   ;2   ;Field     ;
+                SourceExpr=Code }
+
+    { 1117900000;2;Field  ;
+                SourceExpr="Dealer Code";
+                AutoFormatExpr='JMD' }
+
+    { 4   ;2   ;Field     ;
+                SourceExpr=Name }
+
+    { 6   ;2   ;Field     ;
+                SourceExpr="Commission %" }
+
+    { 19853700;2;Field    ;
+                Description=EU.0200720.199667;
+                SourceExpr="Global Dimension 2 Code" }
+
+    { 1101422630;2;Field  ;
+                Description=PA036728;
+                SourceExpr="Type Salesperson/Purchaser" }
+
+    { 12  ;2   ;Field     ;
+                SourceExpr="Phone No." }
+
+    { 1101353000;2;Field  ;
+                SourceExpr="E-Mail" }
+
+    { 1109400005;2;Field  ;
+                Description=PA040025;
+                SourceExpr="Sales Lead Channel Code";
+                Visible=FALSE;
+                Editable=FALSE }
+
+    { 1109400003;2;Field  ;
+                Description=PA040025;
+                SourceExpr="Sales Lead Source Code";
+                Visible=FALSE;
+                Editable=FALSE }
+
+    { 1109400004;2;Field  ;
+                Description=PA040025;
+                SourceExpr="Sales Cycle Code";
+                Visible=FALSE;
+                Editable=FALSE }
+
+    { 1109400002;2;Field  ;
+                Description=PA040025;
+                SourceExpr="Preferred Vehicle Status";
+                Visible=FALSE;
+                Editable=FALSE }
+
+    { 1109400007;2;Field  ;
+                Description=PA040025.83148;
+                SourceExpr="Use Opportunity Templates" }
+
+    { 1900000007;0;Container;
+                ContainerType=FactBoxArea }
+
+    { 1900383207;1;Part   ;
+                Visible=FALSE;
+                PartType=System;
+                SystemPartID=RecordLinks }
+
+    { 1905767507;1;Part   ;
+                Visible=FALSE;
+                PartType=System;
+                SystemPartID=Notes }
+
+    { 1903266607;1;Part   ;
+                SubPageLink=Salespers./Purch. Code=FIELD(Code);
+                PagePartID=Page5208594;
+                Visible=TRUE;
+                PartType=Page }
+
+  }
+  CODE
+  {
+    VAR
+      C_INC001@1101329807 : TextConst 'ENU=Unauthorised Access';
+
+    PROCEDURE __INCADEA__@1101353000();
+    BEGIN
+    END;
+
+    PROCEDURE DealerCheckRunForm@1101353001();
+    VAR
+      CompanyInfoL@1101353001 : Record 79;
+      DealerMgt@1101353000 : Codeunit 5086700;
+    BEGIN
+      // Start INC
+      IF CompanyInfoL.IMSCheck THEN
+        IF DealerMgt.GetDealer <> '' THEN
+      // Start PA033251.7599731
+          ERROR(C_INC001);
+      // Stop PA033251.7599731
+      // Stop INC
+    END;
+
+    PROCEDURE GetSelectionFilter@9176300() : Text;
+    VAR
+      SalespersonPurchaserL@9176300 : Record 13;
+      FirstL@9176301 : Text[20];
+      LastL@9176302 : Text[20];
+      SelectionFilterL@9176303 : Text;
+      CounterL@9176304 : Integer;
+      MoreL@9176305 : Boolean;
+    BEGIN
+      // @ This function is used to return the selected Salespeople/Purchasers code
+      // @ retval Text
+
+      // Start EU.0012606
+      CurrPage.SETSELECTIONFILTER(SalespersonPurchaserL);
+      CounterL := SalespersonPurchaserL.COUNT;
+      IF CounterL > 0 THEN BEGIN
+        SalespersonPurchaserL.FINDSET;
+        WHILE CounterL > 0 DO BEGIN
+          CounterL := CounterL - 1;
+          SalespersonPurchaserL.MARKEDONLY(FALSE);
+          FirstL := SalespersonPurchaserL.Code;
+          LastL := FirstL;
+          MoreL := (CounterL > 0);
+          WHILE MoreL DO
+            IF SalespersonPurchaserL.NEXT = 0 THEN
+              MoreL := FALSE
+            ELSE
+              IF NOT SalespersonPurchaserL.MARK THEN
+                MoreL := FALSE
+              ELSE BEGIN
+                LastL := SalespersonPurchaserL.Code;
+                CounterL := CounterL - 1;
+                IF CounterL = 0 THEN
+                  MoreL := FALSE;
+              END;
+          IF SelectionFilterL <> '' THEN
+            SelectionFilterL := SelectionFilterL + '|';
+          IF FirstL = LastL THEN
+            SelectionFilterL := SelectionFilterL + FirstL
+          ELSE
+            SelectionFilterL := SelectionFilterL + FirstL + '..' + LastL;
+          IF CounterL > 0 THEN BEGIN
+            SalespersonPurchaserL.MARKEDONLY(TRUE);
+            SalespersonPurchaserL.NEXT;
+          END;
+        END;
+      END;
+      EXIT(SelectionFilterL);
+      // Stop EU.0012606
+    END;
+
+    BEGIN
+    {
+      //  @ Area RelationshipManagement
+      PA-Number  Date
+      ------------------------------------------------
+      PA031908   11.05.10 Update of outlook integration: removed reference to old version of outlook integration
+      PA031550   23.09.10 AA Added Create To-do and Create Opportunity buttons
+      PA032651   21.03.12 DR 2559014: All incorrect spelling variants of Caption "To-Dos" or "To-Do" corrected.
+      PA033067   12.04.12 DR DE Captions implemented
+      PA032651   25.04.12 DR 6012646: DEU and ENU Captions corrected
+      PA033251   29.05.12 GB 7599731: On Openform if Importer then raise error with constant
+      PA033259   09.08.12 AI Deletion of Start/Stop History in Code, update copyright and Version List
+      PA033334   04.09.12 DR DEU Captions added N.6.1.2
+      PA033259   18.09.12 DR Variable names changed according to incadea styleguide
+      PA034733   11.12.13 WZ 19649: Realignment of DB & TFS
+      PA036728   19.09.14 SW Added Control for new field "Type Salesperson/Purchaser"
+      PA032891   27.06.12 GL 11:20:35 Added Staff Details Factbox
+      PA035597   10.02.14 GC NAV 2013 R2 Technical Upgrade
+      PA036548   17.12.14 GL Merge of PA036728
+      PA036549   10.02.15 LR 33714 Don't promote actions. Hide Notes FactBox. and reorganize Navigation ribbon
+      PA038127   21.10.16 GP Action Create To Do modified to Set Origin Type field
+      PA040025   14.12.16 GI Added fields "Sales Lead Channel Code", "Sales Lead Source Code",
+                             "Sales Cycle Code".
+                             - Added Opportunity Templates under Salesperson action group.
+      PA040025   27.12.16 GQ 83148 Added field "Use Opportunity Templates"
+      PA040025   10.01.16 GI 83488 Removed the filter on Salesperson Code and changed the icon on the Create Opportunity action.
+      --- 7.2.0 ---
+      EU.0012606 31.01.16 PM New function added "GetSelectionFilter"
+      --- 7.3.0 --- Downmerge
+      EU.0015816 24.05.18 JS Merge of EU.0012606
+      --- 7.2.1 ---
+      EU.0091763 27.05.20 UU Downmerge of EU.0015816
+      EU.0200720 10.07.25 DR 199667 Add "Global Dimension 2 Code" (Make Code) to the list.
+	  APOP000010 13.09.23 QQ Added E-Mail field, used in Esker interface.
+	  CU26Q1	 10.06.26 RL CU upgrade.
+    }
+    END.
+  }
+}
+

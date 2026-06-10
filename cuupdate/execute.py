@@ -34,7 +34,7 @@ from diffengine import DiffEngine
 #              its anchor-equivalent position. Both are verbatim transplants.
 # caption:     caption/optioncaption/optionstring carry on a shared field -
 #              replace B's caption/option property lines with A's values.
-_EXECUTABLE_KINDS = {'field-graft', 'code', 'caption'}
+_EXECUTABLE_KINDS = {'field-graft', 'doc-graft', 'code', 'caption'}
 # Rows with this verdict are "no action needed, take B as-is" and don't block
 # the gate (they describe vendor content we keep).
 _BENIGN_VERDICT = 'TAKE_B'
@@ -197,7 +197,7 @@ def execute(custfn, vendfn, cust, vend, langs, params):
         g.rows = blockers
         raise g
 
-    grafts = [r for r in actionable if r['kind'] in ('field-graft', 'code')]
+    grafts = [r for r in actionable if r['kind'] in ('field-graft', 'doc-graft', 'code')]
     captions = [r for r in actionable if r['kind'] == 'caption']
 
     # --- caption/option carry: replace B's caption/option lines with A's ----
@@ -211,12 +211,26 @@ def execute(custfn, vendfn, cust, vend, langs, params):
     # then apply high-to-low so earlier indices don't drift.
     insertions = []
     for r in grafts:
-        if r['kind'] == 'field-graft':
+        # field-graft (explicit customer tag) and doc-graft (doc-trigger
+        # justified, no body tag - the common Page control-add form) are
+        # mechanically identical: insert the whole customer node verbatim after
+        # its surviving anchor sibling in B. Only the justification differs.
+        if r['kind'] in ('field-graft', 'doc-graft'):
             anchor_id = _anchor_for(e, r['node'])
             if anchor_id is None or anchor_id not in e.Bby:
-                raise GateToDev([f"field-graft node={r['node']} lost its anchor at execution"])
+                raise GateToDev([f"{r['kind']} node={r['node']} lost its anchor at execution"])
             after = _b_node_end_line(e, anchor_id)      # after anchor field block
             block = e.Aby[r['node']]['props'].split('\n')
+            # Pages (and any blank-separated node list) put a blank line between
+            # sibling controls. We insert right after the anchor node's closing
+            # brace; B already has its own blank AFTER that point, so to keep the
+            # grafted node separated from the anchor we carry a LEADING blank
+            # when A had one immediately before this node. (Tables pack fields
+            # with no blank between them, so A won't have one and nothing is
+            # added - leaving the existing Table behaviour unchanged.)
+            a_line = e.Aby[r['node']]['line']           # 1-based first line of node in A
+            if a_line - 2 >= 0 and e.A[a_line - 2].strip() == '':
+                block = [''] + block
         elif r['kind'] == 'code':
             chosen = r.get('chosen')
             if not chosen:

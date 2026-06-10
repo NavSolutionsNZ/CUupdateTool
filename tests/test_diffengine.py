@@ -33,6 +33,7 @@ CUST_OVERRIDE = {
     'T77': {'AP', 'WBL', 'DC'},
     'T80': {'AP', 'WBL', 'DC'},
     'T81': {'AP', 'WBL', 'DC'},
+    'P14': {'AP', 'WBL', 'APOP'},   # customer's E-Mail field tagged APOP000010
 }
 
 
@@ -42,6 +43,17 @@ def _cust_for(name):
 
 PARAMS = dict(cu_token='CU26Q1', initials='RL', text='CU upgrade.',
               merge_date='08/06/26', merge_date_dots='08.06.26')
+
+# Per-object PARAMS overrides: a fixture bakes in the date it was hand-merged,
+# so an object merged on a different day needs its own date params. (Everything
+# else - cu_token/initials/text - is shared.) P14's gold was merged 10/06/26.
+PARAMS_OVERRIDE = {
+    'P14': dict(PARAMS, merge_date='06/10/26', merge_date_dots='10.06.26'),
+}
+
+
+def _params_for(name):
+    return PARAMS_OVERRIDE.get(name, PARAMS)
 
 FIX = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fixtures')
 
@@ -65,6 +77,7 @@ EXPECTED_VERDICTS = {
     'T81': Counter({(50000, 'field-graft', 'CARRY'): 1,     # AP field
                     (None,  'code',        'CARRY'): 1}),   # DC5.00 block; global VAR
                                                             # carry is execution-layer
+    'P14': Counter({(1101353000, 'doc-graft', 'CARRY'): 1}),  # E-Mail control, doc-justified
 }
 
 # Objects that should auto-execute, and the fixture they must reproduce.
@@ -81,6 +94,9 @@ EXEC_CASES = {
     'T81': (os.path.join(FIX, 'EX-T81.stripped.txt'),
             os.path.join(FIX, 'CU-T81.stripped.txt'),
             os.path.join(FIX, 'MyMerged-T81.stripped.txt')),
+    'P14': (os.path.join(FIX, 'EX-P14.stripped.txt'),
+            os.path.join(FIX, 'CU-P14.stripped.txt'),
+            os.path.join(FIX, 'MyMerged-P14.stripped.txt')),
 }
 # Objects that should route to DEV in the narrow build (not execute).
 EXEC_GATED_TO_DEV = ['T36']
@@ -97,7 +113,9 @@ def _spair(stem):
             os.path.join(SAMPLES, f'20206Q1_{stem}.txt'))
 
 
-# stem -> (expected_type, expected_validated)
+# stem -> (expected_type, expected_validated). Reflects the PRODUCTION registry:
+# Pages are gated (validated=False) pending P21/P5025649 sign-off, even though
+# the Page handler is built and P14 reproduces its gold (tested via _validated).
 TYPE_CASES = {
     'T14':      ('TABLE',    True),
     'C80':      ('CODEUNIT', True),
@@ -118,6 +136,8 @@ OBJ = {
             os.path.join(FIX, 'CU-T80.stripped.txt')),
     'T81': (os.path.join(FIX, 'EX-T81.stripped.txt'),
             os.path.join(FIX, 'CU-T81.stripped.txt')),
+    'P14': (os.path.join(FIX, 'EX-P14.stripped.txt'),
+            os.path.join(FIX, 'CU-P14.stripped.txt')),
 }
 
 
@@ -134,9 +154,36 @@ def _norm(text):
     return '\n'.join(out)
 
 
+import contextlib
+from diffengine import HANDLERS, OBJTYPE
+
+
+def _type_of(path):
+    with open(path, encoding='latin-1') as f:
+        m = OBJTYPE.match(f.readline())
+    return m.group(1).upper() if m else None
+
+
+@contextlib.contextmanager
+def _validated(obj_type):
+    """Temporarily mark a type validated so a known-answer fixture for a type
+    that is gated in PRODUCTION (Page/Report/XMLport pending sign-off) can still
+    be exercised here. The registry stays gated; this only relaxes it for the
+    duration of the test assertion."""
+    if obj_type in HANDLERS and not HANDLERS[obj_type]['validated']:
+        HANDLERS[obj_type]['validated'] = True
+        try:
+            yield
+        finally:
+            HANDLERS[obj_type]['validated'] = False
+    else:
+        yield
+
+
 def _verdict_set(name, a, b):
-    e = DiffEngine(a, b, _cust_for(name), VEND, LANGS)
-    rows = e.classify()
+    with _validated(_type_of(a)):
+        e = DiffEngine(a, b, _cust_for(name), VEND, LANGS)
+        rows = e.classify()
     out = Counter()
     for r in rows:
         if r['verdict'] != 'TAKE_B':
@@ -166,7 +213,8 @@ def run():
     # ---- execution layer: must reproduce fixture ----
     for name, (a, b, merged) in EXEC_CASES.items():
         try:
-            out = ex.execute(a, b, _cust_for(name), VEND, LANGS, PARAMS)
+            with _validated(_type_of(a)):
+                out = ex.execute(a, b, _cust_for(name), VEND, LANGS, _params_for(name))
         except ex.GateToDev as g:
             fails.append(f"[exec] {name}: unexpectedly gated to DEV ({g})")
             continue
@@ -182,7 +230,7 @@ def run():
     for name in EXEC_GATED_TO_DEV:
         a, b = OBJ[name]
         try:
-            ex.execute(a, b, _cust_for(name), VEND, LANGS, PARAMS)
+            ex.execute(a, b, _cust_for(name), VEND, LANGS, _params_for(name))
             fails.append(f"[gate] {name}: executed but should route to DEV")
         except ex.GateToDev:
             print(f"[gate] {name}: OK (routes to DEV)")

@@ -79,10 +79,16 @@ The intent above is now **enforced in code**, not just described.
     - **Table** — `fields+code+doc`, validated. Full current rule set.
     - **Codeunit** — `code+doc`, validated. Field rules do not run (a Codeunit has no field nodes;
       gating makes that explicit so field logic can never misfire on a code-only object).
-    - **Page / Report / XMLport** — registered but **`validated=False`**: the WHOLE object routes to
-      DEV (`type-unsupported`) before any rule runs. This is the safety property that lets per-type
-      handlers ship incrementally — a type we have not proven against real paired objects can never
-      get the wrong (Table-shaped) rules run on it. Each becomes `validated=True` only once its
+    - **Page** — handler **BUILT and proven on P14** (a doc-trigger-justified control add:
+      customer field "E-Mail"/`1101353000`, tagged `APOP000010` in the changelog only, grafted into
+      B's CONTROLS after its surviving anchor with correct blank-line separation; reproduces the
+      hand-merge byte-exact). **Held `validated=False` in production** pending sign-off of the other
+      Page samples (P21, P5025649) against golds — flipping to True auto-merges every Page, and those
+      two carry caption-carry rows whose correctness is not yet confirmed on a Page gold. The handler
+      is exercised by a fixture regardless (the harness temporarily enables PAGE for the P14 known-
+      answer assertion). Flip to `validated=True` once P21/P5025649 golds pass.
+    - **Report / XMLport** — registered but **`validated=False`**: the WHOLE object routes to
+      DEV (`type-unsupported`) before any rule runs. Each becomes `validated=True` only once its
       handler is built and a known-answer fixture passes.
 - **Rollout order (agreed):** Table (done — already the proven path) → Codeunit (done) → Page (next;
   nested CONTROLS tree parsing is the real new work) → Report (incl. RDLDATA) → XMLport. Page/Report/
