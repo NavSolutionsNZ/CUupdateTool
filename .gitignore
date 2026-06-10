@@ -1,2 +1,8 @@
 __pycache__/
 *.pyc
+
+files/
+var-carry-p347.patch
+build/
+Webbline Batch/
+files.zip
