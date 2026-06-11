@@ -148,6 +148,14 @@ AP/WBL (A-only). Language: ENU base (in both), ENZ customer layer (A-only); C80 
 - Validate against real objects with known answers before trusting any heuristic.
 - **Diff finds everything; tags justify.** Identify differences FIRST, then justify each by tag
   layer. Never search by tag first (silently misses untagged/odd-form changes).
+- **Keep the distributed docs in sync.** `docs/USER_MANUAL.md` (+ the generated
+  `docs/USER_MANUAL.docx`) is a distribution deliverable for developers and managers, and contains
+  the Rules Index by object type (the user-facing statement of every auto-merge-vs-manual rule).
+  Whenever a change alters tool behaviour, a rule, the pipeline, the GUI, or the supported workflow,
+  UPDATE the User Manual (both .md and rebuilt .docx) AT THE SAME TIME as CONTEXT.md / ARCHITECTURE.md
+  — same commit. The manual must never describe behaviour the engine no longer has, or omit a rule
+  the engine now applies. The .docx is regenerated from the .md (US Letter, navigable TOC,
+  screenshots in docs/img/); do not hand-edit the .docx.
 
 ---
 
