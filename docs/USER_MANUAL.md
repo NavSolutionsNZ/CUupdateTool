@@ -65,11 +65,11 @@ the objects the tool has flagged.
 
 ### 2.1 The application
 
-The tool is a single Windows application, **`CUupdate_1.9.exe`**. The machine it runs on does not
+The tool is a single Windows application, **`CUupdate_2.0.exe`**. The machine it runs on does not
 need any additional software installed — everything required is contained within the
 application.
 
-1. Copy `CUupdate_1.9.exe` to the machine, or run it from where it is stored.
+1. Copy `CUupdate_2.0.exe` to the machine, or run it from where it is stored.
 2. Double-click it.
 3. The **CU Update — batch merge** window opens.
 
@@ -174,7 +174,7 @@ The point to remember is that the tool's input files must already be language-st
 
 ### 4.1 Steps
 
-1. Double-click `CUupdate_1.9.exe`.
+1. Double-click `CUupdate_2.0.exe`.
 2. Next to **Job folder**, click **Browse…** and select the folder that contains the `A\` and
    `B\` sub-folders.
 3. Enter the **CU token** (for example `CU26Q1`) and your **Initials** (for example `RL`). These
@@ -325,7 +325,7 @@ The tool is normally used only through the window described above. This section 
 contained within the application, for background.
 
 The application is built from a small set of Python modules, which are bundled together into the
-single `CUupdate_1.9.exe` file. No part of this is required at run time other than the application
+single `CUupdate_2.0.exe` file. No part of this is required at run time other than the application
 itself.
 
 | Component | Responsibility |
@@ -338,7 +338,7 @@ itself.
 | Executor | Builds the merged object C and performs the header and changelog bookkeeping. |
 
 The application is produced once, on a Windows machine, from the project source. It is then
-distributed as the single `CUupdate_1.9.exe` file. End users are given the finished application and
+distributed as the single `CUupdate_2.0.exe` file. End users are given the finished application and
 do not build it themselves.
 
 ---
@@ -467,6 +467,30 @@ coherent position, in B. There are three content classes:
   commented-out `END;`) are sent to manual review.
 - *Validated on Table 80:* a CASE-branch code block in a field trigger transplants correctly once
   the insertion point is chosen as the closest valid pair of anchors.
+
+#### 8.1.5a A carried code block lands in its own procedure, even when the anchor text repeats
+
+When a customer code block sits inside a procedure, the point it transplants to is found **within
+that same procedure**, never in a different one. This matters because the lines a block anchors
+against are often vendor boilerplate that repeats — for example a `// Start PA036544` marker, or
+the standard exit-point call, can appear at the end of several procedures in the same object. If
+the tool searched the whole object for the nearest matching anchor, a block could be carried into
+the wrong procedure: the text would match, but the surrounding variables would not exist there, and
+the merged object would not compile.
+
+The tool prevents this by first identifying the procedure the block belongs to in A, finding the
+same procedure in B, and confining the search for the insertion point to that procedure. The
+procedure is matched by its number first and its name second, so a procedure the vendor has renamed
+(but not renumbered) is still recognised as the same procedure. If the procedure the block lives in
+has been removed from the vendor object entirely, the block has nowhere safe to land and the whole
+object is sent to manual review rather than guessed.
+
+- *Validated on Table 17 (G/L Entry):* the customer's `// Start AP001994` block (which sets
+  "Posted Description") sits at the end of `CopyFromGenJnlLine`. Its closing anchor, a
+  `// Start PA036544` marker, also appears at the end of four other procedures in the same object.
+  The block is carried into `CopyFromGenJnlLine`, where the `GenJnlLine` parameter it reads is in
+  scope — not into one of the other procedures that share the same anchor text. (An earlier version
+  of the tool carried this block into the wrong procedure.)
 
 #### 8.1.6 A caption or option change — CARRY (always take the customer value)
 
@@ -659,7 +683,7 @@ automatically only once its handler is built and validated against a real object
 
 ## 9. Quick reference
 
-**To run a job:** double-click `CUupdate_1.9.exe`; select the folder that contains `A\` and `B\`;
+**To run a job:** double-click `CUupdate_2.0.exe`; select the folder that contains `A\` and `B\`;
 enter the CU token and your initials; tick **Dry run**; click **Run merge**; review the report;
 remove the tick; click **Run merge** again.
 

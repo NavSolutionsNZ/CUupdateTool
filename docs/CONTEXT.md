@@ -86,8 +86,21 @@ and fixed (both "existence vs position"):
   (block inside a wholly customer-authored procedure absent from B) — was false TRANSPLANT, now DEV.
 - VANILLA_MOD overridden-original was matched **globally**; now validated only **within the anchored
   region**. Fixes C80's coincidental `TESTFIELD` matches.
+- A code block's insertion point was searched **object-wide**, so a block whose anchor text is vendor
+  boilerplate repeated across procedures could be carried into the **wrong procedure** (anchor text
+  matches, but the variables it reads are out of scope → non-compiling output). Now **confined to the
+  block's enclosing procedure**: A's enclosing proc is matched to B's **by `@id` first, name second**
+  (vendors rename-without-renumber), and the anchor search is restricted to that B-proc span (after-
+  anchor may reach the following boundary, for tail-of-proc blocks). Enclosing proc absent from B →
+  whole object to DEV; global-VAR/trigger blocks left unconfined. Fixes T17 AP001994 — `// Start
+  PA036544` recurs in 5 procs; was carried into `CopyPostingGroupsFromDtldCVBuf@94` instead of
+  `CopyFromGenJnlLine@4`. Identified via T17, frozen as a fixture.
+- `_proc_units` span-walk (in **both** `scorer.py` and `diffengine.py`) rewritten to the 4-space-indent
+  `BEGIN`/`END;` invariant; the old token-depth count underflowed on `END ELSE BEGIN` and ended procs
+  early. Latent in diffengine (proc-graft presence/absence by key); fixed in both to avoid divergence.
 
-**Result: 19/19 known-answer cases pass across 22 blocks / 7 objects.** No false TRANSPLANT (the only
+**Result: all known-answer cases pass across 8 objects (T14/T17/T36/C80/R790/T38/T39/T5025400);
+scorer self-test 20/0, full engine harness reproduces T17 byte-exact.** No false TRANSPLANT (the only
 dangerous direction). False DEVs are correct-conservative (e.g. T38 WBL-009@1441 — first statement in
 field 43's OnValidate, legitimately needs trigger-survival confirmation).
 
@@ -1096,3 +1109,43 @@ classify), cuupdate/execute.py (proc-graft insertion, `_b_code_trailer_idx`, `pr
 kind), cuupdate/__init__.py (NEW `__version__`), cu.spec (versioned exe name), cuupdate/cu_gui.py
 (version in title), tests/test_diffengine.py (T36 → EXEC; verdict expectation updated),
 tests/fixtures/Merged_T36.stripped.txt (regenerated correct gold).
+
+---
+
+**§8.23 — Procedure-scope anchor confinement + proc span-walk fix; v2.0**
+
+Identified via **T17 (G/L Entry)**, but the change is to the **behaviour**, not to T17: a customer
+code block whose anchor text is vendor boilerplate repeated across several procedures could be
+carried into the wrong procedure. T17's `// Start AP001994` block (sets "Posted Description", reads
+the `GenJnlLine` parameter) lives at the tail of `CopyFromGenJnlLine@4`; its `// Start PA036544`
+after-anchor recurs at the tail of 5 procedures. The tightest-gap heuristic bracketed it into
+`CopyPostingGroupsFromDtldCVBuf@94` (param `DtldCVLedgEntryBuf`, no `GenJnlLine` in scope) → output
+that does not compile.
+
+Fix (agreed): **resolve the block's enclosing procedure and confine anchoring to it.** A's enclosing
+proc → B's by **`@id` first, name second** (vendors rename-without-renumber; a name change alone is
+the *expected* case and must not gate). Anchor search restricted to that B-proc span; before-anchor
+strictly inside, after-anchor may reach the following boundary (tail-of-proc blocks). Enclosing proc
+**absent from B** → no valid anchor → whole object to DEV. Global-VAR / object-trigger blocks (no
+enclosing proc) left unconfined — their existing object-scope paths are untouched.
+
+Second, latent bug found en route: `_proc_units` token-depth span-walk underflowed on
+`END ELSE BEGIN` and mis-terminated procedures early (T17 `CopyFromGenJnlLine@4` bounded to its first
+inner `IF..THEN BEGIN`). Rewritten to C/AL's 4-space-indent `BEGIN`/`END;` invariant. Fixed in
+**both** `scorer.py` and `diffengine.py` (was latent in diffengine — used for proc-graft
+presence/absence by key — but fixed to stop the two copies diverging).
+
+T17 frozen as a known-answer fixture (verdict + byte-exact EXEC). Harness change: header `Date` and
+the CU-stamp doc-trigger line are PARAM-driven, not merge logic, so they are now **masked in `_norm`**
+before exec comparison across **all** objects; the per-object date/text `PARAMS_OVERRIDE` entries that
+only existed to chase each fixture's baked-in hand-merge date were removed.
+
+**Version bumped 1.9 → 2.0** (standing rule: a change that alters merge output bumps the version, for
+exe-name + GUI merge traceability). `CUupdate_2.0.exe`. USER_MANUAL.md updated (new §8.1.5a worked
+example; exe references) and USER_MANUAL.docx regenerated via `build_manual.js`.
+
+**Files:** cuupdate/scorer.py (proc-unit maps, `_a_enclosing`/`_b_match`, confinement in
+`score_block`, indent-anchored `_proc_units`), cuupdate/diffengine.py (`_proc_units` span-walk),
+cuupdate/__init__.py (2.0), tests/test_diffengine.py (T17 wired in; `_norm` param-masking; overrides
+removed), tests/fixtures/{EX,CU,MyMerged}-T17.stripped.txt, docs/{ARCHITECTURE,CONTEXT}.md,
+docs/USER_MANUAL.{md,docx}.

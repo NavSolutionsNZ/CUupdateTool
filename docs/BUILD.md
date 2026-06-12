@@ -23,7 +23,7 @@ pip install pyinstaller
 pyinstaller cu.spec
 ```
 
-This produces `dist\CUupdate_<version>.exe` (e.g. `dist\CUupdate_1.9.exe`) — a
+This produces `dist\CUupdate_<version>.exe` (e.g. `dist\CUupdate_2.0.exe`) — a
 single file that bundles the interpreter. The version comes from
 `cuupdate/__init__.py`. When the build starts, the console prints a banner line
 `cu.spec: building CUupdate_<version>.exe`; if you do NOT see that banner, a

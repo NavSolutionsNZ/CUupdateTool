@@ -275,12 +275,32 @@ The two "existence vs position" false-positive bugs are FIXED and verified:
    correctly DEV.)
 2. **Overridden-original survival** for VANILLA_MOD now validated **only within the anchored region**
    (pb..pa), not globally. (Fixes C80's coincidental `TESTFIELD` matches.)
+3. **Procedure-scope anchor confinement** — a code block's insertion point is resolved **only within
+   its own enclosing procedure**. The block's enclosing procedure in A is matched to the same
+   procedure in B (**by `@id` first, name second**: vendors rename-without-renumber, so the number is
+   the durable identity and a name change alone is not treated as a different procedure), and the
+   before/after anchor search is restricted to that B-procedure's line span. The before-anchor must
+   be strictly inside the body; the after-anchor may reach the immediately-following boundary (the
+   next `PROCEDURE` header) so a tail-of-procedure block keeps its forward anchor. A block whose
+   enclosing procedure is **absent from B** gets no valid anchor → whole object to DEV. Global-VAR /
+   object-trigger blocks (no enclosing procedure) are left unconfined. (Fixes T17 AP001994 — the
+   `// Start PA036544` after-anchor recurs across 5 procedures and the tightest-gap heuristic
+   bracketed the block into `CopyPostingGroupsFromDtldCVBuf@94` instead of `CopyFromGenJnlLine@4`,
+   producing non-compiling output that read `GenJnlLine` out of scope.) Identified via T17, frozen as
+   a known-answer fixture.
+4. **Procedure span-walk** in `_proc_units` (both `scorer.py` and `diffengine.py`) now uses C/AL's
+   4-space-indent `BEGIN`/`END;` invariant instead of token-depth counting, which underflowed on
+   `END ELSE BEGIN` and mis-terminated procedures early (e.g. T17 `CopyFromGenJnlLine@4` was bounded
+   to its first inner `IF..THEN BEGIN` rather than the procedure end). Was latent in diffengine
+   (used mainly for proc-graft presence/absence by key); fixed in both to keep them from diverging.
 
-Validation: **22 blocks across 7 objects (T14/T36/C80/R790/T38/T39/T5025400), 19 explicit
-known-answer cases all PASS**, covering pure-add, vanilla-mod, vanilla-suppress, nested, field-
-trigger-anchored, and customer-procedure patterns. Safety properties hold: **no false TRANSPLANT**
-(the only dangerous direction); false DEVs are correct-conservative (e.g. T38 WBL-009@1441, first
-statement in field 43's OnValidate — correctly needs confirmation of trigger survival in B).
+Validation: **known-answer blocks across 8 objects (T14/T17/T36/C80/R790/T38/T39/T5025400) all
+PASS** (scorer self-test 20/0), covering pure-add, vanilla-mod, vanilla-suppress, nested, field-
+trigger-anchored, customer-procedure, and repeated-anchor / procedure-confinement (T17) patterns.
+The full engine harness (`test_diffengine.py`) reproduces T17 byte-exact. Safety properties hold:
+**no false TRANSPLANT** (the only dangerous direction); false DEVs are correct-conservative (e.g.
+T38 WBL-009@1441, first statement in field 43's OnValidate — correctly needs confirmation of
+trigger survival in B).
 
 Remaining caveats:
 - Sample is 7 objects / 22 blocks — covers the patterns well but thresholds (PURE 0.75 / VMOD 0.90)
