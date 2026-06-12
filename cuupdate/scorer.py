@@ -31,6 +31,53 @@ BOUNDARY=re.compile(r'^\s*(LOCAL\s+)?PROCEDURE\b|^\s*\{\s*\d+\s*;|^\s*(PROPERTIE
 
 def load(fn): return open(fn,encoding='latin-1').read().replace('\r\n','\n').split('\n')
 
+# ---- shared procedure-unit parser (used by BOTH scorer and diffengine) ------
+# Single source of truth so the two modules can't drift. Identity is name@id.
+_PROC_NAME=re.compile(r'^    (?:LOCAL )?PROCEDURE\s+(\w+)@(\d+)\s*\(')
+_ATTR_LINE=re.compile(r'^    \[[A-Za-z][\w ]*\]\s*$')
+
+def parse_proc_units(lines):
+    """Return {name@id: {'name','id','start','end','local','text'}} for every
+    CODE-section procedure. 'start' is the attribute line if one directly
+    precedes the signature, else the signature line; 'end' is the index of the
+    procedure's terminating END; (inclusive); 'text' is the verbatim slice;
+    'local' is True for LOCAL PROCEDURE. Identity is name@id, so a customer
+    procedure absent from B is detectable by key difference.
+
+    Boundary detection uses C/AL's fixed indentation: a procedure body is
+    opened by BEGIN at 4-space indent ('    BEGIN') and closed by END; at
+    4-space indent ('    END;'). Inner BEGIN/END (IF..THEN BEGIN, END ELSE
+    BEGIN, CASE..END) are always indented deeper, so this avoids the
+    END-ELSE-BEGIN depth-underflow that token counting hits. The object
+    trigger closes with '    END.' (dot), which is not a procedure."""
+    units={}; i=0; n=len(lines)
+    while i<n:
+        pm=_PROC_NAME.match(lines[i])
+        if pm:
+            name,pid=pm.group(1),pm.group(2)
+            start=i
+            if i-1>=0 and _ATTR_LINE.match(lines[i-1]):
+                start=i-1
+            local=lines[i].lstrip().startswith('LOCAL')
+            # find the proc-level BEGIN ('    BEGIN'), then the next
+            # proc-level END; ('    END;') closes the procedure.
+            j=i+1; seen_begin=False
+            while j<n:
+                l=lines[j]
+                if not seen_begin:
+                    if l=='    BEGIN': seen_begin=True
+                    # a following PROCEDURE before any BEGIN => malformed;
+                    # bail so we don't swallow the next procedure.
+                    elif _PROC_NAME.match(l): j-=1; break
+                else:
+                    if l=='    END;' or l=='    END.': break
+                j+=1
+            units[f'{name}@{pid}']={'name':name,'id':pid,'start':start,'end':j,
+                                    'local':local,'text':'\n'.join(lines[start:j+1])}
+            i=j+1; continue
+        i+=1
+    return units
+
 class Scorer:
     def __init__(self, custfn, vendfn, customer_prefixes, all_prefixes):
         self.OPEN,self.CLOSE=build_grammar(all_prefixes)
@@ -55,47 +102,10 @@ class Scorer:
             self.Bproc_by_id[u['id']]=u
             self.Bproc_by_name.setdefault(u['name'],u)
 
-    # ---- procedure-unit parsing (mirrors diffengine._proc_units) ------------
-    _PROC_NAME=re.compile(r'^    (?:LOCAL )?PROCEDURE\s+(\w+)@(\d+)\s*\(')
-    _ATTR_LINE=re.compile(r'^    \[[A-Za-z][\w ]*\]\s*$')
-
+    # ---- procedure-unit parsing (delegates to module-level parse_proc_units,
+    #      shared with diffengine so the two cannot drift) -------------------
     def _proc_units(self, lines):
-        """Return {name@id: {'name','id','start','end'}} for every CODE-section
-        procedure. 'start' is the attribute line if one directly precedes the
-        signature, else the signature line; 'end' is the index of the
-        procedure's terminating END; (inclusive). Identity is name@id.
-
-        Boundary detection uses C/AL's fixed indentation: a procedure body is
-        opened by BEGIN at 4-space indent ('    BEGIN') and closed by END; at
-        4-space indent ('    END;'). Inner BEGIN/END (IF..THEN BEGIN, END ELSE
-        BEGIN, CASE..END) are always indented deeper, so this avoids the
-        END-ELSE-BEGIN depth-underflow that token counting hits. The object
-        trigger closes with '    END.' (dot), which is not a procedure."""
-        units={}; i=0; n=len(lines)
-        while i<n:
-            pm=self._PROC_NAME.match(lines[i])
-            if pm:
-                name,pid=pm.group(1),pm.group(2)
-                start=i
-                if i-1>=0 and self._ATTR_LINE.match(lines[i-1]):
-                    start=i-1
-                # find the proc-level BEGIN ('    BEGIN'), then the next
-                # proc-level END; ('    END;') closes the procedure.
-                j=i+1; seen_begin=False
-                while j<n:
-                    l=lines[j]
-                    if not seen_begin:
-                        if l=='    BEGIN': seen_begin=True
-                        # a following PROCEDURE before any BEGIN => malformed;
-                        # bail so we don't swallow the next procedure.
-                        elif self._PROC_NAME.match(l): j-=1; break
-                    else:
-                        if l=='    END;' or l=='    END.': break
-                    j+=1
-                units[f'{name}@{pid}']={'name':name,'id':pid,'start':start,'end':j}
-                i=j+1; continue
-            i+=1
-        return units
+        return parse_proc_units(lines)
 
     def _a_enclosing(self, idx):
         """The A-procedure unit containing A-line idx, or None if idx lies

@@ -25,7 +25,7 @@ the engine is the front-end that finds every difference and dispatches each.
 """
 import re
 from difflib import SequenceMatcher
-from scorer import Scorer
+from scorer import Scorer, parse_proc_units
 
 NODE  = re.compile(r'^\s*\{\s*(\d+)\s*;\s*(\d)?\s*;\s*([A-Za-z]+)')
 DOC   = re.compile(r'^\s*([A-Za-z]{2,4}[-\.]?[\w.\-]*?)\s+(\d{2}\.\d{2}\.\d{2})\s+([A-Z]{1,3})\s+(.*)$')
@@ -466,63 +466,18 @@ class DiffEngine:
     # ---- VAR-section scan (global + per-procedure local) -------------------
     _VAR_DECL = re.compile(r'^      (\w+)@(\d+)\s*:\s*(.+?);\s*$')
     _PROC_HDR = re.compile(r'^    (?:LOCAL )?PROCEDURE\s+\w+@(\d+)\s*\(')
-    # Full procedure header capturing NAME and ID (identity = name@id). An
-    # optional attribute line ([Internal]/[Integration]/[External]/[Event...])
-    # may sit on its own line directly above; that line is carried WITH the
-    # procedure as one atom (see _proc_units).
-    _PROC_NAME = re.compile(r'^    (?:LOCAL )?PROCEDURE\s+(\w+)@(\d+)\s*\(')
-    _ATTR_LINE = re.compile(r'^    \[[A-Za-z][\w ]*\]\s*$')
+    # NOTE: procedure-unit parsing (and its name@id / attribute-line regexes)
+    # lives in scorer.parse_proc_units - a SINGLE shared implementation used by
+    # both modules so they cannot drift. An optional attribute line
+    # ([Internal]/[Integration]/[External]/[Event...]) directly above a
+    # signature is carried WITH the procedure as one atom.
 
     def _proc_units(self, lines):
-        """Return {name@id: {'start','end','text','local'}} for every procedure
-        in the CODE section. 'start' is the index of the attribute line if one
-        directly precedes the signature, else the signature line; 'end' is the
-        index of the procedure's terminating END; (inclusive). 'text' is the
-        verbatim slice. Identity is name@id so a customer procedure absent from
-        B is detectable by key difference. We stop scanning at the CODE-section
-        trailer (the object-level 'BEGIN' followed by '{')."""
-        units = {}
-        i = 0
-        n = len(lines)
-        while i < n:
-            pm = self._PROC_NAME.match(lines[i])
-            if pm:
-                name, pid = pm.group(1), pm.group(2)
-                start = i
-                # absorb a directly-preceding attribute line ([Internal] etc.)
-                if i - 1 >= 0 and self._ATTR_LINE.match(lines[i - 1]):
-                    start = i - 1
-                local = lines[i].lstrip().startswith('LOCAL')
-                # Find the proc-level BEGIN ('    BEGIN', 4-space indent), then
-                # the next proc-level END; ('    END;') closes the procedure.
-                # Inner BEGIN/END (IF..THEN BEGIN, END ELSE BEGIN, CASE..END)
-                # are always indented deeper, so indentation - not token-depth
-                # counting - is the reliable boundary: 'END ELSE BEGIN' would
-                # underflow a naive depth counter and mis-terminate the proc
-                # early. The object trigger closes with '    END.' (dot).
-                j = i + 1
-                seen_begin = False
-                while j < n:
-                    l = lines[j]
-                    if not seen_begin:
-                        if l == '    BEGIN':
-                            seen_begin = True
-                        elif self._PROC_NAME.match(l):
-                            # next PROCEDURE before any BEGIN => malformed; bail
-                            # so we don't swallow the following procedure.
-                            j -= 1; break
-                    else:
-                        if l == '    END;' or l == '    END.':
-                            break
-                    j += 1
-                units[f'{name}@{pid}'] = {
-                    'start': start, 'end': j, 'local': local,
-                    'text': '\n'.join(lines[start:j + 1]),
-                }
-                i = j + 1
-                continue
-            i += 1
-        return units
+        """Delegates to the shared scorer.parse_proc_units. Returns
+        {name@id: {'name','id','start','end','local','text'}} for every
+        CODE-section procedure; identity is name@id so a customer procedure
+        absent from B is detectable by key difference."""
+        return parse_proc_units(lines)
 
     def _var_blocks(self, lines):
         """Return [{'scope', 'decls': {name: (line_idx, value)}}] for every VAR
