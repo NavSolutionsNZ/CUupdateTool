@@ -28,6 +28,13 @@ a = p.parse_args()
 params = dict(cu_token=a.cu, initials=a.initials, text=a.text,
               merge_date=a.date, merge_date_dots=a.date.replace('/', '.'))
 
+# no-CU-change short-circuit: if the vendor made no change to this object, A is
+# already correct against the new CU - leave A untouched (no merge, no stamp).
+import diffengine as de
+if de.DiffEngine(a.cust, a.vend, CUST, VEND, LANGS).no_cu_change():
+    print(f"NO CU CHANGE -> {a.cust} (vendor unchanged; use A verbatim, no merge)")
+    sys.exit(0)
+
 try:
     merged = ex.execute(a.cust, a.vend, CUST, VEND, LANGS, params)
 except ex.GateToDev as g:

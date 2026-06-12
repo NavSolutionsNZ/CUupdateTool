@@ -25,6 +25,7 @@ in production). Override with --cust / --vend / --langs if needed.
 """
 import argparse, os, re, shutil, sys
 import execute as ex
+from diffengine import DiffEngine
 
 TYPECHAR = {'C': 'Codeunit', 'T': 'Table', 'P': 'Page', 'R': 'Report'}
 
@@ -59,6 +60,15 @@ def _moved(root, side, type_sub, src):
     dest_dir = os.path.join(root, f'{side}autoMerged', type_sub)
     os.makedirs(dest_dir, exist_ok=True)
     shutil.move(src, os.path.join(dest_dir, os.path.basename(src)))
+
+
+def _moved_unchanged(root, side, type_sub, src):
+    """Move a no-CU-change source out of A/ or B/ with an 'Unchanged_' prefix.
+    The remaining files in A/ and B/ are the dev queue, so a skipped object must
+    leave them; the prefix marks WHY it was moved (vendor made no change)."""
+    dest_dir = os.path.join(root, f'{side}noCuChange', type_sub)
+    os.makedirs(dest_dir, exist_ok=True)
+    shutil.move(src, os.path.join(dest_dir, 'Unchanged_' + os.path.basename(src)))
 
 
 def format_merge_dates(date_format='DDMMYY', when=None):
@@ -129,9 +139,32 @@ def run(root, cu, initials, date=None, text='CU upgrade.',
                   merge_date=merge_date, merge_date_dots=merge_date_dots)
 
     pairs, unmatched = find_pairs(root)
-    merged, dev, errors = [], [], []
+    merged, dev, errors, nocu = [], [], [], []
 
     for stem, type_sub, a_path, b_path in sorted(pairs):
+        # --- no-CU-change short-circuit (Stage 2) --------------------------
+        # If the vendor shipped no change to this object, A is already correct
+        # against the new CU: copy A UNTOUCHED (no stamp) to NoCuChangesDetected/
+        # and move the sources out of the dev queue with an 'Unchanged_' prefix.
+        # Checked BEFORE execute() because the deliverable is a verbatim copy,
+        # not a merge. Any detection error here is caught and the object simply
+        # falls through to the normal merge path (never silently skipped).
+        try:
+            if DiffEngine(a_path, b_path, CUST, VEND, LANGS).no_cu_change():
+                if dry_run:
+                    nocu.append((stem, '(dry-run, not copied)'))
+                    continue
+                dest_dir = os.path.join(root, 'NoCuChangesDetected', type_sub)
+                os.makedirs(dest_dir, exist_ok=True)
+                dest = os.path.join(dest_dir, os.path.basename(a_path))
+                shutil.copyfile(a_path, dest)        # A copied verbatim, no stamp
+                _moved_unchanged(root, 'A', type_sub, a_path)
+                _moved_unchanged(root, 'B', type_sub, b_path)
+                nocu.append((stem, dest))
+                continue
+        except Exception:
+            pass                                     # fall through to merge path
+
         try:
             out = ex.execute(a_path, b_path, CUST, VEND, LANGS, params)
         except ex.GateToDev as g:
@@ -162,6 +195,11 @@ def run(root, cu, initials, date=None, text='CU upgrade.',
     for stem, dest in merged:
         shown = os.path.relpath(dest, root) if os.path.sep in str(dest) else dest
         lines.append(f"  {stem:10} -> {shown}")
+    lines.append(f"\nNO CU CHANGE ({len(nocu)}):  (vendor unchanged; A copied verbatim, "
+                 f"sources moved out as Unchanged_*)")
+    for stem, dest in nocu:
+        shown = os.path.relpath(dest, root) if os.path.sep in str(dest) else dest
+        lines.append(f"  {stem:10} -> {shown}")
     lines.append(f"\nMANUAL REVIEW / DEV ({len(dev)}):  (left in A/ and B/)")
     _suffix = " - needs manual merge"
     for stem, why in dev:
@@ -184,7 +222,7 @@ def run(root, cu, initials, date=None, text='CU upgrade.',
             lines.append(f"  {os.path.relpath(u, root)}")
 
     report = "\n".join(lines)
-    results = dict(merged=merged, dev=dev, errors=errors,
+    results = dict(merged=merged, dev=dev, errors=errors, nocu=nocu,
                    unmatched=unmatched, pairs=pairs)
     return report, results
 

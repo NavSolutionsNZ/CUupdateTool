@@ -203,7 +203,9 @@ class App:
                     r = item[1]
                     if r is not None:
                         n_m, n_d = len(r['merged']), len(r['dev'])
-                        self._write(f"\n--- {n_m} auto-merged, {n_d} left for manual review ---\n")
+                        n_n = len(r.get('nocu', []))
+                        self._write(f"\n--- {n_m} auto-merged, {n_n} no CU change, "
+                                    f"{n_d} left for manual review ---\n")
                 else:
                     self._write(item)
         except queue.Empty:

@@ -1,0 +1,228 @@
+OBJECT Codeunit 1201 Process Posting Exch.
+{
+  OBJECT-PROPERTIES
+  {
+    Date=08/16/23;
+    Time=[ 2:30:20 PM];
+    Modified=Yes;
+    Version List=NAVW17.10.00.35800,N.7.1.0,WBL;
+  }
+  PROPERTIES
+  {
+    OnRun=BEGIN
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      MissingValueErr@1000 : TextConst '@@@="%1=File Name;%2=Post Exch.Def Type;%3=Post Exch. Def Code;%4=Line No;%5=Column No";ENU=The file that you are trying to import, %1, is different from the specified %2, %3.\\The value in line %4, column %5 is missing.';
+      IncorrectFormatOrTypeErr@1001 : TextConst '@@@="%1=File Name;%2=Post Exch.Def Type;%3=Post Exch. Def Code;%4=Line No;%5=Column No;%6=Data Type;%7=Data Type Format;%8=Local;%9=Actual Value";ENU=The file that you are trying to import, %1, is different from the specified %2, %3.\\The value in line %4, column %5 has incorrect format or type.\Expected format: %6, according to the %7 and %8 of the %9.\Actual value: "%10".';
+      DataTypeNotSupportedErr@1002 : TextConst '@@@="%1=Field Value;%2=Field Value;%3=Filed Type";ENU=The %1 column is mapped in the %2 format to a %3 field, which is not supported.';
+
+    PROCEDURE ProcessColumnMapping@2(PostExch@1004 : Record 1220;RecRefTemplate@1013 : RecordRef);
+    VAR
+      PostExchField@1009 : Record 1221;
+      PostExchMapping@1060 : Record 1224;
+      PostExchFieldMapping@1010 : Record 1225;
+      PostExchLineDef@1001 : Record 1227;
+      RecRef@1005 : RecordRef;
+      LastKeyFieldId@1015 : Integer;
+      CurrLineNo@1000 : Integer;
+      LineCount@1003 : Integer;
+      LineNoOffset@1002 : Integer;
+    BEGIN
+      LastKeyFieldId := GetLastIntegerKeyField(RecRefTemplate);
+      LineNoOffset := GetLastKeyValueInRange(RecRefTemplate,LastKeyFieldId);
+
+      PostExchField.SETRANGE("Posting Exch. No.",PostExch."Entry No.");
+      PostExchField.FINDLAST;
+      LineCount := PostExchField."Line No.";
+
+      PostExchLineDef.SETRANGE("Posting Exch. Def Code",PostExch."Posting Exch. Def Code");
+      PostExchLineDef.FINDFIRST;
+
+      PostExchMapping.GET(PostExch."Posting Exch. Def Code",PostExchLineDef.Code,RecRefTemplate.NUMBER);
+      PostExchFieldMapping.SETRANGE("Posting Exch. Def Code",PostExch."Posting Exch. Def Code");
+      PostExchFieldMapping.SETRANGE("Posting Exch. Line Def Code",PostExchLineDef.Code);
+      PostExchFieldMapping.SETRANGE("Table ID",RecRefTemplate.NUMBER);
+
+      FOR CurrLineNo := 1 TO LineCount DO BEGIN
+        RecRef := RecRefTemplate.DUPLICATE;
+        IF (PostExchMapping."Posting Exch. No. Field ID" <> 0) AND (PostExchMapping."Posting Exch. Line Field ID" <> 0) THEN BEGIN
+          SetFieldValue(RecRef,PostExchMapping."Posting Exch. No. Field ID",PostExch."Entry No.");
+          SetFieldValue(RecRef,PostExchMapping."Posting Exch. Line Field ID",CurrLineNo);
+        END;
+        SetFieldValue(RecRef,LastKeyFieldId,CurrLineNo * 10000 + LineNoOffset);
+        PostExchFieldMapping.FINDSET;
+        REPEAT
+          PostExchField.SETRANGE("Posting Exch. No.",PostExch."Entry No.");
+          PostExchField.SETRANGE("Line No.",CurrLineNo);
+          PostExchField.SETRANGE("Column No.",PostExchFieldMapping."Column No.");
+          IF PostExchField.FINDSET THEN
+            REPEAT
+              SetField(RecRef,PostExchFieldMapping."Field ID",PostExchField,
+                PostExch."Posting Exch. Def Code",PostExchLineDef.Code,PostExchFieldMapping.Multiplier)
+            UNTIL PostExchField.NEXT = 0
+          ELSE
+            IF NOT PostExchFieldMapping.Optional THEN
+              ERROR(
+                MissingValueErr,PostExch."File Name",GetType(PostExch."Posting Exch. Def Code"),
+                PostExch."Posting Exch. Def Code",CurrLineNo,PostExchFieldMapping."Column No.");
+        UNTIL PostExchFieldMapping.NEXT = 0;
+        RecRef.INSERT;
+      END;
+    END;
+
+    PROCEDURE SetField@1(RecRef@1015 : RecordRef;FieldId@1016 : Integer;VAR PostExchField@1017 : Record 1221;PostExchDefCode@1018 : Code[20];PostExchLineDefCode@1009 : Code[20];NewMultiplier@1001 : Decimal);
+    VAR
+      PostExchColumnDef@1000 : Record 1223;
+      FieldRef@1008 : FieldRef;
+    BEGIN
+      PostExchColumnDef.GET(PostExchDefCode,PostExchLineDefCode,PostExchField."Column No.");
+      FieldRef := RecRef.FIELD(FieldId);
+      CASE FORMAT(FieldRef.TYPE) OF
+        'Text','Code':
+          SetAndMergeTextCodeField(PostExchField.Value,FieldRef);
+        'Date':
+          SetDateDecimalField(PostExchField,FieldRef,PostExchColumnDef);
+        'Decimal':
+          IF PostExchColumnDef."Negative-Sign Identifier" = '' THEN BEGIN
+            SetDateDecimalField(PostExchField,FieldRef,PostExchColumnDef);
+            AdjustDecimalWithMultiplier(FieldRef,NewMultiplier,FieldRef.VALUE);
+          END ELSE
+            IF PostExchColumnDef."Negative-Sign Identifier" = PostExchField.Value THEN
+              AdjustDecimalWithSign(FieldRef,-1,FieldRef.VALUE);
+        ELSE
+          ERROR(DataTypeNotSupportedErr,PostExchColumnDef.Description,PostExchDefCode,FieldRef.TYPE);
+      END;
+      FieldRef.VALIDATE;
+    END;
+
+    LOCAL PROCEDURE SetAndMergeTextCodeField@10(Value@1000 : Text;VAR FieldRef@1001 : FieldRef);
+    VAR
+      CurrentLength@1002 : Integer;
+    BEGIN
+      CurrentLength := STRLEN(FORMAT(FieldRef.VALUE));
+      IF FieldRef.LENGTH = CurrentLength THEN
+        EXIT;
+      IF CurrentLength = 0 THEN
+        FieldRef.VALUE := COPYSTR(Value,1,FieldRef.LENGTH)
+      ELSE
+        FieldRef.VALUE := STRSUBSTNO('%1 %2',FORMAT(FieldRef.VALUE),COPYSTR(Value,1,FieldRef.LENGTH - CurrentLength - 1));
+    END;
+
+    LOCAL PROCEDURE SetDateDecimalField@18(VAR PostExchField@1000 : Record 1221;VAR FieldRef@1001 : FieldRef;VAR PostExchColumnDef@1003 : Record 1223);
+    VAR
+      SystemVariableFunctions@1006 : Codeunit 10;
+      Value@1005 : Variant;
+    BEGIN
+      Value := FieldRef.VALUE;
+
+      //IF NOT SystemVariableFunctions.Evaluate(
+      IF NOT SystemVariableFunctions.Evaluate_WBL(   //WBL
+           Value,PostExchField.Value,PostExchColumnDef."Data Format",PostExchColumnDef."Data Formatting Culture")
+      THEN
+        ERROR(IncorrectFormatOrTypeErr,
+          GetFileName(PostExchField."Posting Exch. No."),GetType(PostExchColumnDef."Posting Exch. Def Code"),
+          PostExchColumnDef."Posting Exch. Def Code",PostExchField."Line No.",PostExchField."Column No.",FORMAT(FieldRef.TYPE),
+          PostExchColumnDef.FIELDCAPTION("Data Format"),PostExchColumnDef.FIELDCAPTION("Data Formatting Culture"),
+          PostExchColumnDef.TABLECAPTION,PostExchField.Value);
+
+      FieldRef.VALUE := Value;
+    END;
+
+    LOCAL PROCEDURE AdjustDecimalWithMultiplier@5(VAR FieldRef@1002 : FieldRef;NewMultiplier@1000 : Decimal;DecimalAsVariant@1001 : Variant);
+    VAR
+      DecimalValue@1003 : Decimal;
+    BEGIN
+      DecimalValue := DecimalAsVariant;
+      FieldRef.VALUE := NewMultiplier * DecimalValue;
+    END;
+
+    LOCAL PROCEDURE AdjustDecimalWithSign@21(VAR FieldRef@1002 : FieldRef;Sign@1000 : Decimal;DecimalAsVariant@1001 : Variant);
+    VAR
+      DecimalValue@1003 : Decimal;
+    BEGIN
+      DecimalValue := DecimalAsVariant;
+      FieldRef.VALUE := Sign * DecimalValue;
+    END;
+
+    LOCAL PROCEDURE GetLastIntegerKeyField@7(RecRef@1000 : RecordRef) : Integer;
+    VAR
+      KeyRef@1001 : KeyRef;
+      FieldRef@1002 : FieldRef;
+    BEGIN
+      KeyRef := RecRef.KEYINDEX(1);
+      FieldRef := KeyRef.FIELDINDEX(KeyRef.FIELDCOUNT);
+      IF FORMAT(FieldRef.TYPE) <> 'Integer' THEN
+        EXIT(0);
+
+      EXIT(FieldRef.NUMBER);
+    END;
+
+    LOCAL PROCEDURE GetLastKeyValueInRange@4(RecRefTemplate@1000 : RecordRef;FieldId@1002 : Integer) : Integer;
+    VAR
+      RecRef@1003 : RecordRef;
+      FieldRef@1001 : FieldRef;
+    BEGIN
+      RecRef := RecRefTemplate.DUPLICATE;
+      SetKeyAsFilter(RecRef);
+      FieldRef := RecRef.FIELD(FieldId);
+      FieldRef.SETRANGE;
+      IF RecRef.FINDLAST THEN
+        EXIT(RecRef.FIELD(FieldId).VALUE);
+      EXIT(0);
+    END;
+
+    LOCAL PROCEDURE SetFieldValue@11(RecRef@1000 : RecordRef;FieldID@1001 : Integer;Value@1002 : Variant);
+    VAR
+      FieldRef@1003 : FieldRef;
+    BEGIN
+      IF FieldID = 0 THEN
+        EXIT;
+      FieldRef := RecRef.FIELD(FieldID);
+      FieldRef.VALIDATE(Value);
+    END;
+
+    LOCAL PROCEDURE SetKeyAsFilter@3(VAR RecRef@1000 : RecordRef);
+    VAR
+      KeyRef@1001 : KeyRef;
+      FieldRef@1003 : FieldRef;
+      i@1002 : Integer;
+    BEGIN
+      KeyRef := RecRef.KEYINDEX(1);
+      FOR i := 1 TO KeyRef.FIELDCOUNT DO BEGIN
+        FieldRef := RecRef.FIELD(KeyRef.FIELDINDEX(i).NUMBER);
+        FieldRef.SETRANGE(FieldRef.VALUE);
+      END
+    END;
+
+    LOCAL PROCEDURE GetType@6(PostExchDefCode@1000 : Code[20]) : Text;
+    VAR
+      PostingExchDef@1001 : Record 1222;
+    BEGIN
+      PostingExchDef.GET(PostExchDefCode);
+      EXIT(FORMAT(PostingExchDef.Type));
+    END;
+
+    LOCAL PROCEDURE GetFileName@9(PostExchEntryNo@1000 : Integer) : Text;
+    VAR
+      PostingExch@1001 : Record 1220;
+    BEGIN
+      PostingExch.GET(PostExchEntryNo);
+      EXIT(PostingExch."File Name");
+    END;
+
+    BEGIN
+    {
+      // @ Area GeneralLedger
+      PA-Number  Date
+      ------------------------------------------------
+      PA035966   08.12.14 TS NAV 2013 R2 General Ledger Integration - new NAV Standard Object for Payment Management.
+      WBL        11.08.23 RN Force to convert the Date Format in 'D/M/YYYY'
+    }
+    END.
+  }
+}
+

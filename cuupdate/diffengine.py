@@ -652,3 +652,142 @@ class DiffEngine:
         return dict(node=node['id'] if node else None, tag=tag, verdict=verdict,
                     kind=kind, line=node['line'] if node else None, reason=reason)
 
+    # ---- no-CU-change detection (Stage 2 short-circuit) --------------------
+    # A merge is not always required. When the vendor shipped NO change to this
+    # object in the CU, A is already correct against the new CU and there is
+    # nothing to carry the customer's code INTO. We detect this difference-first:
+    # diff A vs B over the object body; the verdict is "no CU change" iff EVERY
+    # differing line is attributable to a customer layer. If any difference is
+    # unattributable, a vendor change exists -> fall through to the normal merge
+    # path. The safe error is always "don't fire": an unrecognised customer idiom
+    # leaves a residual, suppresses the short-circuit, and the object is merged
+    # as before (never silently skipped).
+    #
+    # Scope: the whole object body EXCLUDING the OBJECT-PROPERTIES header
+    # (Date/Time/Modified/Version List - churn by construction) and the
+    # doc-trigger BEGIN{..}END. block (customer changes are documented there too,
+    # so it can never count as a vendor change). Customer artifacts live in VAR
+    # sections, field nodes and CODE alike, so scope is the whole body - not just
+    # CODE{} (a CODE-only scope would miss a Table's field-level changes).
+    #
+    # A body line is CUSTOMER-ATTRIBUTABLE when any of:
+    #   1. live code (not itself a comment) ending in a `//<cust>` marker
+    #      (optional space after //) - the trailing-tag "live line" idiom;
+    #   2. any line within a `Start..Stop` customer block (whole span, anywhere);
+    #   3. a commented line (`//` at start) that either begins `//<cust>` OR is
+    #      strictly contiguous to a category-1/2 customer line (the comment-out
+    #      and comment-out-with-replacement idioms);
+    #   4. a VAR declaration present in A but absent from B - structural customer
+    #      ownership (the vendor never had it, so it can only be a customer add;
+    #      a vendor VAR would be present in B and is never swept up). VAR decls
+    #      are attributed structurally because the customer tags the code BLOCK
+    #      that uses the variable, not the declaration line.
+    # The recognised marker forms (1/3) are a documented set, extendable per
+    # customer as new idioms surface; they are NOT assumed exhaustive.
+    _NOCU_HDR  = re.compile(r'(^\s*Date=|^\s*Time=|^\s*Modified=|^\s*Version List=)')
+    _NOCU_VARD = re.compile(r'^\s*\w+@\d+\s*:\s*.+;\s*$')
+
+    def _nocu_body(self, lines):
+        """Object body minus OBJECT-PROPERTIES header and the trailing
+        doc-trigger BEGIN{..}END. block. Returns the surviving lines."""
+        end_dot = next((k for k in range(len(lines) - 1, -1, -1)
+                        if lines[k].strip() == 'END.'), None)
+        doc_lo = doc_hi = None
+        if end_dot is not None:
+            b = next((k for k in range(end_dot, -1, -1)
+                      if lines[k].strip() == 'BEGIN'), None)
+            if b is not None:
+                doc_lo, doc_hi = b, end_dot
+        out = []
+        for i, l in enumerate(lines):
+            if self._NOCU_HDR.search(l):
+                continue
+            if doc_lo is not None and doc_lo <= i <= doc_hi:
+                continue
+            out.append(l)
+        return out
+
+    def _nocu_attribute(self, lines):
+        """Flag each line customer-attributable per categories 1-3 (4 is applied
+        by the caller, which needs B to test VAR absence). `lines` is the kept,
+        non-blank body. Returns a parallel list of bools.
+
+        NOTE: these regexes are built from self.CUST ONLY - deliberately NOT the
+        engine's self.OPEN/self.STOP/self.INLINE, which are built from the COMBINED
+        customer+vendor prefix set (so they also match vendor `// Start PA...`
+        blocks). For attribution we must recognise CUSTOMER markers only; a vendor
+        Start/Stop block is a vendor change and must NOT be attributed away."""
+        n = len(lines)
+        flag = [False] * n
+        if not self.CUST:
+            return flag
+        is_comment = lambda l: l.lstrip().startswith('//')
+        alt = '|'.join(sorted(self.CUST, key=len, reverse=True))
+        c_open = re.compile(rf'^\s*(?://|\{{)\s*Start\s+({alt})', re.I)
+        c_stop = re.compile(rf'^\s*(?://\s*)?Stop\s+({alt})', re.I)
+        c_mark = re.compile(rf'//\s*({alt})\b', re.I)          # marker anywhere
+        c_lead = re.compile(rf'^\s*//\s*({alt})\b', re.I)      # marker leads a comment
+        # cat 2: customer Start..Stop block spans (anywhere in the body)
+        depth = 0
+        for i, l in enumerate(lines):
+            if c_open.search(l):
+                depth += 1; flag[i] = True; continue
+            if depth > 0:
+                flag[i] = True
+            if c_stop.search(l) and depth > 0:
+                depth -= 1
+        # cat 1: live code (not itself a comment) carrying a //<cust> marker;
+        # cat 3a: a comment line whose comment begins with the marker
+        for i, l in enumerate(lines):
+            if not c_mark.search(l):
+                continue
+            if is_comment(l):
+                if c_lead.search(l):
+                    flag[i] = True
+            else:
+                flag[i] = True
+        # cat 3b: a comment line strictly contiguous to a cat-1/2 customer line
+        changed = True
+        while changed:
+            changed = False
+            for i, l in enumerate(lines):
+                if flag[i] or not is_comment(l):
+                    continue
+                if (i > 0 and flag[i - 1]) or (i + 1 < n and flag[i + 1]):
+                    flag[i] = True; changed = True
+        return flag
+
+    def no_cu_change(self):
+        """True iff the vendor made no change to this object in the CU - i.e.
+        every A-vs-B body difference is customer-attributable. See the block
+        comment above for the attribution contract. On True the caller copies A
+        untouched (no stamp) to NoCuChangesDetected/ and skips the merge."""
+        A = [l for l in self._nocu_body(self.A) if l.strip()]
+        B = [l for l in self._nocu_body(self.B) if l.strip()]
+        An = [norm(l) for l in A]
+        Bn = [norm(l) for l in B]
+        flag = self._nocu_attribute(A)
+        # cat 4: A-only VAR declaration (present in A, absent from B)
+        Bset = set(Bn)
+        for i, nl in enumerate(An):
+            if not flag[i] and self._NOCU_VARD.match(nl) and nl not in Bset:
+                flag[i] = True
+        sm = SequenceMatcher(None, Bn, An)
+        for tag, b1, b2, a1, a2 in sm.get_opcodes():
+            if tag == 'equal':
+                continue
+            # A-side lines (insert/replace) must each be attributable
+            for ai in range(a1, a2):
+                if not flag[ai]:
+                    return False
+            # B-side lines gone from A (replace/delete): a vendor line the
+            # customer removed is only safe if an adjacent A line is customer-
+            # attributed (the customer replaced it). Otherwise it is an
+            # unexplained vendor/customer delta -> not a no-CU-change.
+            if tag in ('replace', 'delete'):
+                adj = any(flag[k] for k in range(max(0, a1 - 1),
+                                                  min(len(An), a2 + 1)))
+                if not adj:
+                    return False
+        return True
+

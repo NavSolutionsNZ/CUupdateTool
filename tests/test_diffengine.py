@@ -359,6 +359,35 @@ def run():
             fails.append(f"[type] mismatch: not gated correctly "
                          f"(mismatch={e.type_mismatch}, rows={[r['kind'] for r in rows]})")
 
+    # ---- no-CU-change layer: vendor-unchanged objects skip the merge --------
+    # Difference-first: an object whose every A-vs-B body difference is
+    # customer-attributable means the vendor shipped no change -> A is already
+    # correct -> copy A verbatim, no merge. FIRE cases are confirmed
+    # no-vendor-change objects; NO-FIRE cases carry real customer field work or
+    # genuine vendor changes and MUST still merge (never silently skipped).
+    NOCU_FIRE = {
+        'C1201': (os.path.join(FIX, 'EX-C1201.stripped.txt'),
+                  os.path.join(FIX, 'CU-C1201.stripped.txt')),
+        'C231':  (os.path.join(FIX, 'EX-C231.stripped.txt'),
+                  os.path.join(FIX, 'CU-C231.stripped.txt')),
+        'C232':  (os.path.join(FIX, 'EX-C232.stripped.txt'),
+                  os.path.join(FIX, 'CU-C232.stripped.txt')),
+    }
+    NOCU_NOFIRE = ['T14', 'T36', 'T77', 'P347']   # real customer/vendor deltas
+    for name, (a, b) in NOCU_FIRE.items():
+        e = DiffEngine(a, b, _cust_for(name), VEND, LANGS)
+        if e.no_cu_change():
+            print(f"[nocu] {name}: OK (fires - vendor unchanged, skip merge)")
+        else:
+            fails.append(f"[nocu] {name}: should fire (vendor unchanged) but did not")
+    for name in NOCU_NOFIRE:
+        a, b = OBJ[name]
+        e = DiffEngine(a, b, _cust_for(name), VEND, LANGS)
+        if e.no_cu_change():
+            fails.append(f"[nocu] {name}: fired but has real changes - would skip a merge")
+        else:
+            print(f"[nocu] {name}: OK (does not fire - real delta, merge needed)")
+
     # ---- date-format toggle: header per locale, doc-trigger always DD.MM.YY ----
     import datetime as _dt
     from run_batch import format_merge_dates
