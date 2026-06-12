@@ -1,0 +1,38 @@
+# Line-ending policy for CUupdateTool.
+#
+# Problem this solves: source files were authored LF, but Windows clones with
+# core.autocrlf=true check them out as CRLF, so `git status` permanently shows
+# them "modified" (LF<->CRLF only) and a `git pull` won't fast-forward over
+# them. That caused a real incident (a build silently ran the OLD cu.spec
+# because the new one couldn't be pulled in over the phantom-modified files).
+#
+# Policy:
+#   - SOURCE files (code, docs, build): normalised. Stored as LF in the repo,
+#     checked out using the platform's native ending. No more phantom diffs.
+#   - C/AL OBJECT TEXT (.txt) + the test FIXTURES and SAMPLES: frozen as-is.
+#     These are byte-exact known-answer artifacts; the execution tests compare
+#     them after their OWN normalisation, and some are deliberately CRLF
+#     (TortoiseMerge artifacts) while others are LF. Git must NEVER rewrite
+#     their line endings or the fixtures would change bytes and break the
+#     byte-exact tests. `-text` = treat as binary for EOL purposes (no convert).
+
+# --- source: normalise to LF in repo, native on checkout ---
+*.py    text eol=lf
+*.md    text eol=lf
+*.spec  text eol=lf
+*.js    text eol=lf
+*.json  text eol=lf
+.gitignore   text eol=lf
+.gitattributes text eol=lf
+
+# --- C/AL object text and known-answer artifacts: freeze bytes, never convert ---
+*.txt   -text
+tests/fixtures/**  -text
+samples/**         -text
+
+# --- binary artifacts (already effectively binary; be explicit) ---
+*.docx  binary
+*.png   binary
+*.exe   binary
+*.zip   binary
+*.patch -text
