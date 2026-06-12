@@ -147,7 +147,7 @@ class App:
         # code-block carries; vendor prefixes do not. Empty until the first
         # (dry) run has produced a census.
         attr = ttk.LabelFrame(master, text="Tag attribution "
-                              "(run a dry run to populate; move mis-attributed prefixes)")
+                              "(move mis-attributed prefixes between lists)")
         attr.pack(fill='x', padx=8, pady=4)
 
         ttk.Label(attr, text="Customer tags").grid(row=0, column=0, padx=4, pady=(4, 0))
