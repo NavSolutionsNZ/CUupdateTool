@@ -23,7 +23,14 @@ pip install pyinstaller
 pyinstaller cu.spec
 ```
 
-This produces `dist\CUupdate.exe` — a single file that bundles the interpreter
+This produces `dist\CUupdate_<version>.exe` (e.g. `dist\CUupdate_1.9.exe`) — a
+single file that bundles the interpreter. The version comes from
+`cuupdate/__init__.py`. When the build starts, the console prints a banner line
+`cu.spec: building CUupdate_<version>.exe`; if you do NOT see that banner, a
+stale auto-generated `CUupdate.spec` (left by an old `pyinstaller --name
+CUupdate cu_gui.py` run) is being used instead — delete it and any `build/`
+cache, then run `pyinstaller cu.spec` again. The build clears `dist\` first, so
+only the current version's exe is left behind.
 and all engine modules. Copy that one file to the server and double-click it.
 Nothing else needs to be installed there.
 
