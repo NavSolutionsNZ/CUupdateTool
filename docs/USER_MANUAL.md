@@ -250,6 +250,8 @@ ends up excluded as vendor. The **Tag attribution** panel lets you correct this.
 
 After a dry run the panel shows two lists: **Customer tags** on the left and
 **Excluded as vendor** on the right, each prefix with its occurrence count.
+The lists are also filled **automatically when you select the job folder**, so
+the proposed split is visible before you run anything.
 To move a prefix, select it and click the arrow:
 
 - **→** moves a prefix from Customer to Vendor. It will no longer gate customer

@@ -82,8 +82,17 @@ class App:
         # Job root picker
         ttk.Label(frm, text="Job folder (contains A\\ and B\\):").grid(row=0, column=0, sticky='w')
         self.root_var = tk.StringVar()
-        ttk.Entry(frm, textvariable=self.root_var, width=64).grid(row=1, column=0, sticky='we')
+        self.root_entry = ttk.Entry(frm, textvariable=self.root_var, width=64)
+        self.root_entry.grid(row=1, column=0, sticky='we')
+        # Auto-census when the developer finishes editing the path (focus-out) or
+        # presses Return. Browse-select triggers it directly (see pick_root).
+        self.root_entry.bind('<FocusOut>', lambda e: self._maybe_census())
+        self.root_entry.bind('<Return>', lambda e: self._maybe_census())
         ttk.Button(frm, text="Browse...", command=self.pick_root).grid(row=1, column=1, padx=4)
+
+        # Folder the attribution lists were last populated from, so a repeated
+        # focus-out on the SAME folder doesn't wipe the developer's manual moves.
+        self._censused_root = None
 
         # Params
         self.cu_var = tk.StringVar()
@@ -246,10 +255,41 @@ class App:
         force_cust = sorted(cur_cust - self._orig_cust)         # moved vendor->cust
         return force_vendor, force_cust
 
+    def _maybe_census(self):
+        """Auto-populate the attribution lists from the selected folder.
+
+        Fires on Browse-select and on path-field focus-out / Return. Census-only
+        (no merge), on a background thread, and silent on failure (no A/ tree or
+        no Version Lists yet -> lists simply stay empty). Skips when the folder
+        is unchanged AND the lists are already populated, so a stray focus-out
+        never wipes the developer's manual moves. A genuinely new folder always
+        repopulates (old corrections don't apply to a different job).
+        """
+        root = self.root_var.get().strip()
+        if not root or not os.path.isdir(root):
+            return
+        already_populated = self.cust_list.size() or self.vendor_list.size()
+        if root == self._censused_root and already_populated:
+            return
+        self._censused_root = root
+        threading.Thread(target=self._census_work, args=(root,),
+                         daemon=True).start()
+
+    def _census_work(self, root):
+        """Background census-only pass; hands lists back via the queue. Silent
+        on any failure - the lists just stay as they were."""
+        try:
+            _cust, _summary, lists = derive_cust(root)
+            if lists['cust'] or lists['vendor']:
+                self.q.put(("CENSUS", lists))
+        except Exception:
+            pass            # no A/ tree yet, unreadable headers, etc. - stay quiet
+
     def pick_root(self):
         d = filedialog.askdirectory(title="Select job folder (contains A and B)")
         if d:
             self.root_var.set(d)
+            self._maybe_census()
 
     def _write(self, s):
         self.log.insert('end', s)
@@ -337,6 +377,12 @@ class App:
                                     f"{n_d} left for manual review ---\n")
                 elif isinstance(item, tuple) and item and item[0] == "LISTS":
                     self.populate_lists(item[1])
+                elif isinstance(item, tuple) and item and item[0] == "CENSUS":
+                    # Auto-census result (folder select). Populate only if the
+                    # developer hasn't already started correcting this job.
+                    self.populate_lists(item[1])
+                    self._write("tags read from version lists; "
+                                "review the attribution lists if needed.\n")
                 else:
                     self._write(item)
         except queue.Empty:

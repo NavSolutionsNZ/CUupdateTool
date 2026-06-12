@@ -69,7 +69,10 @@ for the real run.
 The census proposes a customer / vendor split from each object's version list.
 The vendor filter is only a first pass, so a prefix can be mis-attributed. After
 a dry run, the two lists under **Tag attribution** show the proposed split —
-**Customer tags** on the left, **Excluded as vendor** on the right. Select a
+**Customer tags** on the left, **Excluded as vendor** on the right. The lists
+are also populated **automatically when a job folder is selected** (a fast,
+census-only read of the version lists), so the split is visible before any run.
+Select a
 mis-attributed prefix and use **→** to mark it vendor (it stops gating customer
 code-block carries) or **←** to mark it a customer tag. Run again to apply the
 correction. The lists are session state; reopening the GUI requires a fresh dry
