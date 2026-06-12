@@ -2845,8 +2845,6 @@ OBJECT Table 36 Sales Header
 
                                                    CaptionML=ENU=Last Return Receipt No.;
                                                    Editable=No }
-    { 7001;No ;FIELD ID 7001 BLOCKED;Integer      ;CaptionML=ENU=FIELD ID 7001 BLOCKED;
-                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
     { 50090;  ;Consignment Order   ;Boolean       ;OnValidate=VAR
                                                                 CustL@1101353000 : Record 18;
                                                               BEGIN
@@ -2885,6 +2883,8 @@ OBJECT Table 36 Sales Header
                                                    Editable=No;
                                                    AutoFormatType=1;
                                                    AutoFormatExpr="Currency Code" }
+    { 7001;No ;FIELD ID 7001 BLOCKED;Integer      ;CaptionML=ENU=FIELD ID 7001 BLOCKED;
+                                                   Description=reserved for tables 36|110|112|114|6660|5028930|5046905 }
     { 5025350;;General Document    ;Boolean       ;DataClassification=ToBeClassified;
                                                    CaptionML=ENU=General Document;
                                                    Description=EU.0114065 }
@@ -7555,19 +7555,6 @@ OBJECT Table 36 Sales Header
     BEGIN
     END;
 
-    [Internal]
-    PROCEDURE GetConsignmentBranchShipmentLines@39();
-    VAR
-      GetBranchShipmentLinesL@1000 : Page 50091;
-    BEGIN
-      // Start AP001651
-      GetBranchShipmentLinesL.SetToSalesHeader(Rec);
-      GetBranchShipmentLinesL.LOOKUPMODE := TRUE;
-      IF GetBranchShipmentLinesL.RUNMODAL = ACTION::LookupOK THEN
-        GetBranchShipmentLinesL.CopyLineToDoc;
-      CLEAR(GetBranchShipmentLinesL);
-      // Stop AP001651
-
     PROCEDURE ShowServiceInvoices@16606200(OrderNoP@16606200 : Code[20]);
     VAR
       SalesHeaderL@16606201 : Record 36;
@@ -7587,6 +7574,20 @@ OBJECT Table 36 Sales Header
       PAGE.RUN(SalesHeaderL.GetListPageID("Document Type"::Invoice, "Order Type"::Service, FALSE), SalesHeaderL);
       // Stop EU.0174523
       // Stop EU.0166062.167048}
+    END;
+
+    [Internal]
+    PROCEDURE GetConsignmentBranchShipmentLines@39();
+    VAR
+      GetBranchShipmentLinesL@1000 : Page 50091;
+    BEGIN
+      // Start AP001651
+      GetBranchShipmentLinesL.SetToSalesHeader(Rec);
+      GetBranchShipmentLinesL.LOOKUPMODE := TRUE;
+      IF GetBranchShipmentLinesL.RUNMODAL = ACTION::LookupOK THEN
+        GetBranchShipmentLinesL.CopyLineToDoc;
+      CLEAR(GetBranchShipmentLinesL);
+      // Stop AP001651
     END;
 
     BEGIN
@@ -8047,7 +8048,7 @@ OBJECT Table 36 Sales Header
       AP2263     29.04.25 RN Change the AP002228 (Table 37 Sales Line) to prevent the Unit Price to be recalculated multi times when there is a currency conversion
                              In RecreateSalesLines, added Set xRec of Sales Header Record to SalesLine for identifying the changes for Unit Price
       AP2308     08.09.25 RL Change captions of 'Your Reference' to 'Customer Order No.' and 'External Doc. No.' to 'Merchant No.'.
-	  CU26Q1     08.06.26 RL CU upgrade.
+      CU26Q1     08.06.26 RL CU upgrade.
     }
     END.
   }

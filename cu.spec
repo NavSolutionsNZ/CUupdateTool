@@ -1,7 +1,16 @@
 # cu.spec -- PyInstaller spec for the CU update GUI launcher.
 # Build on a Windows machine (one-time):  pyinstaller cu.spec
-# Produces dist\CUupdate.exe -- a single double-clickable file, no Python needed.
-# See BUILD.md.
+# Produces dist\CUupdate_<version>.exe -- a single double-clickable file, no
+# Python needed. Version is read from cuupdate/__init__.py (single source of
+# truth). See BUILD.md.
+
+import re, os
+
+# Read __version__ from cuupdate/__init__.py without importing the package
+# (the freezer environment may not have it importable yet).
+_init = os.path.join('cuupdate', '__init__.py')
+_m = re.search(r'^__version__\s*=\s*["\']([^"\']+)["\']', open(_init).read(), re.M)
+VERSION = _m.group(1) if _m else '0.0'
 
 block_cipher = None
 
@@ -32,7 +41,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='CUupdate',
+    name='CUupdate_%s' % VERSION,
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

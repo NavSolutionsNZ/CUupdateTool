@@ -30,6 +30,16 @@ from tkinter import filedialog, messagebox, scrolledtext, ttk
 import census
 import run_batch
 
+# Tool version (single source of truth: cuupdate/__init__.py). Imported with a
+# fallback so a flat frozen build (modules at top level, no package) still runs.
+try:
+    from cuupdate import __version__ as _VERSION
+except Exception:
+    try:
+        from __init__ import __version__ as _VERSION
+    except Exception:
+        _VERSION = "1.9"
+
 
 def derive_cust(root):
     """Run the census on <root> and return (cust_csv, summary_str).
@@ -51,7 +61,7 @@ def derive_cust(root):
 class App:
     def __init__(self, master):
         self.master = master
-        master.title("CU Update - batch merge")
+        master.title("CU Update v%s - batch merge" % _VERSION)
         master.geometry("760x560")
         self.q = queue.Queue()
 

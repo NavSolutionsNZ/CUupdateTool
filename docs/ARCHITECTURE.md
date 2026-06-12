@@ -327,13 +327,31 @@ Remaining caveats:
   keep-over-delete) and **option-string VAR append carry** (B's literal a strict prefix of A's — a
   CARRY `var-option` row) — §8.14, §8.20. Anchor selection picks the
   tightest valid bracket and balances nearest-code vs vendor-tag anchors (§8.13).
+- **Structural ownership before tag-justification (v1.9, §8.22):** a customer
+  code block is carried with its enclosing *unit* when that unit is proven
+  customer-owned by ABSENCE FROM B — no census tag-justification needed. Two
+  cases: (a) **proc-graft** — a whole PROCEDURE/LOCAL PROCEDURE whose `name@id`
+  is absent from B is a customer addition; the entire unit (attribute line e.g.
+  `[Internal]`, signature, VAR, BEGIN..END) carries verbatim, inserted at the
+  end of B's CODE section (safe, order-immaterial anchor). Corroborated by a
+  customer tag in the unit so a vendor proc renamed in B is never mis-carried.
+  (b) **scorer suppression** — a code block whose span lies inside an already-
+  grafted added customer field (or a proc-graft) is covered by that atom; the
+  anchor scorer no longer emits a competing (always-score-0) DEV row for it.
+  This is what made T36 auto-merge: its two `AP001691` field-trigger blocks ride
+  with grafted fields 50090/50091, and `GetConsignmentBranchShipmentLines@39`
+  (absent from B) carries as a proc-graft. The tag inside a customer-owned unit
+  is now EVIDENCE of ownership, not the carry boundary — so an in-body tag that
+  isn't in the census (AP001691 ∉ Version List) no longer gates the object.
   - NOT yet executing: VANILLA_MOD/SUPPRESS (DEV by rule); RDLC layout (DEV); local (in-procedure) VAR
     additions; page/report structural diff beyond field-grafts.
 - **Stage 0 census BUILT:** `census.py` derives the customer-tag set from each object's Version List
   (leading-alpha prefix, vendor-prefix filter); `cu_gui.py` runs it automatically to fill `--cust`.
   See §8.9. (Languages still default-driven; full language census per §4 not yet wired.)
 - **GUI + deployment:** `cu_gui.py` (tkinter) is a double-click launcher wrapping `run_batch`; `cu.spec`
-  freezes it to a standalone `CUupdate.exe` (no Python on the server). See §8.10, BUILD.md.
+  freezes it to a standalone `CUupdate_<version>.exe` (no Python on the server). Version is the single
+  source of truth in `cuupdate/__init__.py` (`__version__`, starts 1.9, +0.1 per release); the spec
+  reads it to name the exe and the GUI shows it in the title. See §8.10, BUILD.md.
 - Prototype, not production: anchor/confidence scorer (§9 — note §8.5.1 field-trigger attribution still
   open; CODE-section blocks now keyed by span).
 - Not started: page/report structural differ beyond field-grafts; PowerShell port (scorer + engine +

@@ -79,8 +79,11 @@ EXPECTED_VERDICTS = {
                     (50097, 'field-graft', 'CARRY'): 1,
                     (11,    'caption',     'CARRY'): 1,
                     (100,   'caption',     'CARRY'): 1,
-                    (None,  'code',        'DEV'):   3,     # AP001691 x2, AP001651
-                    (None,  'code',        'CARRY'): 1}),   # AP2263
+                    (None,  'proc-graft',  'CARRY'): 1,     # GetConsignmentBranchShipmentLines@39
+                                                            # absent from B -> whole-proc carry
+                    (None,  'code',        'CARRY'): 1}),   # AP2263. The two AP001691 blocks are
+                                                            # inside added fields 50090/50091 and
+                                                            # carry WITH them (scorer suppressed).
     'T77': Counter({(1, 'caption', 'CARRY'): 1}),           # OptionCaption/String carry
     'T80': Counter({(9,    'caption', 'CARRY'): 1,          # option + Description carry
                     (None, 'code',    'CARRY'): 1}),        # DC5.00 block transplant
@@ -117,6 +120,9 @@ EXEC_CASES = {
     'T81': (os.path.join(FIX, 'EX-T81.stripped.txt'),
             os.path.join(FIX, 'CU-T81.stripped.txt'),
             os.path.join(FIX, 'MyMerged-T81.stripped.txt')),
+    'T36': (os.path.join(FIX, 'Cust_T36.stripped.txt'),
+            os.path.join(FIX, '20206Q1_T36.stripped.txt'),
+            os.path.join(FIX, 'Merged_T36.stripped.txt')),
     'P14': (os.path.join(FIX, 'EX-P14.stripped.txt'),
             os.path.join(FIX, 'CU-P14.stripped.txt'),
             os.path.join(FIX, 'MyMerged-P14.stripped.txt')),
@@ -128,7 +134,7 @@ EXEC_CASES = {
              os.path.join(FIX, 'MyMerged-P347.stripped.txt')),
 }
 # Objects that should route to DEV in the narrow build (not execute).
-EXEC_GATED_TO_DEV = ['T36', 'P21']
+EXEC_GATED_TO_DEV = ['P21']
 
 # ---- type-dispatch layer (commit 1) ----------------------------------------
 # Real sample pairs (samples/, not fixtures/) exercising the per-type front

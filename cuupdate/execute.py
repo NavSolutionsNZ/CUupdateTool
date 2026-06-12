@@ -37,7 +37,7 @@ from diffengine import DiffEngine
 # var-option:  option-string VAR (global/local) the customer extended by
 #              appending members (B's literal is a strict prefix of A's) - take
 #              A's declaration line. RULE 2.
-_EXECUTABLE_KINDS = {'field-graft', 'doc-graft', 'code', 'caption', 'var-option'}
+_EXECUTABLE_KINDS = {'field-graft', 'doc-graft', 'code', 'caption', 'var-option', 'proc-graft'}
 # Rows with this verdict are "no action needed, take B as-is" and don't block
 # the gate (they describe vendor content we keep).
 _BENIGN_VERDICT = 'TAKE_B'
@@ -88,6 +88,25 @@ class GateToDev(Exception):
     def __init__(self, reasons):
         self.reasons = reasons
         super().__init__('; '.join(reasons))
+
+
+def _b_code_trailer_idx(engine):
+    """0-based index in engine.B of the object-level CODE-section trailer: the
+    '    BEGIN' line (4-space indent, exactly 'BEGIN') immediately followed by
+    a '    {' changelog-open line. This is the boundary AFTER the last procedure
+    and BEFORE the changelog comment block; a proc-graft inserts just before it.
+    Insertion point returned is the trailer line index, so out[idx:idx]=block
+    places the new procedure right before 'BEGIN'."""
+    B = engine.B
+    for i in range(len(B) - 1):
+        if B[i].rstrip() == '    BEGIN':
+            j = i + 1
+            # allow blank lines between BEGIN and the '{'
+            while j < len(B) and B[j].strip() == '':
+                j += 1
+            if j < len(B) and B[j].lstrip().startswith('{'):
+                return i
+    return None
 
 
 def _anchor_for(engine, node_id):
@@ -319,7 +338,7 @@ def execute(custfn, vendfn, cust, vend, langs, params):
         g.rows = blockers
         raise g
 
-    grafts = [r for r in actionable if r['kind'] in ('field-graft', 'doc-graft', 'code')]
+    grafts = [r for r in actionable if r['kind'] in ('field-graft', 'doc-graft', 'code', 'proc-graft')]
     captions = [r for r in actionable if r['kind'] == 'caption']
 
     # --- caption/option carry: replace B's caption/option lines with A's ----
@@ -387,6 +406,26 @@ def execute(custfn, vendfn, cust, vend, langs, params):
             if hi + 1 < len(e.A) and e.A[hi + 1].strip() == '':
                 hi += 1
             block = e.A[lo:hi + 1]
+            src = start
+        elif r['kind'] == 'proc-graft':
+            # whole customer procedure absent from B: insert verbatim at the END
+            # of B's CODE-section procedure list - after B's last procedure END;
+            # and before the object-level CODE trailer ('    BEGIN' then '    {').
+            # End-of-CODE is the SAFE anchor: it never depends on a surviving
+            # predecessor and always yields a syntactically valid, compiling
+            # placement (procedure order is immaterial in C/AL). Matches the
+            # operator's current hand-merge convention (MyMerged-T36).
+            after = _b_code_trailer_idx(e)
+            if after is None:
+                raise GateToDev([f"proc-graft {r.get('proc_key')} found no CODE trailer in B"])
+            start, stop = r['span']
+            proc = e.A[start:stop + 1]
+            # B's layout at the trailer is: <last proc END;> / <blank> / BEGIN.
+            # Inserting at the trailer index ('BEGIN') drops the proc AFTER that
+            # existing blank, giving END; / blank / <proc> - exactly one blank
+            # before. Add ONE trailing blank so the result is <proc END;> /
+            # blank / BEGIN, matching the hand-merge spacing. No leading blank.
+            block = proc + ['']
             src = start
         else:
             raise GateToDev([f"unexpected executable kind {r['kind']}"])

@@ -145,6 +145,15 @@ class DiffEngine:
             out.append(l)
         return out
 
+    def _unit_tags(self, text):
+        """Tags appearing in an arbitrary text slice (e.g. a procedure unit):
+        inline code-block Start tags only. Used to corroborate ownership of a
+        whole-procedure carry. Mirrors the 'code' half of _node_tags."""
+        tags = []
+        for m in self.INLINE.finditer(text):
+            tags.append(('code', m.group(1) + m.group(2)))
+        return tags
+
     def _node_tags(self, node):
         """All tags appearing in a node: inline code-block tags + Description= tokens."""
         tags = []
@@ -360,16 +369,67 @@ class DiffEngine:
                 rows.append(self._row(a, ctags[0] if ctags else None, 'TAKE_B', 'vendor-change',
                                       f'field {nid} no material customer difference -> take B'))
 
+        # 3b) proc-graft: a whole customer PROCEDURE absent from B. Identity is
+        # name@id; a procedure present in A but with no matching key in B can
+        # only be a customer addition (the vendor never had it to upgrade). We
+        # carry the ENTIRE unit verbatim - attribute line ([Internal] etc.),
+        # signature, VAR block and BEGIN..END - as one atom, A-after-B at the
+        # end of the CODE section. The anchor scorer is the wrong instrument
+        # here: the block inside the proc body has NO vendor neighbour to
+        # bracket against (the proc doesn't exist in B), so it always scored 0
+        # and gated. Ownership is proven structurally (absent from B) and
+        # CORROBORATED by a customer tag in the unit - we require the customer
+        # tag so a vendor procedure the customer merely retained from an older
+        # base (renamed in B) is NOT mis-carried as a duplicate.
+        owned_spans = []      # (start,stop) 0-based A-line spans already carried
+                              # by a structural atom (added field / proc-graft);
+                              # scorer code blocks inside these are covered.
+        # added customer fields already grafted (their triggers travel with them)
+        graft_ids = {r['node'] for r in rows
+                     if r['kind'] in ('field-graft', 'doc-graft') and r['verdict'] == 'CARRY'}
+        for nid in graft_ids:
+            nd = self.Aby.get(nid)
+            if nd:
+                s = nd['line'] - 1
+                owned_spans.append((s, s + nd['props'].count('\n')))
+
+        ua = self._proc_units(self.A)
+        ub = self._proc_units(self.B)
+        for key, u in ua.items():
+            if key in ub:
+                continue                      # vendor has it -> not a customer add
+            tags = [t for k, t in self._unit_tags(u['text'])
+                    if self._layer(t) == 'customer']
+            if not tags:
+                # absent from B but no customer tag: ambiguous (could be a vendor
+                # proc renamed in B). Don't guess - leave to the whole-object gate
+                # via the existing scorer path / DEV. We simply don't claim it.
+                continue
+            rows.append(dict(node=None, tag=tags[0], verdict='CARRY', kind='proc-graft',
+                             line=u['start'] + 1,
+                             reason=f"customer procedure {key} absent from B "
+                                    f"(tag {tags[0]}) -> graft whole procedure A-after-B",
+                             span=(u['start'], u['end']), proc_key=key))
+            owned_spans.append((u['start'], u['end']))
+
         # 4) object-level / CODE-section customer code blocks. The scorer scans
         # the WHOLE object and scores every customer Start/Stop block by anchor
         # survival. Blocks that live OUTSIDE any field node (global triggers, the
         # CODE{} procedures) are scored but never surfaced by the per-node loop
         # above. Emit a 'code' row for each such block so the executor can act on
         # it and the whole-object gate can SEE it (never silently drop code).
+        # SUPPRESS blocks already covered by a structural atom (an added customer
+        # field grafted whole, or a proc-graft): scoring them by anchor is
+        # meaningless (no vendor neighbour) and would gate the object on code
+        # that is in fact carried verbatim with its enclosing unit.
+        def _covered(sb):
+            return any(s <= sb['start'] and sb['stop'] <= e for s, e in owned_spans)
         emitted_lines = {r['line'] for r in rows if r['kind'] == 'code'}
         for sb in self._scorer_blocks():
             if sb['line'] in emitted_lines:
                 continue
+            if _covered(sb):
+                continue                      # carried by its enclosing owned unit
             verdict = 'CARRY' if sb['verdict'] == 'TRANSPLANT' else 'DEV'
             node = {'id': None, 'line': sb['line']}
             rows.append(dict(node=None, tag=sb['tag'], verdict=verdict, kind='code',
@@ -406,6 +466,56 @@ class DiffEngine:
     # ---- VAR-section scan (global + per-procedure local) -------------------
     _VAR_DECL = re.compile(r'^      (\w+)@(\d+)\s*:\s*(.+?);\s*$')
     _PROC_HDR = re.compile(r'^    (?:LOCAL )?PROCEDURE\s+\w+@(\d+)\s*\(')
+    # Full procedure header capturing NAME and ID (identity = name@id). An
+    # optional attribute line ([Internal]/[Integration]/[External]/[Event...])
+    # may sit on its own line directly above; that line is carried WITH the
+    # procedure as one atom (see _proc_units).
+    _PROC_NAME = re.compile(r'^    (?:LOCAL )?PROCEDURE\s+(\w+)@(\d+)\s*\(')
+    _ATTR_LINE = re.compile(r'^    \[[A-Za-z][\w ]*\]\s*$')
+
+    def _proc_units(self, lines):
+        """Return {name@id: {'start','end','text','local'}} for every procedure
+        in the CODE section. 'start' is the index of the attribute line if one
+        directly precedes the signature, else the signature line; 'end' is the
+        index of the procedure's terminating END; (inclusive). 'text' is the
+        verbatim slice. Identity is name@id so a customer procedure absent from
+        B is detectable by key difference. We stop scanning at the CODE-section
+        trailer (the object-level 'BEGIN' followed by '{')."""
+        units = {}
+        i = 0
+        n = len(lines)
+        while i < n:
+            pm = self._PROC_NAME.match(lines[i])
+            if pm:
+                name, pid = pm.group(1), pm.group(2)
+                start = i
+                # absorb a directly-preceding attribute line ([Internal] etc.)
+                if i - 1 >= 0 and self._ATTR_LINE.match(lines[i - 1]):
+                    start = i - 1
+                local = lines[i].lstrip().startswith('LOCAL')
+                # walk to the procedure's terminating END; (depth on BEGIN/END
+                # at 4-space proc indent). The body's first BEGIN opens depth 1;
+                # matching END; at the same indent closes the procedure.
+                j = i + 1
+                depth = 0
+                seen_begin = False
+                while j < n:
+                    s = lines[j].strip()
+                    if s == 'BEGIN' or s.startswith('BEGIN '):
+                        depth += 1; seen_begin = True
+                    elif s == 'END;' or s == 'END':
+                        depth -= 1
+                        if seen_begin and depth <= 0:
+                            break
+                    j += 1
+                units[f'{name}@{pid}'] = {
+                    'start': start, 'end': j, 'local': local,
+                    'text': '\n'.join(lines[start:j + 1]),
+                }
+                i = j + 1
+                continue
+            i += 1
+        return units
 
     def _var_blocks(self, lines):
         """Return [{'scope', 'decls': {name: (line_idx, value)}}] for every VAR

@@ -65,11 +65,11 @@ the objects the tool has flagged.
 
 ### 2.1 The application
 
-The tool is a single Windows application, **`CUupdate.exe`**. The machine it runs on does not
+The tool is a single Windows application, **`CUupdate_1.9.exe`**. The machine it runs on does not
 need any additional software installed — everything required is contained within the
 application.
 
-1. Copy `CUupdate.exe` to the machine, or run it from where it is stored.
+1. Copy `CUupdate_1.9.exe` to the machine, or run it from where it is stored.
 2. Double-click it.
 3. The **CU Update — batch merge** window opens.
 
@@ -174,7 +174,7 @@ The point to remember is that the tool's input files must already be language-st
 
 ### 4.1 Steps
 
-1. Double-click `CUupdate.exe`.
+1. Double-click `CUupdate_1.9.exe`.
 2. Next to **Job folder**, click **Browse…** and select the folder that contains the `A\` and
    `B\` sub-folders.
 3. Enter the **CU token** (for example `CU26Q1`) and your **Initials** (for example `RL`). These
@@ -325,7 +325,7 @@ The tool is normally used only through the window described above. This section 
 contained within the application, for background.
 
 The application is built from a small set of Python modules, which are bundled together into the
-single `CUupdate.exe` file. No part of this is required at run time other than the application
+single `CUupdate_1.9.exe` file. No part of this is required at run time other than the application
 itself.
 
 | Component | Responsibility |
@@ -338,7 +338,7 @@ itself.
 | Executor | Builds the merged object C and performs the header and changelog bookkeeping. |
 
 The application is produced once, on a Windows machine, from the project source. It is then
-distributed as the single `CUupdate.exe` file. End users are given the finished application and
+distributed as the single `CUupdate_1.9.exe` file. End users are given the finished application and
 do not build it themselves.
 
 ---
@@ -373,7 +373,7 @@ Each object type has its own handler. The current status is:
 
 | Object type | Status | What runs |
 |---|---|---|
-| **Table** | Merges automatically | field graft, code transplant, caption and option carry, description-tag carry, variable-declaration carry, changelog carry, header bookkeeping |
+| **Table** | Merges automatically | field graft, whole-procedure graft, code transplant, caption and option carry, description-tag carry, variable-declaration carry, changelog carry, header bookkeeping |
 | **Codeunit** | Merges automatically | code transplant, changelog carry, header bookkeeping (no field rules) |
 | **Page** | Merges automatically | control-add graft, caption and option carry with a vendor-rename guard, variable-declaration carry, changelog carry |
 | **Report** | Manual review only | the whole object is sent to manual review until a handler is built |
@@ -403,8 +403,29 @@ scored block.
   dropped, because they are customisations of a vendor object — even though their numbers fall in
   the customer range. (The rule to exclude object numbers 50000 to 99999 applies to whole
   whole customer objects, not to customer fields added inside a vendor object.)
+- *Validated on Table 36:* a customer field's own trigger code may be tagged with a ticket
+  number that is not in the version list (field 50090's `OnValidate` is tagged `AP001691`, while
+  the version list lists `AP001651`). Because the field is a customer addition — proven by its
+  number and its absence from B — the trigger code travels with the field and is **not** checked
+  against the customer-tag list. Ownership of the enclosing field is established first; the tag
+  inside it is then only corroborating evidence, never the deciding factor.
 
-#### 8.1.2 A changelog entry takes priority over a misleading vendor tag — CARRY
+#### 8.1.2 A whole customer procedure added to a vendor table — CARRY (procedure graft)
+
+A `PROCEDURE` or `LOCAL PROCEDURE` whose name and id are present in A but absent from B can only
+be a customer addition: the vendor never had it to upgrade. The whole procedure is carried
+forward verbatim — its attribute line (for example `[Internal]`), its signature, its local
+variable block, and its full body — and placed at the end of the object's CODE section, a
+position that always compiles because procedure order does not matter in C/AL. The carry is
+confirmed by a customer tag inside the procedure, so that a vendor procedure that was merely
+renamed in the new version is never mistaken for a customer addition and duplicated.
+
+- *Validated on Table 36:* `GetConsignmentBranchShipmentLines` is present in A, absent from B,
+  and tagged `AP001651` in its body. It is carried forward whole. Its body code is not scored as
+  a loose block — it travels with the procedure, the same way a new field's trigger code travels
+  with the field.
+
+#### 8.1.3 A changelog entry takes priority over a misleading vendor tag — CARRY
 
 If a field that exists only in A carries a vendor-looking description tag, but a customer
 changelog entry clearly identifies it as a customer addition, the changelog entry takes priority
@@ -414,7 +435,7 @@ and the field is carried forward.
   changelog entry "Add External Document No." was the true justification, so the field was
   carried rather than treated as a vendor deletion.
 
-#### 8.1.3 A whole field, present only in A, with no tag and no changelog entry — MANUAL
+#### 8.1.4 A whole field, present only in A, with no tag and no changelog entry — MANUAL
 
 A field that is present in A but not in B, with neither a customer tag nor a changelog entry, is
 ambiguous: it could be a vendor deletion or a customer addition. Because a whole missing field
@@ -422,7 +443,7 @@ can fail quietly, it is sent to manual review rather than guessed.
 
 - *Validated on Table 38:* field 70000, "RUID", is sent to manual review.
 
-#### 8.1.4 A customer code block inside a changed shared field or trigger — the scorer decides
+#### 8.1.5 A customer code block inside a changed shared field or trigger — the scorer decides
 
 A customer-tagged code block (in the `// Start <TAG>` … `// Stop <TAG>` form, or the brace form)
 inside a shared node is passed to the anchor scorer. The scorer decides between CARRY
@@ -447,7 +468,7 @@ coherent position, in B. There are three content classes:
 - *Validated on Table 80:* a CASE-branch code block in a field trigger transplants correctly once
   the insertion point is chosen as the closest valid pair of anchors.
 
-#### 8.1.5 A caption or option change — CARRY (always take the customer value)
+#### 8.1.6 A caption or option change — CARRY (always take the customer value)
 
 On **any** difference in `CaptionML`, `OptionCaptionML` or `OptionString`, the customer value is
 carried forward. No tag is required. This is low-risk and easy to verify in testing, so it is
@@ -465,7 +486,7 @@ tags are a subset of the customer's, so that a vendor-added tag is never lost.
 > part of the customer's). A mid-list vendor change can shift the option ordinals, so the item is
 > flagged for the developer to check.
 
-#### 8.1.6 A field with both a code change and an option change — both are carried
+#### 8.1.7 A field with both a code change and an option change — both are carried
 
 A field can have both a customer code block in its trigger and an extended option or caption.
 These are not treated as alternatives. The tool produces a scorer-routed code item and a caption
@@ -474,7 +495,7 @@ carry for the same field.
 - *Validated on Table 80:* field 9, "Type", had both a CASE branch and an extended option string,
   option caption and description tag. Both are carried.
 
-#### 8.1.7 Customer variable declarations — CARRY (keep rather than delete)
+#### 8.1.8 Customer variable declarations — CARRY (keep rather than delete)
 
 A variable declared in the VAR section of A — either the object-level (global) section, or a
 procedure-level (local) section — but absent from the matching section of B, is carried forward.
@@ -487,7 +508,7 @@ is simply to keep it.
 - *Validated on Table 81:* a global variable, `VendBankAccG`, used by carried code, was being
   dropped. It is now carried forward so that the merged object compiles.
 
-#### 8.1.8 A customer-extended option-string variable — CARRY
+#### 8.1.9 A customer-extended option-string variable — CARRY
 
 A variable present in both A and B, where both values are quoted text and the vendor's value is a
 leading part of the customer's value (that is, the customer appended options), takes the
@@ -497,7 +518,7 @@ test and is sent to the whole-object manual-review gate; the tool does not guess
 - *Validated on Page 347:* the customer's extension of the `ReportUsage2` option list is carried
   forward.
 
-#### 8.1.9 Header and changelog bookkeeping (every automatic merge)
+#### 8.1.10 Header and changelog bookkeeping (every automatic merge)
 
 When the tool builds C, it also performs the mechanical bookkeeping a hand merge would:
 
@@ -512,7 +533,7 @@ When the tool builds C, it also performs the mechanical bookkeeping a hand merge
   last, at the standard six-space indent. This is a combined list: it loses neither the vendor's
   new entries nor the customer's entries.
 
-#### 8.1.10 Differences in tag spelling are standardised
+#### 8.1.11 Differences in tag spelling are standardised
 
 A difference in tag spelling between the version list and the body (for example, `WBL-009` in the
 body against `WBL009` in the version list) is matched without regard to hyphens or full stops,
@@ -638,7 +659,7 @@ automatically only once its handler is built and validated against a real object
 
 ## 9. Quick reference
 
-**To run a job:** double-click `CUupdate.exe`; select the folder that contains `A\` and `B\`;
+**To run a job:** double-click `CUupdate_1.9.exe`; select the folder that contains `A\` and `B\`;
 enter the CU token and your initials; tick **Dry run**; click **Run merge**; review the report;
 remove the tick; click **Run merge** again.
 

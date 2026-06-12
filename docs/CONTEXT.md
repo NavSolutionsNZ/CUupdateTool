@@ -1048,3 +1048,51 @@ never describe behaviour the engine no longer has, nor omit a rule the engine no
 **Files:** docs/USER_MANUAL.md (NEW), docs/USER_MANUAL.docx (NEW, generated), docs/build_manual.js
 (NEW, reproducible builder), docs/img/{gui-launch,gui-running,gui-report,folders-after-run}.png
 (NEW), docs/CONTEXT.md (§7 maintenance rule + this §8.21 entry).
+
+---
+
+**§8.22 — Structural ownership before tag-justification; T36 now auto-merges (v1.9)**
+
+Origin: compile errors in the dev env from auto-merged objects (`ShowStatusHistory`,
+`GetPostingActionAccessPermission` etc. "unknown variable"). Investigation showed these were
+NOT merge defects — they were cross-object compile-ORDER ghosts: a page calling a NEW vendor
+function on its source table (T18, T36) before that table was merged/compiled. Clearing T18 then
+T36 (recompiling dependents) resolved them. The real lesson for the tool: nothing forces "tables
+green first, then unconditionally recompile every dependent page" — a Stage-6 compile-orchestration
+gap (two-pass compile script still TODO, independent of this change).
+
+The substantive engine change came from T36 itself, which correctly gated to DEV on 3 blocks but
+was in fact safely auto-mergeable:
+- Fields **50090/50091** (Consignment, 50000-range, absent from B) carry whole as field-grafts; their
+  `OnValidate` code is tagged **AP001691**, a ticket number NOT in the Version List census
+  (`AP001651,AP2263,AP2308`). The scorer independently found those blocks, couldn't anchor them
+  (no vendor neighbour — the enclosing field is customer-added), scored 0 → DEV, gating the object.
+- **GetConsignmentBranchShipmentLines@39** (absent from B, body tagged AP001651) likewise had no
+  vendor anchor → scored 0 → DEV.
+
+Fix (agreed rule): **establish structural ownership of the enclosing unit FIRST; only fall back to
+census tag-justification for blocks landing inside vendor-owned units.**
+- **50000-range fields carry regardless of tagging** (confirmed standing rule). Vendor-range fields
+  check `Description=` for an **AP######** customer marker (narrowed to AP — a customer-local ticket
+  prefix, never used by the vendor).
+- **proc-graft**: a procedure whose `name@id` is absent from B is a customer addition → carry the
+  whole unit verbatim (incl. `[Internal]` attr) at end of CODE section. Require a customer tag in the
+  unit (guards against a vendor proc renamed in B looking "absent").
+- **scorer suppression**: code blocks inside an already-owned atom (added field / proc-graft) are
+  carried with it; the scorer no longer emits competing DEV rows for them.
+
+Result: T36 auto-merges (4 field-grafts, 2 captions, 1 code AP2263, 1 proc-graft; **zero DEV**),
+reproducing the hand-merge byte-for-byte (procedure at end-of-CODE — the safe unambiguous anchor;
+field 7001 ordering is developer-discretion and not load-bearing). P21 still gates (proves no
+over-carry). Frozen as an EXEC fixture (`Merged_T36.stripped.txt` regenerated — the prior hand-merge
+gold had a dropped `END;` that would not compile; the tool output is the corrected gold).
+
+**Versioning (new standing convention):** tool version is tracked in `cuupdate/__init__.py`
+(`__version__`), starting **1.9**, +0.1 per release to whole numbers. `cu.spec` names the frozen exe
+`CUupdate_<version>.exe`; the GUI title shows `v<version>`.
+
+**Files:** cuupdate/diffengine.py (`_proc_units`, `_unit_tags`, proc-graft + scorer-suppression in
+classify), cuupdate/execute.py (proc-graft insertion, `_b_code_trailer_idx`, `proc-graft` executable
+kind), cuupdate/__init__.py (NEW `__version__`), cu.spec (versioned exe name), cuupdate/cu_gui.py
+(version in title), tests/test_diffengine.py (T36 → EXEC; verdict expectation updated),
+tests/fixtures/Merged_T36.stripped.txt (regenerated correct gold).
