@@ -41,13 +41,19 @@ except Exception:
         _VERSION = "1.9"
 
 
-def derive_cust(root):
-    """Run the census on <root> and return (cust_csv, summary_str).
-    Falls back to run_batch's default if no A-side objects are found."""
+def derive_cust(root, force_vendor=None, force_cust=None):
+    """Run the census on <root> with the developer's review deltas applied.
+
+    Returns (cust_csv, summary_str, lists) where lists is
+    {'cust': [(prefix, count), ...], 'vendor': [(prefix, count), ...]}
+    so the GUI can populate its two list boxes. cust_csv is None if no
+    A-side objects were found.
+    """
     try:
-        result = census.census(root, census.DEFAULT_VENDOR_EXCLUSIONS)
+        result = census.census(root, census.DEFAULT_VENDOR_EXCLUSIONS,
+                               force_vendor=force_vendor, force_cust=force_cust)
     except SystemExit as e:                 # census exits if no A objects
-        return None, f"census: {e}"
+        return None, f"census: {e}", {'cust': [], 'vendor': []}
     prefixes = result['prefixes']
     cust = sorted(p for p, r in prefixes.items() if not r['vendor'])
     vendor = sorted(p for p, r in prefixes.items() if r['vendor'])
@@ -55,7 +61,11 @@ def derive_cust(root):
     summary = (f"census: {n} objects -> customer tags "
                f"{','.join(cust) or '(none)'}"
                + (f"  [excluded vendor: {','.join(vendor)}]" if vendor else ""))
-    return ','.join(cust), summary
+    lists = {
+        'cust': [(p, prefixes[p]['count']) for p in cust],
+        'vendor': [(p, prefixes[p]['count']) for p in vendor],
+    }
+    return ','.join(cust), summary, lists
 
 
 class App:
@@ -118,12 +128,51 @@ class App:
                              "prevents matching letters inside words)",
                   foreground="#666").grid(row=6, column=1, sticky='w')
 
+        # --- Tag attribution review (two-list view) -----------------------
+        # The census proposes a customer/vendor split from each object's
+        # Version List. The startswith vendor filter is only a first pass; a
+        # prefix can be mis-attributed (a vendor prefix the filter missed, or a
+        # customer prefix it wrongly swallowed). After a dry run populates these
+        # lists, the developer moves any mis-attributed prefix to the correct
+        # side with the arrow buttons. Customer prefixes gate customer
+        # code-block carries; vendor prefixes do not. Empty until the first
+        # (dry) run has produced a census.
+        attr = ttk.LabelFrame(master, text="Tag attribution "
+                              "(run a dry run to populate; move mis-attributed prefixes)")
+        attr.pack(fill='x', padx=8, pady=4)
+
+        ttk.Label(attr, text="Customer tags").grid(row=0, column=0, padx=4, pady=(4, 0))
+        ttk.Label(attr, text="Excluded as vendor").grid(row=0, column=2, padx=4, pady=(4, 0))
+
+        self.cust_list = tk.Listbox(attr, height=6, width=24,
+                                    exportselection=False, font=('Consolas', 9))
+        self.cust_list.grid(row=1, column=0, padx=4, pady=4, sticky='ns')
+
+        movebtns = ttk.Frame(attr)
+        movebtns.grid(row=1, column=1, padx=2)
+        ttk.Button(movebtns, text="\u2192", width=3,
+                   command=self.move_to_vendor).pack(pady=2)
+        ttk.Button(movebtns, text="\u2190", width=3,
+                   command=self.move_to_cust).pack(pady=2)
+
+        self.vendor_list = tk.Listbox(attr, height=6, width=24,
+                                      exportselection=False, font=('Consolas', 9))
+        self.vendor_list.grid(row=1, column=2, padx=4, pady=4, sticky='ns')
+
+        ttk.Label(attr, text="\u2192 marks a prefix as vendor (no customer carry);  "
+                             "\u2190 marks it as a customer tag.",
+                  foreground="#666").grid(row=2, column=0, columnspan=3,
+                                          sticky='w', padx=4, pady=(0, 4))
+
         # Buttons
         btns = ttk.Frame(master)
         btns.pack(fill='x', **pad)
         self.run_btn = ttk.Button(btns, text="Run merge", command=self.on_run)
         self.run_btn.pack(side='left')
-        self.dry_var = tk.BooleanVar(value=False)
+        # Default ON: the first run is a dry run so the census populates the
+        # attribution lists for review before anything mutates the filesystem.
+        # The developer unticks it for the real run.
+        self.dry_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(btns, text="Dry run (classify only, move nothing)",
                         variable=self.dry_var).pack(side='left', padx=12)
 
@@ -142,6 +191,60 @@ class App:
     def _field(self, parent, label, var, row):
         ttk.Label(parent, text=label, width=22).grid(row=row, column=0, sticky='w', pady=2)
         ttk.Entry(parent, textvariable=var, width=40).grid(row=row, column=1, sticky='w')
+
+    # --- attribution list state --------------------------------------------
+    # _counts: prefix -> occurrence count (for the display label).
+    # _orig_cust/_orig_vendor: the census's FIRST-PASS proposal (before any
+    # developer move), so the deltas we send back are computed relative to it:
+    #   force_vendor = prefixes now on the vendor side that started customer
+    #   force_cust   = prefixes now on the customer side that started vendor
+    _counts = {}
+    _orig_cust = set()
+    _orig_vendor = set()
+
+    def _fmt(self, pfx):
+        return f"{pfx:8} x{self._counts.get(pfx, 0)}"
+
+    def _pfx_of(self, label):
+        return label.split()[0] if label else ''
+
+    def populate_lists(self, lists):
+        """Fill both list boxes from a census result, recording the original
+        proposal so subsequent moves can be expressed as deltas."""
+        self._counts = {p: c for p, c in lists['cust'] + lists['vendor']}
+        self._orig_cust = {p for p, _ in lists['cust']}
+        self._orig_vendor = {p for p, _ in lists['vendor']}
+        self.cust_list.delete(0, 'end')
+        self.vendor_list.delete(0, 'end')
+        for p, _ in lists['cust']:
+            self.cust_list.insert('end', self._fmt(p))
+        for p, _ in lists['vendor']:
+            self.vendor_list.insert('end', self._fmt(p))
+
+    def _move(self, src, dst):
+        sel = src.curselection()
+        if not sel:
+            return
+        label = src.get(sel[0])
+        src.delete(sel[0])
+        dst.insert('end', label)
+
+    def move_to_vendor(self):
+        self._move(self.cust_list, self.vendor_list)
+
+    def move_to_cust(self):
+        self._move(self.vendor_list, self.cust_list)
+
+    def current_overrides(self):
+        """Return (force_vendor, force_cust) as the delta from the original
+        census proposal to the current list state."""
+        cur_vendor = {self._pfx_of(self.vendor_list.get(i))
+                      for i in range(self.vendor_list.size())}
+        cur_cust = {self._pfx_of(self.cust_list.get(i))
+                    for i in range(self.cust_list.size())}
+        force_vendor = sorted(cur_vendor - self._orig_vendor)   # moved cust->vendor
+        force_cust = sorted(cur_cust - self._orig_cust)         # moved vendor->cust
+        return force_vendor, force_cust
 
     def pick_root(self):
         d = filedialog.askdirectory(title="Select job folder (contains A and B)")
@@ -189,16 +292,23 @@ class App:
 
         self._set_busy(True)
         self.log.delete('1.0', 'end')
+        force_vendor, force_cust = self.current_overrides()
         t = threading.Thread(target=self._work,
                              args=(root, cu, initials, date, text, date_format,
-                                   cust_digits, self.dry_var.get()),
+                                   cust_digits, self.dry_var.get(),
+                                   force_vendor, force_cust),
                              daemon=True)
         t.start()
 
-    def _work(self, root, cu, initials, date, text, date_format, cust_digits, dry):
+    def _work(self, root, cu, initials, date, text, date_format, cust_digits, dry,
+              force_vendor, force_cust):
         try:
-            cust, summary = derive_cust(root)
+            cust, summary, lists = derive_cust(root, force_vendor=force_vendor,
+                                               force_cust=force_cust)
             self.q.put(summary + "\n")
+            # Hand the classified lists back to the UI thread to repopulate the
+            # two boxes (Tkinter widgets must only be touched on the main thread).
+            self.q.put(("LISTS", lists))
             if cust is None:
                 self.q.put("No customer tags derived; aborting.\n")
                 self.q.put(("DONE", None))
@@ -225,6 +335,8 @@ class App:
                         n_n = len(r.get('nocu', []))
                         self._write(f"\n--- {n_m} auto-merged, {n_n} no CU change, "
                                     f"{n_d} left for manual review ---\n")
+                elif isinstance(item, tuple) and item and item[0] == "LISTS":
+                    self.populate_lists(item[1])
                 else:
                     self._write(item)
         except queue.Empty:

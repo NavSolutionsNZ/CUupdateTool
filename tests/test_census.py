@@ -108,9 +108,44 @@ def test_end_to_end():
     return ok1 and ok2
 
 
+def test_review_deltas():
+    print("review deltas (force_vendor / force_cust):")
+    objs = {
+        'EX-T1.txt': 'NAVW1.x,AP001651,WBL,ZZ999',  # ZZ: filter calls it customer
+        'EX-T2.txt': 'N.7.2.1,ZZ001',                # N: filter calls it vendor
+    }
+    with tempfile.TemporaryDirectory() as root:
+        a_tbl = os.path.join(root, 'A', 'Table')
+        os.makedirs(a_tbl)
+        for fn, vl in objs.items():
+            with open(os.path.join(a_tbl, fn), 'w', encoding='latin-1') as f:
+                f.write(f"OBJECT Table 0 X\n{{\n  OBJECT-PROPERTIES\n  {{\n"
+                        f"    Version List={vl};\n  }}\n}}\n")
+        base = census.census(root, VEND)
+        bc = sorted(p for p, r in base['prefixes'].items() if not r['vendor'])
+        bv = sorted(p for p, r in base['prefixes'].items() if r['vendor'])
+
+        corr = census.census(root, VEND, force_vendor=['ZZ'], force_cust=['N'])
+        cc = sorted(p for p, r in corr['prefixes'].items() if not r['vendor'])
+        cv = sorted(p for p, r in corr['prefixes'].items() if r['vendor'])
+
+        # force_vendor wins ties: a prefix in both lands vendor (safe direction)
+        tie = census.census(root, VEND, force_vendor=['WBL'], force_cust=['WBL'])
+        tie_wbl_vendor = tie['prefixes']['WBL']['vendor']
+
+    ok1 = check('baseline customer', bc, ['AP', 'WBL', 'ZZ'])
+    ok2 = check('baseline vendor', bv, ['N', 'NAVW'])
+    ok3 = check('corrected customer (ZZ out, N in)', cc, ['AP', 'N', 'WBL'])
+    ok4 = check('corrected vendor (ZZ in, N out)', cv, ['NAVW', 'ZZ'])
+    ok5 = check('ZZ forced flag', corr['prefixes']['ZZ']['forced'], 'vendor')
+    ok6 = check('N forced flag', corr['prefixes']['N']['forced'], 'cust')
+    ok7 = check('tie -> vendor wins', tie_wbl_vendor, True)
+    return all([ok1, ok2, ok3, ok4, ok5, ok6, ok7])
+
+
 def main():
     tests = [test_prefix_of, test_is_vendor, test_tokens_of,
-             test_read_version_list, test_end_to_end]
+             test_read_version_list, test_end_to_end, test_review_deltas]
     results = [t() for t in tests]
     n_ok = sum(results)
     print(f"\n{n_ok}/{len(results)} test groups passed")

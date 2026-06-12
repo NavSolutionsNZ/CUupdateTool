@@ -97,15 +97,33 @@ def find_a_objects(root, loose=False):
     return sorted(found)
 
 
-def census(root, exclusions, loose=False):
-    """Build the prefix census. Returns a dict with per-prefix evidence."""
+def census(root, exclusions, loose=False, force_vendor=None, force_cust=None):
+    """Build the prefix census. Returns a dict with per-prefix evidence.
+
+    The startswith filter (`exclusions`) is only a FIRST PASS. A developer
+    reviewing the dry-run census can correct mis-attributions with two deltas:
+
+      - force_vendor: prefixes the filter left as customer that are really
+        vendor (mark vendor; they stop gating customer code-block carries).
+      - force_cust:   prefixes the filter swallowed as vendor that are really
+        customer (mark customer; they start gating carries).
+
+    Both are sets of bare uppercased prefixes. force_vendor wins ties (a prefix
+    listed in both is treated as vendor - the safe direction, since making a
+    real customer prefix vendor only drops a carry, never injects vendor code).
+    The override is recorded per-prefix as rec['forced'] so the report/artifact
+    can show WHY a prefix landed where it did.
+    """
     objs = find_a_objects(root, loose=loose)
     if not objs:
         where = "A/<Type>/EX-*.txt" + (" or Cust_*.txt" if loose else "")
         sys.exit(f"no A-side objects found under {root} ({where})")
 
+    force_vendor = {p.upper() for p in (force_vendor or [])}
+    force_cust = {p.upper() for p in (force_cust or [])}
+
     # prefix -> {count, vendor(bool), example tokens, objects seen in}
-    prefixes = defaultdict(lambda: {'count': 0, 'vendor': False,
+    prefixes = defaultdict(lambda: {'count': 0, 'vendor': False, 'forced': None,
                                     'tokens': set(), 'objects': set()})
     no_version = []
 
@@ -125,8 +143,13 @@ def census(root, exclusions, loose=False):
 
     # A prefix is vendor only if EVERY token under it is vendor; a single
     # customer-looking token makes the whole prefix a candidate (shown for review).
+    # Then apply the developer's review deltas on top. force_vendor wins ties.
     for pfx, rec in prefixes.items():
         rec['vendor'] = all(is_vendor(t, exclusions) for t in rec['tokens'])
+        if pfx in force_vendor:
+            rec['vendor'], rec['forced'] = True, 'vendor'
+        elif pfx in force_cust:
+            rec['vendor'], rec['forced'] = False, 'cust'
 
     return {
         'objects_scanned': [l for l, _ in objs],
@@ -140,14 +163,18 @@ def print_table(result, exclusions):
     cust = sorted(p for p, r in prefixes.items() if not r['vendor'])
     vendor = sorted(p for p, r in prefixes.items() if r['vendor'])
 
+    def mark(p):
+        f = prefixes[p].get('forced')
+        return ' (forced)' if f else ''
+
     n = len(result['objects_scanned'])
     print(f"\n=== Stage 0 prefix census ({n} objects) ===")
     print(f"Vendor filter: {','.join(exclusions)}")
     print(f"\nCustomer tags ({len(cust)}):")
     for p in cust:
-        print(f"  {p:8} x{prefixes[p]['count']}")
+        print(f"  {p:8} x{prefixes[p]['count']}{mark(p)}")
     if vendor:
-        print(f"Excluded as vendor: {', '.join(vendor)}")
+        print(f"Excluded as vendor: {', '.join(p + mark(p) for p in vendor)}")
     if result['objects_without_version_list']:
         print(f"No Version List in: {', '.join(result['objects_without_version_list'])}")
     print(f"\nProposed --cust: {','.join(cust)}\n")
@@ -165,6 +192,7 @@ def write_artifact(out_path, result, exclusions, cust):
             p: {
                 'count': r['count'],
                 'vendor': r['vendor'],
+                'forced': r.get('forced'),
                 'tokens': sorted(r['tokens']),
                 'objects': sorted(r['objects']),
             } for p, r in sorted(prefixes.items())
@@ -185,12 +213,22 @@ def main():
                         'If omitted, only the table is printed.')
     p.add_argument('--loose', action='store_true',
                    help='also scan flat Cust_*.txt in --root (pre-A/-tree)')
+    p.add_argument('--force-vendor', default='',
+                   help='comma-separated prefixes the filter left as customer '
+                        'but are really vendor (re-classify as vendor; they stop '
+                        'gating customer code-block carries)')
+    p.add_argument('--force-cust', default='',
+                   help='comma-separated prefixes the filter swallowed as vendor '
+                        'but are really customer (re-classify as customer)')
     a = p.parse_args()
 
     root = os.path.abspath(a.root)
     exclusions = [s.strip().upper() for s in a.vend.split(',') if s.strip()]
+    force_vendor = [s.strip().upper() for s in a.force_vendor.split(',') if s.strip()]
+    force_cust = [s.strip().upper() for s in a.force_cust.split(',') if s.strip()]
 
-    result = census(root, exclusions, loose=a.loose)
+    result = census(root, exclusions, loose=a.loose,
+                    force_vendor=force_vendor, force_cust=force_cust)
     cust = print_table(result, exclusions)
 
     if a.out:

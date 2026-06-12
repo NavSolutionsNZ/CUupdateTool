@@ -60,3 +60,18 @@ census — you do not enter them.
 - **Errors / unmatched** → left in place, listed in the report.
 
 Use the **Dry run** checkbox to classify without writing or moving anything.
+It is **ticked by default**: the first run is a dry run so the **Tag attribution**
+lists populate from the census for review before anything is written. Untick it
+for the real run.
+
+## Tag attribution review (two-list view)
+
+The census proposes a customer / vendor split from each object's version list.
+The vendor filter is only a first pass, so a prefix can be mis-attributed. After
+a dry run, the two lists under **Tag attribution** show the proposed split —
+**Customer tags** on the left, **Excluded as vendor** on the right. Select a
+mis-attributed prefix and use **→** to mark it vendor (it stops gating customer
+code-block carries) or **←** to mark it a customer tag. Run again to apply the
+correction. The lists are session state; reopening the GUI requires a fresh dry
+run to repopulate. The same corrections are available on the CLI via
+`census.py --force-vendor` / `--force-cust`.

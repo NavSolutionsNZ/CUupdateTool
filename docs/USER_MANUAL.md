@@ -90,9 +90,10 @@ There is nothing to configure the first time it is run.
 | **Changelog text** | The standard text for the changelog entry. The default is `CU upgrade.` |
 | **Date** | Leave blank to use today's date. |
 | **Customer DB date format** | `DD/MM/YY` (the default) or `MM/DD/YY`. See section 4.3. |
-| **Prefixes needing digits** | Optional. Comma-separated list of customer prefixes that should only be treated as a customer tag when followed by digits, for example `AP`. Leave blank if not needed. See section 4.5. |
+| **Prefixes needing digits** | Optional. Comma-separated list of customer prefixes that should only be treated as a customer tag when followed by digits, for example `AP`. Leave blank if not needed. See section 4.6. |
 | **Run merge** | Starts the job. |
-| **Dry run** | Classifies the objects and produces the report, but writes and moves nothing. See section 5.1. |
+| **Dry run** | Classifies the objects and produces the report, but writes and moves nothing. **Ticked by default** so the first run populates the Tag attribution lists for review. See section 5.1. |
+| **Tag attribution** | Two lists (Customer tags / Excluded as vendor) populated after a dry run. Move a mis-attributed prefix with the **→** / **←** buttons. See section 4.5. |
 
 The customer tags are determined by the tool automatically and are not entered by hand. See
 section 4.4.
@@ -187,11 +188,13 @@ The point to remember is that the tool's input files must already be language-st
 5. Leave **Date** blank to use today's date.
 6. Set **Customer DB date format** to match the customer database. See section 4.3.
 7. If this customer has a short prefix that needs trailing digits (for example `AP`), enter it in
-   **Prefixes needing digits**. Otherwise leave it blank. See section 4.5.
-8. For the first pass, tick **Dry run**. See section 5.1.
+   **Prefixes needing digits**. Otherwise leave it blank. See section 4.6.
+8. **Dry run** is ticked by default for the first pass. Leave it ticked. See section 5.1.
 9. Click **Run merge**.
-10. Read the report in the lower panel. If the dry run is satisfactory, remove the **Dry run**
-    tick and click **Run merge** again to perform the merge.
+10. Read the report and check the **Tag attribution** lists. If any prefix is on the wrong
+    side, move it with the **→** / **←** buttons (section 4.5) and click **Run merge** again.
+    Once the attribution and the dry-run report are satisfactory, remove the **Dry run** tick
+    and click **Run merge** to perform the merge.
 
 ### 4.2 What "Run merge" does
 
@@ -238,7 +241,28 @@ census: 75 objects -> customer tags AP,APOP,DC,ESKER,KS,N,WBL  [excluded vendor:
 
 The customer tags are not entered by hand.
 
-### 4.5 Prefixes that need trailing digits
+### 4.5 Correcting a mis-attributed tag (Tag attribution lists)
+
+The split in section 4.4 is a **proposal**. The vendor filter is a first pass and
+can occasionally put a prefix on the wrong side — a vendor prefix it did not
+recognise ends up in the customer list, or a customer prefix it wrongly matched
+ends up excluded as vendor. The **Tag attribution** panel lets you correct this.
+
+After a dry run the panel shows two lists: **Customer tags** on the left and
+**Excluded as vendor** on the right, each prefix with its occurrence count.
+To move a prefix, select it and click the arrow:
+
+- **→** moves a prefix from Customer to Vendor. It will no longer gate customer
+  code-block carries — use this for a vendor prefix the filter missed.
+- **←** moves a prefix from Vendor to Customer. It will start gating customer
+  carries — use this for a customer prefix the filter wrongly excluded.
+
+Move the prefixes you need to correct, then run again so the correction takes
+effect. The lists are cleared when you close the tool; a fresh dry run
+repopulates them. Because the first run is a dry run by default (section 5.1),
+you always get to review and correct the split before anything is written.
+
+### 4.6 Prefixes that need trailing digits
 
 This optional field controls **how a customer prefix is recognised in the body of an object**, and
 works together with the automatic tags from section 4.4. It is a global setting for the job — an
@@ -266,9 +290,11 @@ a customer's own procedures appended to a codeunit — to be identified as needi
 ### 5.1 Use Dry run first
 
 The **Dry run** option classifies every object and prints the full report **without writing or
-moving any files**. Use it to preview a job: it shows which objects need no merge, which will be
-merged automatically, and which will be left for manual review, before anything is changed. When
-the preview is satisfactory, remove the tick and run the merge.
+moving any files**. It is **ticked by default**, so the first run of any job is always a preview:
+it shows which objects need no merge, which will be merged automatically, and which will be left
+for manual review, and it populates the **Tag attribution** lists (section 4.5) so you can correct
+the customer / vendor split before anything is changed. When the preview and the attribution are
+satisfactory, remove the tick and run the merge.
 
 ### 5.2 Where the files go after a merge
 
