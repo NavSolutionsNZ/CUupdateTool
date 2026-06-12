@@ -1333,3 +1333,59 @@ copy, `_moved_unchanged` → `Unchanged_*`, report section, results dict), cuupd
 (short-circuit print), cuupdate/cu_gui.py (summary count), cuupdate/__init__.py (2.3),
 tests/test_diffengine.py (no-CU-change known-answer layer: 3 fire + 4 no-fire),
 tests/fixtures/{EX,CU}-C1201.stripped.txt (NEW), docs/{ARCHITECTURE,CONTEXT,USER_MANUAL}.md.
+
+---
+
+**§8.27 — No-CU-change category 5: customer-token-anywhere + token-shape addendum; C10; v2.4**
+
+**One-liner:** *C10 is a no-vendor-change object the §8.26 contract missed: the customer appended whole
+procedures (`Evaluate_WBL`, `TryEvaluateDate_WBL`, a `"---- WBL ----"` separator) carrying the WBL
+token in LIVE CODE — no `//` markers, no `Start..Stop` block, so categories 1–4 saw ~80 unattributed
+lines and fell to merge. New category 5: a customer TOKEN (the prefix itself) anywhere as a bounded
+unit is customer-attributed; in a PROCEDURE header it attributes the whole procedure span. Token shape
+is a global per-job addendum to the version list (digits-optional WBL vs digits-required AP). Fires
+C10; C1201/C231/C232 still fire; T14/T36/T77/P14/P347 still merge. Suite green.*
+
+**Driver (Rich):** asked why C10 (Codeunit 10, customer tag WBL) did not qualify and whether a rule was
+possible. C10's WBL work is entirely new appended procedures — the customer's date-format helper
+(`Evaluate_WBL` → `TryEvaluateDate_WBL`), no inline tags, no blocks.
+
+**The signal — what's actually customer-owned.** Walked several candidates and Rich corrected the
+unsafe ones: the `@1101353xxx` ID range is **system-assigned, not customer-allocated** — cannot be used
+for ownership. The reliable signal is the **prefix token itself**: for this customer WBL is a letter
+combination that never appears in real words or vendor prose, so its mere presence (in an identifier, a
+comment, a separator — anywhere) is customer ownership. AP is the same but ALWAYS carries trailing
+digits (optional `_`/`-`). So attribution is token-anywhere, with a per-customer SHAPE rule.
+
+**Category 5 (new).** A body line bearing a customer token as a bounded unit is customer-attributed.
+When the token is in a `PROCEDURE`/`LOCAL PROCEDURE` header, the whole span header→next-procedure-
+boundary(or end-of-CODE) is attributed as one unit (Rich confirmed span-to-next-proc), so unsuffixed
+helper lines and comments inside a customer procedure carry too. Keys on the TOKEN, not on divider
+styling — the `"---- WBL ----"` separator is caught because its name contains WBL, not the dashes;
+Rich noted dash patterns won't be consistent, and bare WBL covers it anyway, so no dash rule exists.
+
+**Token-shape addendum (global, per-job) — "addendum to the version list".** Rich's framing: the
+version list stays authoritative for WHICH prefixes are in play; this says WHAT each looks like so it
+can be matched in the body. `cust_digit_required` set on the engine: a prefix in it matches only with
+trailing digits (`AP[_\-]?\d+`); else digits-optional (`WBL(?:[_\-]?\d+)?`). Token is bounded
+`(?<![A-Za-z])…(?![A-Za-z])`. **Safety is load-bearing for AP:** bare AP would match inside "Mapping",
+"APPLICATION" — verified it does NOT, while AP001662/AP_001662/AP-001662 do, and WBL/Evaluate_WBL do
+but "WBLah" does not. Blank default = all digits-optional (today's WBL behaviour). Yes/no-digits is
+enough to describe every customer shape foreseen (WBL, AP, ALM-next); exposed as GUI field "Prefixes
+needing digits" + `--cust-digits` (both CLIs). NOT hardcoded — ALM onboards by typing its shape, no
+code change.
+
+**Shared-path change — regression net.** Category 5 is broader than 1–4 (token anywhere), so the whole
+fixture set is the net. Verified: C10 fires; C1201/C231/C232 still fire; T14/T36/T77/P14/P347 still do
+NOT (T36's real vendor `// Start EU…` change and P14's APOP both correctly merge). C10 end-to-end:
+verbatim copy to `NoCuChangesDetected/` (byte-identical by `cmp`), sources moved `Unchanged_*`. Full
+suite green: diffengine PASS (9 no-CU-change assertions + token-shape safety), scorer 20/20, census
+5/5. Method still additive — `classify()`/`execute()` untouched.
+
+**Version bumped 2.3 → 2.4.** `CUupdate_2.4.exe`.
+
+**Files:** cuupdate/diffengine.py (cat 5 + `_cust_token_re` + whole-proc span + `cust_digit_required`
+ctor param), cuupdate/run_batch.py + run_one.py (`--cust-digits` / `cust_digits` thread-through),
+cuupdate/cu_gui.py ("Prefixes needing digits" field → `_work` → run), cuupdate/__init__.py (2.4),
+tests/test_diffengine.py (C10 fire case + token-shape safety assertion; AP digits-required),
+tests/fixtures/{EX,CU}-C10.stripped.txt (NEW), docs/{ARCHITECTURE,CONTEXT,USER_MANUAL}.md.

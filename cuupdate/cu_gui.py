@@ -101,6 +101,23 @@ class App:
         ttk.Radiobutton(fmt, text="MM/DD/YY", variable=self.date_fmt_var,
                         value="MMDDYY").pack(side='left', padx=8)
 
+        # Customer prefixes that only count as a tag WITH trailing digits.
+        # Customer prefixes themselves are derived automatically from the census
+        # (the version lists). This field is the per-customer SHAPE addendum: most
+        # prefixes (e.g. WBL) are safe as bare letters because the combination
+        # never appears in ordinary words, but a prose-risky prefix (e.g. AP,
+        # which would otherwise match inside "Mapping") must be listed here so it
+        # is only recognised when followed by digits (AP001662, AP_001662).
+        # Blank = all prefixes digits-optional.
+        self.cust_digits_var = tk.StringVar(value="")
+        ttk.Label(grid, text="Prefixes needing digits:", width=22).grid(
+            row=5, column=0, sticky='w', pady=2)
+        ttk.Entry(grid, textvariable=self.cust_digits_var, width=40).grid(
+            row=5, column=1, sticky='w')
+        ttk.Label(grid, text="comma-separated, e.g. AP  (blank = none; "
+                             "prevents matching letters inside words)",
+                  foreground="#666").grid(row=6, column=1, sticky='w')
+
         # Buttons
         btns = ttk.Frame(master)
         btns.pack(fill='x', **pad)
@@ -157,6 +174,7 @@ class App:
         text = self.text_var.get().strip() or "CU upgrade."
         date = self.date_var.get().strip()
         date_format = self.date_fmt_var.get()
+        cust_digits = self.cust_digits_var.get().strip()
 
         if not root or not os.path.isdir(root):
             messagebox.showerror("Missing", "Pick a valid job folder.")
@@ -173,11 +191,11 @@ class App:
         self.log.delete('1.0', 'end')
         t = threading.Thread(target=self._work,
                              args=(root, cu, initials, date, text, date_format,
-                                   self.dry_var.get()),
+                                   cust_digits, self.dry_var.get()),
                              daemon=True)
         t.start()
 
-    def _work(self, root, cu, initials, date, text, date_format, dry):
+    def _work(self, root, cu, initials, date, text, date_format, cust_digits, dry):
         try:
             cust, summary = derive_cust(root)
             self.q.put(summary + "\n")
@@ -187,6 +205,7 @@ class App:
                 return
             report, results = run_batch.run(
                 root, cu, initials, date, text=text, cust=cust,
+                cust_digits=cust_digits,
                 date_format=date_format, dry_run=dry)
             self.q.put(report + "\n")
             self.q.put(("DONE", results))

@@ -23,7 +23,12 @@ p.add_argument('--cu', required=True)
 p.add_argument('--initials', required=True)
 p.add_argument('--text', default='CU upgrade.')
 p.add_argument('--date', required=True, help='DD/MM/YY')
+p.add_argument('--cust-digits', default='',
+               help='customer prefixes that require trailing digits to count '
+                    'as a token (comma-separated, e.g. AP); blank = optional')
 a = p.parse_args()
+
+CUST_DIGITS = {s.strip().upper() for s in a.cust_digits.split(',') if s.strip()}
 
 params = dict(cu_token=a.cu, initials=a.initials, text=a.text,
               merge_date=a.date, merge_date_dots=a.date.replace('/', '.'))
@@ -31,7 +36,8 @@ params = dict(cu_token=a.cu, initials=a.initials, text=a.text,
 # no-CU-change short-circuit: if the vendor made no change to this object, A is
 # already correct against the new CU - leave A untouched (no merge, no stamp).
 import diffengine as de
-if de.DiffEngine(a.cust, a.vend, CUST, VEND, LANGS).no_cu_change():
+if de.DiffEngine(a.cust, a.vend, CUST, VEND, LANGS,
+                 cust_digit_required=CUST_DIGITS).no_cu_change():
     print(f"NO CU CHANGE -> {a.cust} (vendor unchanged; use A verbatim, no merge)")
     sys.exit(0)
 

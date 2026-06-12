@@ -95,7 +95,7 @@ def format_merge_dates(date_format='DDMMYY', when=None):
 
 def run(root, cu, initials, date=None, text='CU upgrade.',
         cust='AP,WBL', vend='PA,PPA,EU,INC,IMM,PS', langs='ENZ',
-        date_format='DDMMYY', dry_run=False):
+        cust_digits='', date_format='DDMMYY', dry_run=False):
     """Run the Stage 3 batch over <root>/A and <root>/B.
 
     Behaviour is identical to the CLI: auto-merged objects are written to
@@ -120,6 +120,7 @@ def run(root, cu, initials, date=None, text='CU upgrade.',
 
     root = os.path.abspath(root)
     CUST, VEND, LANGS = _as_set(cust), _as_set(vend), _as_set(langs)
+    CUST_DIGITS = _as_set(cust_digits)
     if date:
         # explicit override: header takes it verbatim; doc-trigger needs DD.MM.YY.
         # Re-derive dots from the chosen format so an MM/DD/YY input still yields
@@ -150,7 +151,8 @@ def run(root, cu, initials, date=None, text='CU upgrade.',
         # not a merge. Any detection error here is caught and the object simply
         # falls through to the normal merge path (never silently skipped).
         try:
-            if DiffEngine(a_path, b_path, CUST, VEND, LANGS).no_cu_change():
+            if DiffEngine(a_path, b_path, CUST, VEND, LANGS,
+                          cust_digit_required=CUST_DIGITS).no_cu_change():
                 if dry_run:
                     nocu.append((stem, '(dry-run, not copied)'))
                     continue
@@ -240,6 +242,11 @@ def main():
                    help="customer DB date locale for the header Date= field "
                         "(default DDMMYY; doc-trigger date is always DD.MM.YY)")
     p.add_argument('--cust', default='AP,WBL')
+    p.add_argument('--cust-digits', default='',
+                   help='of --cust, which prefixes only count as a customer '
+                        'token WITH trailing digits (comma-separated, e.g. AP). '
+                        'Prevents matching the letters inside ordinary words. '
+                        'Blank = all customer prefixes are digits-optional.')
     p.add_argument('--vend', default='PA,PPA,EU,INC,IMM,PS')
     p.add_argument('--langs', default='ENZ')
     p.add_argument('--dry-run', action='store_true', help='classify only, move nothing')
@@ -247,6 +254,7 @@ def main():
 
     report, _ = run(a.root, a.cu, a.initials, a.date, text=a.text,
                     cust=a.cust, vend=a.vend, langs=a.langs,
+                    cust_digits=a.cust_digits,
                     date_format=a.date_format, dry_run=a.dry_run)
     print(report)
 

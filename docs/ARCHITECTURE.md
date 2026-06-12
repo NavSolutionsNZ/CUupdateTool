@@ -186,7 +186,33 @@ unattributable difference means the vendor touched the object → fall through t
      never had it, so it can only be a customer add; a vendor VAR would be present in B). VARs are
      attributed structurally because the customer tags the code *block* that uses the variable, not
      the declaration line (this is what makes C231/C232's `DCRegNoG@…` qualify).
-- **Safe error is always "don't fire."** The recognised marker forms (1/3) are a documented set,
+  5. a line bearing a **customer token** anywhere as a bounded unit. The token is the customer
+     prefix itself (WBL, AP…): for these customers the letter combination is inherently
+     customer-owned and does not occur in vendor prose. When the token lands in a `PROCEDURE`
+     header, the **whole procedure span** (header → next procedure boundary or end of CODE) is
+     attributed as one unit, pulling in unsuffixed helper lines and comments inside that customer
+     procedure. This is what makes **C10** qualify: the customer appended whole procedures
+     (`Evaluate_WBL`, `TryEvaluateDate_WBL`, and a `"---- WBL ----"` separator) carrying the WBL
+     token in **live code** — no `//` markers, no `Start..Stop` block, so categories 1–4 miss them.
+     The match keys on the token, not on any divider styling (a `"---- WBL ----"` separator is caught
+     because its name contains WBL, not because of the dashes — so differently-styled dividers, or
+     none at all, make no difference).
+
+**Token-shape addendum (global, per-job).** Category 5 needs to know what each customer token *looks
+like* so it can be recognised wherever it appears. This is an **addendum to the version list**: the
+version list remains the authoritative per-object census of *which* prefixes are in play; the shape
+addendum (applied globally to the job) says *what each looks like*. Two shapes, selectable per prefix:
+
+- **digits-optional** (default, e.g. WBL): the prefix matches bare or with trailing digits. Safe
+  because the letter combination does not occur in ordinary words or vendor prose.
+- **digits-required** (e.g. AP): the prefix matches **only** with trailing digits (optional `_`/`-`
+  separator — `AP001662`, `AP_001662`). Load-bearing for safety: bare `AP` would otherwise match the
+  letters inside words like *Mapping* or *APPLICATION*. The token is bounded (not preceded/followed by
+  a letter) so it is matched as a unit, never as a substring.
+
+The addendum is the GUI field **"Prefixes needing digits"** (and `--cust-digits` on both CLIs); blank
+= all prefixes digits-optional. Customer prefixes themselves continue to be derived from the census.
+- **Safe error is always "don't fire."** The recognised marker forms are a documented set,
   extendable per customer as idioms surface — NOT assumed exhaustive. An unrecognised idiom leaves a
   residual, suppresses the short-circuit, and the object is merged as before. New idioms degrade to
   "merged unnecessarily," never "skipped wrongly."
@@ -194,9 +220,10 @@ unattributable difference means the vendor touched the object → fall through t
   sources out of the dev queue (`A/`, `B/`) into `AnoCuChange/`/`BnoCuChange/` with an `Unchanged_`
   prefix, so the files remaining in `A/`+`B/` are exactly the dev queue. GUI summary and batch report
   carry a dedicated count/section.
-- **Validated:** fires on C1201/C231/C232 (confirmed no-vendor-change); does NOT fire on T14/T36/T77/
-  P14/P347 (real customer field work or genuine vendor changes — T36 in particular is a real vendor
-  code change and must not be skipped). Known-answer layer in `test_diffengine.py`.
+- **Validated:** fires on C1201/C231/C232/C10 (confirmed no-vendor-change); does NOT fire on T14/T36/
+  T77/P14/P347 (real customer field work or genuine vendor changes — T36 in particular is a real
+  vendor code change and must not be skipped). Known-answer layer in `test_diffengine.py`, including a
+  token-shape safety assertion (AP needs digits; WBL bounded; no prose false-matches).
 
 
 

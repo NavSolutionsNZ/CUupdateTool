@@ -90,6 +90,7 @@ There is nothing to configure the first time it is run.
 | **Changelog text** | The standard text for the changelog entry. The default is `CU upgrade.` |
 | **Date** | Leave blank to use today's date. |
 | **Customer DB date format** | `DD/MM/YY` (the default) or `MM/DD/YY`. See section 4.3. |
+| **Prefixes needing digits** | Optional. Comma-separated list of customer prefixes that should only be treated as a customer tag when followed by digits, for example `AP`. Leave blank if not needed. See section 4.5. |
 | **Run merge** | Starts the job. |
 | **Dry run** | Classifies the objects and produces the report, but writes and moves nothing. See section 5.1. |
 
@@ -185,10 +186,12 @@ The point to remember is that the tool's input files must already be language-st
 4. Leave **Changelog text** as `CU upgrade.` unless different text is required.
 5. Leave **Date** blank to use today's date.
 6. Set **Customer DB date format** to match the customer database. See section 4.3.
-7. For the first pass, tick **Dry run**. See section 5.1.
-8. Click **Run merge**.
-9. Read the report in the lower panel. If the dry run is satisfactory, remove the **Dry run**
-   tick and click **Run merge** again to perform the merge.
+7. If this customer has a short prefix that needs trailing digits (for example `AP`), enter it in
+   **Prefixes needing digits**. Otherwise leave it blank. See section 4.5.
+8. For the first pass, tick **Dry run**. See section 5.1.
+9. Click **Run merge**.
+10. Read the report in the lower panel. If the dry run is satisfactory, remove the **Dry run**
+    tick and click **Run merge** again to perform the merge.
 
 ### 4.2 What "Run merge" does
 
@@ -234,6 +237,27 @@ census: 75 objects -> customer tags AP,APOP,DC,ESKER,KS,N,WBL  [excluded vendor:
 ```
 
 The customer tags are not entered by hand.
+
+### 4.5 Prefixes that need trailing digits
+
+This optional field controls **how a customer prefix is recognised in the body of an object**, and
+works together with the automatic tags from section 4.4. It is a global setting for the job — an
+addendum to the version list. The version list still decides *which* customer prefixes are in play;
+this field tells the tool *what each one looks like* so it can be found wherever it appears.
+
+Most customer prefixes are safe to recognise on their own. `WBL`, for example, is a letter
+combination that never occurs inside an ordinary word, so the tool can treat any appearance of
+`WBL` — in a procedure name such as `Evaluate_WBL`, in a comment, or as a tag — as customer-owned.
+
+A few prefixes are short enough that they *would* appear inside ordinary words. `AP`, for instance,
+occurs inside `Mapping` and `Application`. For these, enter the prefix in this field. The tool will
+then treat the prefix as a customer tag **only when it is followed by digits** (for example
+`AP001662`, `AP_001662`), and never when it appears inside a word. List several prefixes separated
+by commas. Leave the field blank if no prefix needs this.
+
+This recognition is what allows an object whose only changes are customer-added code — for example
+a customer's own procedures appended to a codeunit — to be identified as needing no merge (section
+5.2), even when that code carries no explicit tag comments.
 
 ---
 

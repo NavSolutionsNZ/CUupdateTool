@@ -365,6 +365,9 @@ def run():
     # correct -> copy A verbatim, no merge. FIRE cases are confirmed
     # no-vendor-change objects; NO-FIRE cases carry real customer field work or
     # genuine vendor changes and MUST still merge (never silently skipped).
+    # AP is digits-required (token-shape addendum) so it cannot match the letters
+    # inside ordinary words; all other customer prefixes are digits-optional.
+    CUST_DIGITS = {'AP'}
     NOCU_FIRE = {
         'C1201': (os.path.join(FIX, 'EX-C1201.stripped.txt'),
                   os.path.join(FIX, 'CU-C1201.stripped.txt')),
@@ -372,21 +375,44 @@ def run():
                   os.path.join(FIX, 'CU-C231.stripped.txt')),
         'C232':  (os.path.join(FIX, 'EX-C232.stripped.txt'),
                   os.path.join(FIX, 'CU-C232.stripped.txt')),
+        # C10: customer added whole procedures (Evaluate_WBL, TryEvaluateDate_WBL,
+        # and a "---- WBL ----" separator) carrying the WBL token in LIVE CODE -
+        # no //markers, no Start..Stop block. Fires via category 5 (token-anywhere
+        # + whole-procedure span).
+        'C10':   (os.path.join(FIX, 'EX-C10.stripped.txt'),
+                  os.path.join(FIX, 'CU-C10.stripped.txt')),
     }
     NOCU_NOFIRE = ['T14', 'T36', 'T77', 'P347']   # real customer/vendor deltas
     for name, (a, b) in NOCU_FIRE.items():
-        e = DiffEngine(a, b, _cust_for(name), VEND, LANGS)
+        e = DiffEngine(a, b, _cust_for(name), VEND, LANGS,
+                       cust_digit_required=CUST_DIGITS)
         if e.no_cu_change():
             print(f"[nocu] {name}: OK (fires - vendor unchanged, skip merge)")
         else:
             fails.append(f"[nocu] {name}: should fire (vendor unchanged) but did not")
     for name in NOCU_NOFIRE:
         a, b = OBJ[name]
-        e = DiffEngine(a, b, _cust_for(name), VEND, LANGS)
+        e = DiffEngine(a, b, _cust_for(name), VEND, LANGS,
+                       cust_digit_required=CUST_DIGITS)
         if e.no_cu_change():
             fails.append(f"[nocu] {name}: fired but has real changes - would skip a merge")
         else:
             print(f"[nocu] {name}: OK (does not fire - real delta, merge needed)")
+
+    # token-shape safety: AP (digits-required) must NOT match inside ordinary
+    # words; WBL (digits-optional) must match as a bounded unit but not as a
+    # substring of a larger word. This bounding is what makes category 5 safe.
+    _tok = DiffEngine(NOCU_FIRE['C10'][0], NOCU_FIRE['C10'][1],
+                      {'WBL', 'AP'}, VEND, cust_digit_required={'AP'})._cust_token_re()
+    _shape = [('PostExchMapping.GET', False), ('Mapping', False),
+              ('APPLICATION', False), ('AP', False), ('AP001662', True),
+              ('AP_001662', True), ('Evaluate_WBL', True), ('WBL', True),
+              ('a WBLah thing', False)]
+    for s, exp in _shape:
+        if bool(_tok.search(s)) != exp:
+            fails.append(f"[nocu] token-shape: '{s}' expected match={exp}")
+    if not any(f.startswith('[nocu] token-shape') for f in fails):
+        print("[nocu] token-shape: OK (AP needs digits, WBL bounded, no prose hits)")
 
     # ---- date-format toggle: header per locale, doc-trigger always DD.MM.YY ----
     import datetime as _dt

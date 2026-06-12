@@ -71,12 +71,21 @@ def prefix(tag):
 
 
 class DiffEngine:
-    def __init__(self, custfn, vendfn, customer_prefixes, vendor_prefixes, languages=None):
+    def __init__(self, custfn, vendfn, customer_prefixes, vendor_prefixes,
+                 languages=None, cust_digit_required=None):
         self._custfn = custfn; self._vendfn = vendfn
         self.A = load(custfn); self.B = load(vendfn)
         self.CUST = {p.upper() for p in customer_prefixes}
         self.VEND = {p.upper() for p in vendor_prefixes}
         self.LANGS = set(languages or [])               # customer language layer codes (e.g. ENZ)
+        # Token-shape addendum (global, per-job): prefixes that ONLY count as a
+        # customer token when followed by trailing digits (optionally via _ or -).
+        # This is what keeps a prose-risky prefix like AP from matching the
+        # letters inside an ordinary word (e.g. "map"); a prefix absent from this
+        # set is digits-optional (today's WBL behaviour - safe because the letter
+        # combination does not occur in real words/vendor prose). Blank default
+        # = all digits-optional. See _cust_token_re / category 5 in no_cu_change.
+        self.CUST_DIGITS = {p.upper() for p in (cust_digit_required or [])}
         alt = '|'.join(sorted(self.CUST | self.VEND, key=len, reverse=True))
         # both tag styles: line '// Start X' and block '{ Start X .. Stop X}'
         self.OPEN = re.compile(rf'^\s*(?://|\{{)\s*Start\s+({alt})([\w.\-]*)', re.I)
@@ -682,10 +691,50 @@ class DiffEngine:
     #      a vendor VAR would be present in B and is never swept up). VAR decls
     #      are attributed structurally because the customer tags the code BLOCK
     #      that uses the variable, not the declaration line.
-    # The recognised marker forms (1/3) are a documented set, extendable per
-    # customer as new idioms surface; they are NOT assumed exhaustive.
+    #   5. a line bearing a CUSTOMER TOKEN anywhere as a bounded unit. The token
+    #      is the customer prefix itself (e.g. WBL, AP) - for these customers the
+    #      letter combination is inherently customer-owned and does not occur in
+    #      vendor prose. Shape is per-customer (the global token-shape addendum,
+    #      CUST_DIGITS): a prefix in CUST_DIGITS only matches WITH trailing digits
+    #      (optional _ or - separator) - this is what stops a prose-risky prefix
+    #      like AP from matching the letters inside an ordinary word; a prefix not
+    #      in CUST_DIGITS is digits-optional. This is what attributes C10's
+    #      `Evaluate_WBL` / `TryEvaluateDate_WBL` identifiers and the
+    #      `"---- WBL ----"` separator - WBL tokens carried in LIVE CODE, never in
+    #      a comment or a version list. When such a token lands in a PROCEDURE
+    #      header, the WHOLE procedure span (header -> next procedure boundary or
+    #      end of CODE) is attributed as one unit, pulling in unsuffixed helper
+    #      lines and comments inside that customer procedure.
+    #
+    # The customer token (cat 5) is an ADDENDUM to the version list, applied
+    # globally: the version list remains the authoritative per-object census of
+    # WHICH prefixes are in play; the token shape says WHAT each looks like so it
+    # can be recognised wherever it appears in the body.
+    #
+    # The recognised marker forms are a documented set, extendable per customer as
+    # new idioms surface; they are NOT assumed exhaustive. Safe error is always
+    # "don't fire".
     _NOCU_HDR  = re.compile(r'(^\s*Date=|^\s*Time=|^\s*Modified=|^\s*Version List=)')
     _NOCU_VARD = re.compile(r'^\s*\w+@\d+\s*:\s*.+;\s*$')
+    _NOCU_PROC = re.compile(r'^\s*(?:LOCAL\s+)?PROCEDURE\b', re.I)
+
+    def _cust_token_re(self):
+        """Regex matching any customer prefix as a bounded token, shaped per the
+        global addendum (CUST_DIGITS -> trailing digits required). Returns None
+        if there are no customer prefixes."""
+        if not self.CUST:
+            return None
+        parts = []
+        for p in sorted(self.CUST, key=len, reverse=True):
+            pe = re.escape(p)
+            if p in self.CUST_DIGITS:
+                parts.append(rf'{pe}[_\-]?\d+')        # digits required (e.g. AP001662)
+            else:
+                parts.append(rf'{pe}(?:[_\-]?\d+)?')    # digits optional (e.g. WBL, Evaluate_WBL)
+        # bound the token so it is a unit, not a substring of a larger word:
+        # the prefix must not be preceded by a letter, and (for the bare form)
+        # must not run straight into more letters.
+        return re.compile(rf'(?<![A-Za-z])(?:{"|".join(parts)})(?![A-Za-z])', re.I)
 
     def _nocu_body(self, lines):
         """Object body minus OBJECT-PROPERTIES header and the trailing
@@ -755,6 +804,27 @@ class DiffEngine:
                     continue
                 if (i > 0 and flag[i - 1]) or (i + 1 < n and flag[i + 1]):
                     flag[i] = True; changed = True
+        # cat 5: a customer TOKEN (the prefix itself, shaped per the addendum)
+        # appearing anywhere as a bounded unit. For these customers the letter
+        # combination is inherently customer-owned. If the token lands in a
+        # PROCEDURE header, attribute the WHOLE procedure span (header -> next
+        # procedure boundary or end of body) so unsuffixed helper lines and
+        # comments inside that customer procedure are carried as one unit.
+        tok = self._cust_token_re()
+        if tok is not None:
+            for i, l in enumerate(lines):
+                if not tok.search(l):
+                    continue
+                if self._NOCU_PROC.search(l):
+                    # span: this header line down to (but not including) the next
+                    # procedure header, or the end of the body.
+                    j = i + 1
+                    while j < n and not self._NOCU_PROC.search(lines[j]):
+                        j += 1
+                    for k in range(i, j):
+                        flag[k] = True
+                else:
+                    flag[i] = True
         return flag
 
     def no_cu_change(self):
