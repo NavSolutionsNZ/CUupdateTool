@@ -493,19 +493,26 @@ class DiffEngine:
                 if i - 1 >= 0 and self._ATTR_LINE.match(lines[i - 1]):
                     start = i - 1
                 local = lines[i].lstrip().startswith('LOCAL')
-                # walk to the procedure's terminating END; (depth on BEGIN/END
-                # at 4-space proc indent). The body's first BEGIN opens depth 1;
-                # matching END; at the same indent closes the procedure.
+                # Find the proc-level BEGIN ('    BEGIN', 4-space indent), then
+                # the next proc-level END; ('    END;') closes the procedure.
+                # Inner BEGIN/END (IF..THEN BEGIN, END ELSE BEGIN, CASE..END)
+                # are always indented deeper, so indentation - not token-depth
+                # counting - is the reliable boundary: 'END ELSE BEGIN' would
+                # underflow a naive depth counter and mis-terminate the proc
+                # early. The object trigger closes with '    END.' (dot).
                 j = i + 1
-                depth = 0
                 seen_begin = False
                 while j < n:
-                    s = lines[j].strip()
-                    if s == 'BEGIN' or s.startswith('BEGIN '):
-                        depth += 1; seen_begin = True
-                    elif s == 'END;' or s == 'END':
-                        depth -= 1
-                        if seen_begin and depth <= 0:
+                    l = lines[j]
+                    if not seen_begin:
+                        if l == '    BEGIN':
+                            seen_begin = True
+                        elif self._PROC_NAME.match(l):
+                            # next PROCEDURE before any BEGIN => malformed; bail
+                            # so we don't swallow the following procedure.
+                            j -= 1; break
+                    else:
+                        if l == '    END;' or l == '    END.':
                             break
                     j += 1
                 units[f'{name}@{pid}'] = {

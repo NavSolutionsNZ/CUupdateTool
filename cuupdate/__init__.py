@@ -6,4 +6,4 @@ window title, so a developer can tell at a glance which build produced a merge.
 
 Versioning: start 1.9, increment by 0.1 up to whole numbers (1.9 -> 2.0 -> 2.1).
 """
-__version__ = "1.9"
+__version__ = "2.0"
