@@ -183,6 +183,54 @@ class Scorer:
             return [i for i,x in enumerate(self.bn) if sim(val,x)>=0.90]
         return []
 
+    # ---- END-count replay (structural placement for END-bracketed blocks) ----
+    # A code block whose nearest distinctive neighbours are END; lines can't be
+    # forward-anchored by string matching (END; is non-distinctive boilerplate,
+    # excluded as an anchor). Its real home is defined by the END; nesting it
+    # sits inside. We recover that by counting END-class lines between the
+    # before-anchor and the block in A, then replaying that count in B - a
+    # structural signal that survives whitespace/indent differences (balanced
+    # nesting is guaranteed by compilation).
+    _ENDC=re.compile(r'^\s*END[;.]?\s*$', re.I)   # END / END; / END. (block closers)
+
+    def _a_index_of_anchor(self, kind, val, block_start):
+        """A index of the before-anchor: nearest line ABOVE block_start that
+        produced (kind,val). None if not found within the local window."""
+        if val is None: return None
+        for j in range(block_start-1, max(-1, block_start-31), -1):
+            line=self.A[j]
+            if kind=='vtag':
+                if self._vkey(line)==val: return j
+            else:  # code / boundary: normalised similarity
+                if sim(val, norm(line))>=0.90: return j
+        return None
+
+    def _end_count_between(self, a_idx, block_start):
+        """Number of END-class lines in A strictly between a_idx and block_start
+        (the inner-block closers the block sits below)."""
+        return sum(1 for k in range(a_idx+1, block_start)
+                   if self._ENDC.match(self.A[k]))
+
+    def _walk_ends(self, pb, n, hi):
+        """From B index pb, walk forward (skipping blanks) consuming exactly n
+        END-class lines, not past hi (the enclosing proc's close). Return the
+        index of the n-th END; (block anchors AFTER it). n==0 -> pb itself.
+        None if n END-class lines aren't available within (pb, hi]."""
+        if n==0: return pb
+        seen=0; j=pb+1
+        while j<=hi and j<len(self.B):
+            s=self.B[j].strip()
+            if s=='':
+                j+=1; continue
+            if self._ENDC.match(self.B[j]):
+                seen+=1
+                if seen==n: return j
+                j+=1; continue
+            # a non-blank, non-END line before consuming n ENDs: the structure
+            # doesn't match (the block isn't simply END-bracketed here) -> bail.
+            return None
+        return None
+
     def _classify(self,inner,brace=False):
         # brace-style { Start..Stop } blocks are C/AL block comments: the ENTIRE inner content
         # is commented-out (suppressed) vendor code, regardless of per-line // markers.
@@ -209,6 +257,9 @@ class Scorer:
         # removed/renamed-and-renumbered it) gets no valid anchor -> DEV.
         # Blocks OUTSIDE any procedure (global VAR / object trigger) are left
         # unconfined - their existing object-scope anchoring is unchanged.
+        # END-replay after-anchor positions (block sits AFTER these END; lines,
+        # not immediately after the before-anchor). Empty in the normal case.
+        end_replay_pos=set()
         a_unit=self._a_enclosing(b['start'])
         if a_unit is not None:
             b_unit=self._b_match(a_unit)
@@ -233,6 +284,36 @@ class Scorer:
                 if j<len(self.B) and BOUNDARY.match(self.B[j]):
                     hi_after=j
                 apos=[p for p in apos if lo<=p<=hi_after]
+                # TAIL / END-BRACKETED block: when a block's nearest distinctive
+                # neighbours are END; lines (boilerplate, excluded as anchors),
+                # _anchor's forward walk skips them and overshoots past the proc
+                # onto the object trigger / changelog; confinement then strips
+                # that -> apos empty -> false DEV. The block's TRUE forward home
+                # is the END; line(s) it sits above. Recover it STRUCTURALLY (not
+                # by indentation - operators' indent discipline varies): count
+                # the END-class lines between the before-anchor and the block in
+                # A, then replay that exact count forward from each matched
+                # before-anchor in B. The block anchors after the last replayed
+                # END;. Balanced END nesting is guaranteed (the object compiles),
+                # so the count transfers even if whitespace doesn't. Scoped to
+                # the confined, otherwise-anchorless case: cannot perturb any
+                # block that already anchors, nor any unconfined object-scope
+                # block (a_unit is None for those).
+                if not apos and bpos:
+                    # before-anchor's A index: the nearest distinctive line above
+                    # the block that _anchor latched onto. Count END-class lines
+                    # between it and the block, then replay forward in B.
+                    a_bpos=self._a_index_of_anchor(bk,bv,b['start'])
+                    if a_bpos is not None:
+                        n_end=self._end_count_between(a_bpos, b['start'])
+                        cand=[]
+                        for pb in bpos:
+                            tgt=self._walk_ends(pb, n_end, hi)
+                            if tgt is not None:
+                                cand.append(tgt)
+                        if cand:
+                            apos=cand
+                            end_replay_pos=set(cand)
         # POSITION VALIDATION: after must follow before within a bounded window
         # in B. When the before-anchor occurs in B more than once (e.g. a vendor
         # tag reused several times), the FIRST valid pair is not necessarily the
@@ -285,9 +366,17 @@ class Scorer:
             verdict='DEV'   # suppressing vendor logic is always a human decision
         else:  # VANILLA_MOD
             verdict='TRANSPLANT' if (score>=VMOD_T and orig_ok) else 'DEV'
+        # INSERTION POINT for the executor. Normally a block sits immediately
+        # after its before-anchor, so insert after chosen[0]. But an END-replay
+        # block sits AFTER the END; line(s) it was bracketed against, so its
+        # insert point is the after-anchor (chosen[1]) instead. Expose this
+        # explicitly so the executor never re-derives it from chosen[0] alone.
+        insert_after=None
+        if coherent and chosen:
+            insert_after = chosen[1] if chosen[1] in end_replay_pos else chosen[0]
         return dict(tag=f"{b['p']}{b['id']}",line=b['start']+1,content=content,
                     score=round(score,2),coherent=coherent,anchors=(bk,ak),orig_ok=orig_ok,verdict=verdict,
-                    chosen=chosen)
+                    chosen=chosen,insert_after=insert_after)
 
 import os as _os
 _SAMPLES=_os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))),'samples')

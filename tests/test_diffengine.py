@@ -37,6 +37,7 @@ CUST_OVERRIDE = {
     'P21': {'AP', 'WBL'},           # WBL10 field add + AP-2362 FactBoxes (DEV-gate)
     'P21V2': {'AP', 'WBL'},         # FactBoxes now tagged AP-2362 -> auto-merge (pair to P21)
     'P347': {'AP', 'WBL', 'DC'},    # Direct Credit customisation; DC6.00 block + ReportUsage2 option ext
+    'C231': {'AP', 'WBL', 'DC'},    # Direct Credit (DC5.00): two CODE blocks, one END-bracketed at proc tail
 }
 
 
@@ -108,6 +109,12 @@ EXPECTED_VERDICTS = {
                                                                  # Block's after-anchor (// Start PA036544)
                                                                  # recurs across 5 procedures; procedure-
                                                                  # scope confinement keeps it in @4.
+    'C231': Counter({(None, 'code', 'CARRY'): 2}),               # two DC5.00 blocks in Code@1. The 2nd is
+                                                                 # END-bracketed at the proc tail (nearest
+                                                                 # neighbours are END; lines) -> anchored by
+                                                                 # END-count replay. Global VAR DCRegNoG +
+                                                                 # Version List/doc-trigger carries are
+                                                                 # execution-layer (cf. T81).
 }
 
 # Objects that should auto-execute, and the fixture they must reproduce.
@@ -139,6 +146,9 @@ EXEC_CASES = {
     'T17': (os.path.join(FIX, 'EX-T17.stripped.txt'),
             os.path.join(FIX, 'CU-T17.stripped.txt'),
             os.path.join(FIX, 'MyMerged-T17.stripped.txt')),
+    'C231': (os.path.join(FIX, 'EX-C231.stripped.txt'),
+             os.path.join(FIX, 'CU-C231.stripped.txt'),
+             os.path.join(FIX, 'MyMerged-C231.stripped.txt')),
 }
 # Objects that should route to DEV in the narrow build (not execute).
 EXEC_GATED_TO_DEV = ['P21']
@@ -189,6 +199,8 @@ OBJ = {
              os.path.join(FIX, 'CU-P347.stripped.txt')),
     'T17': (os.path.join(FIX, 'EX-T17.stripped.txt'),
             os.path.join(FIX, 'CU-T17.stripped.txt')),
+    'C231': (os.path.join(FIX, 'EX-C231.stripped.txt'),
+             os.path.join(FIX, 'CU-C231.stripped.txt')),
 }
 
 

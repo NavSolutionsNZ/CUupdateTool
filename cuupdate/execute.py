@@ -393,9 +393,12 @@ def execute(custfn, vendfn, cust, vend, langs, params):
             chosen = r.get('chosen')
             if not chosen:
                 raise GateToDev([f"code block {r['tag']} not coherently anchored at execution"])
-            # chosen=(pb,pa): pb is B index of the before-anchor; insert the
-            # verbatim customer block (A[start..stop] inclusive) right after it.
-            after = chosen[0] + 1
+            # chosen=(pb,pa). Normally the block sits right after the before-
+            # anchor pb, so insert after pb. The scorer may instead supply an
+            # explicit insert_after (END-replay blocks sit after the END; line
+            # they were bracketed against, i.e. pa, not pb); honour it when set.
+            ins = r.get('insert_after')
+            after = (ins if ins is not None else chosen[0]) + 1
             start, stop = r['span']
             # A-after-B: the customer addition carries its surrounding blank-line
             # spacing (a blank separating it from the preceding vendor block, and
@@ -406,6 +409,16 @@ def execute(custfn, vendfn, cust, vend, langs, params):
             if hi + 1 < len(e.A) and e.A[hi + 1].strip() == '':
                 hi += 1
             block = e.A[lo:hi + 1]
+            # Trailing-blank collision: if B ALREADY has a blank line immediately
+            # after the insertion point, carrying our own trailing blank would
+            # double it. B's existing blank already separates the block from the
+            # following vendor line, so drop the carried trailing blank in that
+            # case. (Leading blank is unaffected; only fires when the block both
+            # carried a trailing blank AND lands just before a B blank - the
+            # END-bracketed / between-statements case. Other transplants that
+            # land where B has no following blank keep their trailing blank.)
+            if block and block[-1].strip() == '' and after < len(e.B) and e.B[after].strip() == '':
+                block = block[:-1]
             src = start
         elif r['kind'] == 'proc-graft':
             # whole customer procedure absent from B: insert verbatim at the END

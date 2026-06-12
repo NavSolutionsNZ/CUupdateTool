@@ -436,7 +436,8 @@ class DiffEngine:
                              line=sb['line'],
                              reason=f"CODE-section block {sb['tag']} -> scorer "
                                     f"[{sb['content']}:{sb['verdict']} score={sb['score']}]",
-                             span=(sb['start'], sb['stop']), chosen=sb['chosen']))
+                             span=(sb['start'], sb['stop']), chosen=sb['chosen'],
+                             insert_after=sb.get('insert_after')))
 
         # Safety net: every field we saw customer code in (above) should now be
         # covered by at least one scorer-emitted code row. If the scorer somehow
@@ -618,13 +619,15 @@ class DiffEngine:
                     self._sblocks.append(dict(tag=r['tag'], line=r['line'],
                                               span=(b['start'], b['stop']),
                                               content=r['content'], score=r['score'],
-                                              verdict=r['verdict'], chosen=r.get('chosen')))
+                                              verdict=r['verdict'], chosen=r.get('chosen'),
+                                              insert_after=r.get('insert_after')))
             except Exception:
                 self._sblocks = []
         # normalise key name expected by caller
         return [dict(tag=s['tag'], line=s['line'], start=s['span'][0],
                      stop=s['span'][1], content=s['content'], score=s['score'],
-                     verdict=s['verdict'], chosen=s['chosen']) for s in self._sblocks]
+                     verdict=s['verdict'], chosen=s['chosen'],
+                     insert_after=s.get('insert_after')) for s in self._sblocks]
 
     def _scorer_verdicts(self, tags):
         """Run the anchor scorer once (cached) and return [(tag, verdict)] for the given
