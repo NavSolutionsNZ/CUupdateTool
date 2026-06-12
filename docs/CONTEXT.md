@@ -1267,3 +1267,69 @@ depth-aware correction in `score_block`), cuupdate/__init__.py (2.2), tests/test
 wired in: CUST_OVERRIDE, EXPECTED_VERDICTS, EXEC_CASES; fails-checked exit), tests/test_scorer.py
 (non-zero exit on failure), tests/fixtures/{EX,CU,MyMerged}-C232.stripped.txt (NEW),
 docs/{ARCHITECTURE,CONTEXT}.md.
+
+---
+
+**§8.26 — No-CU-change detection: skip the merge when the vendor changed nothing; v2.3**
+
+**One-liner:** *A merge is not always required. When the vendor shipped NO change to an object in the
+CU, A is already correct against the new CU — there is nothing to carry the customer's code INTO. New
+Stage-2 short-circuit (`diffengine.no_cu_change`) detects this difference-first and skips the merge:
+copy A verbatim to `NoCuChangesDetected/`, move sources out of the dev queue as `Unchanged_*`. Fires
+C1201/C231/C232; T14/T36/T77/P14/P347 still merge. Suite green.*
+
+**Driver (Rich):** confirmed C1201 (Codeunit 1201, customer tag WBL — the `Evaluate`→`Evaluate_WBL`
+swap) and C231/C232 (Direct Credit, DC) are genuine no-vendor-change cases that should NOT produce a
+merge. The manual process still TortoiseMerges them per object pair to confirm "nothing to do" — pure
+noise. The tool should recognise the case and skip it.
+
+**The detection (difference-first, mirror of pipeline step 3).** Step 3 ("normalised equality → take
+B") fires when A == B (no customer side). No-CU-change is its mirror: it fires when the customer layer
+is the ONLY difference (no vendor side) — and KEEPS A (not B; A holds the customisations). Diff A vs B
+over the object body; fire iff EVERY differing line is customer-attributable. Scope = whole body minus
+OBJECT-PROPERTIES header minus doc-trigger (both carry customer churn by construction; neither can
+count as a vendor change). Whole-body, NOT CODE-only — see trap 1.
+
+**Attribution contract (the customer-layer test).** A body line is customer-attributable when any of:
+(1) live code carrying a `//<cust>` marker (trailing-tag live-line idiom); (2) any line in a customer
+`Start..Stop` block, anywhere; (3) a comment line beginning `//<cust>` OR strictly contiguous to a
+cat-1/2 line (comment-out and comment-out-with-replacement idioms — C1201's dead `//IF…Evaluate(` twin
+is attributed by adjacency to the live `//WBL` line below it); (4) a VAR declaration present in A but
+absent from B (structural customer ownership — C231/C232's `DCRegNoG@…`; the customer tags the code
+BLOCK that uses the var, not the decl line). Marker forms are a documented, per-customer-extendable set,
+NOT exhaustive. Safe error is always "don't fire": an unrecognised idiom leaves a residual → merged as
+before → never skipped wrongly.
+
+**Trap 1 — CODE-only scope (caught before commit).** First cut compared only inside `CODE{}`. That
+fired wrongly on T14: a Table's customer work (the `Webbline Location` field, captions, OptionString)
+lives in field nodes ABOVE `CODE{}`, so a CODE-only view saw "code identical" and would have skipped a
+real merge. Fix: scope is the whole object body (minus header + doc-trigger). T14/T36 then correctly do
+NOT fire.
+
+**Trap 2 — vendor blocks read as customer (caught before commit).** `_nocu_attribute` first reused the
+engine's `self.OPEN`/`self.STOP`, which are built from the COMBINED customer+vendor prefix set — so
+`// Start PA036544` (vendor) matched as a customer block. On T14 this flagged 881/893 lines (an
+unclosed vendor block runs the depth counter away) and fired no-CU-change on a real merge object. Fix:
+build customer-ONLY `Start/Stop` regexes from `self.CUST` inside the attributor. A vendor Start/Stop
+block is a vendor change and must surface, not be attributed away.
+
+**Verification.** Fires: C1201/C231/C232 (zero unattributed). Does NOT fire: T14 (customer field add,
+no inline marker), T36 (real vendor `// Start EU…` code blocks B has and A lacks — the dangerous case
+that must never be skipped), T77, P14, P347 (vendor option/desc extensions). C1201 output is byte-
+identical to the source A (verbatim, no stamp — confirmed by `cmp`). End-to-end batch verified: A/ and
+B/ emptied to `AnoCuChange/`+`BnoCuChange/` as `Unchanged_*`, copy in `NoCuChangesDetected/`, report
+section + GUI count present. Existing fixtures all still reproduce byte-exact (the method is additive —
+it does NOT touch `classify()` or `execute()`); C231/C232 merge path unchanged if ever reached. Full
+suite green: diffengine PASS (incl. 7 new no-CU-change assertions), scorer 20/20, census 5/5.
+
+**Version bumped 2.2 → 2.3.** Not strictly merge-output-altering (additive short-circuit; no existing
+merge changes), but it changes externally-visible behaviour (new outcome, new folders, objects now
+skipped rather than merged-then-discarded) and the bump keeps local build differentiation clear in the
+GUI title / exe name. `CUupdate_2.3.exe`.
+
+**Files:** cuupdate/diffengine.py (`no_cu_change` + `_nocu_body`/`_nocu_attribute`, customer-only
+attribution; additive), cuupdate/run_batch.py (pre-merge check, `nocu` bucket, `NoCuChangesDetected/`
+copy, `_moved_unchanged` → `Unchanged_*`, report section, results dict), cuupdate/run_one.py
+(short-circuit print), cuupdate/cu_gui.py (summary count), cuupdate/__init__.py (2.3),
+tests/test_diffengine.py (no-CU-change known-answer layer: 3 fire + 4 no-fire),
+tests/fixtures/{EX,CU}-C1201.stripped.txt (NEW), docs/{ARCHITECTURE,CONTEXT,USER_MANUAL}.md.

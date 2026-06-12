@@ -199,7 +199,7 @@ For each A and B pair in the job, the tool:
 4. For each manual object, leaves the source files in place and reports the reason.
 
 While the tool is working, the window shows a progress indicator. It then prints the full report
-and a summary line in the form `--- N auto-merged, M left for manual review ---`.
+and a summary line in the form `--- N auto-merged, K no CU change, M left for manual review ---`.
 
 ![A merge in progress. The first line of the report shows the customer tags the tool determined from the version lists.](img/gui-running.png)
 
@@ -245,11 +245,23 @@ satisfactory, remove the tick and run the merge.
 | Outcome | Result |
 |---|---|
 | **Merged automatically** | C is written to `<job>\Merged\<Type>\Merged-<stem>.txt`. The two source files are moved to `<job>\AautoMerged\<Type>\` and `<job>\BautoMerged\<Type>\`. |
+| **No CU change** | The vendor made no change to the object in this CU, so no merge is needed. The A file is copied **unchanged** (no stamp, no edit) to `<job>\NoCuChangesDetected\<Type>\`. The two source files are moved out of the worklist to `<job>\AnoCuChange\<Type>\` and `<job>\BnoCuChange\<Type>\`, each renamed with an `Unchanged_` prefix. |
 | **Manual review** | The A and B files are left in place in `A\` and `B\`. |
 | **Error or unmatched** | The files are left in place and listed in the report. One faulty object never stops the batch. |
 
 This means that, after a merge, **whatever remains in `A\` and `B\` is exactly the manual
-TortoiseMerge worklist**. Everything that merged automatically has been moved aside.
+TortoiseMerge worklist**. Everything that merged automatically — or that needed no merge because the
+vendor did not touch it — has been moved aside.
+
+**About "No CU change".** Not every object needs merging. When the vendor ships a CU, many objects are
+unchanged from the version the customer originally customised; for those, the customer's object is
+already correct and there is nothing to carry forward. The tool recognises this by checking whether
+**every** difference between A and B is explained by the customer's own tags and markers (a tagged
+`Start..Stop` block, a `//`-tagged line, or a customer-added variable). If so — and only if so — it
+treats the object as "no CU change" and copies A across untouched, saving the manual check that would
+otherwise confirm "nothing to do". If **any** difference cannot be explained as a customer change, the
+tool assumes the vendor changed something and sends the object down the normal merge path instead, so
+this can never cause a real vendor change to be skipped.
 
 ![A job folder after a merge. The automatically merged objects are in Merged, with their sources in AautoMerged and BautoMerged. Whatever remains in A and B is the manual worklist.](img/folders-after-run.png)
 

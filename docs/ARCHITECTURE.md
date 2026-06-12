@@ -142,7 +142,11 @@ customer as un-customised.
 2. **Modified=No** (A header) → take **B** (customer never touched it). Trusted per decision.
 3. **Normalised equality** — strip header fields `Date/Time/Modified/Version List`, trailing
    whitespace, line-endings, **and customer-added language layers (§7d)**; if A == B → take **B**.
-4. **Type-aware difference handling** (A ≠ B):
+4. **No-CU-change** (§5a) — the *mirror* of step 3. Step 3 fires when A == B (no customer side);
+   no-CU-change fires when the customer layer is the **only** difference (no vendor side): the
+   vendor shipped nothing in this CU, so A is already correct. Keep **A** verbatim (NOT B — A holds
+   the customisations), no stamp, no merge. Distinguished from step 3 by *which* side keeps.
+5. **Type-aware difference handling** (A ≠ B):
 
    **Code objects (Codeunit/Table):**
    - For each **customer-tagged block** (AP/WBL…): classify + route (§6).
@@ -155,7 +159,46 @@ customer as un-customised.
    - Simple structural **addition** with surviving insertion point → auto-graft onto B.
    - Anything else (modified control, property/caption change, layout/RDLC) → **DEV**.
 
-## 6. Code-object block routing (tag-driven transplant)
+### 5a. No-CU-change detection (difference-first; `diffengine.no_cu_change`)
+
+A merge is not always required. When the vendor made **no change** to an object in the CU, there is
+nothing to carry the customer's code *into* — A is already correct against the new CU and only needs
+to be kept. Detected difference-first (consistent with §8): diff A vs B over the object body; the
+verdict is **no-CU-change iff EVERY differing line is attributable to a customer layer**. Any
+unattributable difference means the vendor touched the object → fall through to the normal merge path.
+
+- **Scope:** whole object body, EXCLUDING the OBJECT-PROPERTIES header (`Date/Time/Modified/Version
+  List` — churn) and the doc-trigger `BEGIN{..}END.` block (customer changes are documented there
+  too, so it can never count as a vendor change). Whole-body, *not* CODE-only: a Table's customer
+  work lives in field nodes and VAR sections, which a CODE-only scope would miss (this was a real
+  bug — a CODE-only test fired wrongly on T14).
+- **A body line is customer-attributable when any of:**
+  1. live code (not itself a comment) carrying a `//<cust>` marker (the trailing-tag *live line*
+     idiom — tag at end annotates running code);
+  2. any line within a customer `Start..Stop` block (whole span, anywhere). **Customer prefixes
+     only** — the engine's own `OPEN`/`STOP` regexes match the *combined* customer+vendor set, so a
+     vendor `// Start PA…` block must NOT be attributed away (this was a real bug: reusing the
+     combined regex flagged vendor blocks as customer and skipped real merges);
+  3. a commented line (`//` at start) that either begins `//<cust>` (self-attributed comment-out)
+     OR is strictly contiguous to a category-1/2 customer line (the comment-out-with-replacement
+     idiom, e.g. C1201's `Evaluate`→`Evaluate_WBL` swap: dead twin attributed by adjacency);
+  4. a VAR declaration present in A but absent from B — structural customer ownership (the vendor
+     never had it, so it can only be a customer add; a vendor VAR would be present in B). VARs are
+     attributed structurally because the customer tags the code *block* that uses the variable, not
+     the declaration line (this is what makes C231/C232's `DCRegNoG@…` qualify).
+- **Safe error is always "don't fire."** The recognised marker forms (1/3) are a documented set,
+  extendable per customer as idioms surface — NOT assumed exhaustive. An unrecognised idiom leaves a
+  residual, suppresses the short-circuit, and the object is merged as before. New idioms degrade to
+  "merged unnecessarily," never "skipped wrongly."
+- **On fire (batch):** copy A **verbatim** (no stamp) to `NoCuChangesDetected/<type>/`; move the
+  sources out of the dev queue (`A/`, `B/`) into `AnoCuChange/`/`BnoCuChange/` with an `Unchanged_`
+  prefix, so the files remaining in `A/`+`B/` are exactly the dev queue. GUI summary and batch report
+  carry a dedicated count/section.
+- **Validated:** fires on C1201/C231/C232 (confirmed no-vendor-change); does NOT fire on T14/T36/T77/
+  P14/P347 (real customer field work or genuine vendor changes — T36 in particular is a real vendor
+  code change and must not be skipped). Known-answer layer in `test_diffengine.py`.
+
+
 
 **Documentation-trigger enrichment (all object types):** the changelog also carries customer code
 entries (e.g. T39 `WBL-009 21.08.23 RL "Purchaser code" mandatory on lines.`). These map by tag to
