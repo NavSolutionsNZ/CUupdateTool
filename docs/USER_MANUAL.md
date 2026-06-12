@@ -65,11 +65,11 @@ the objects the tool has flagged.
 
 ### 2.1 The application
 
-The tool is a single Windows application, **`CUupdate_2.0.exe`**. The machine it runs on does not
+The tool is a single Windows application, **`CUupdate_{{VERSION}}.exe`**. The machine it runs on does not
 need any additional software installed — everything required is contained within the
 application.
 
-1. Copy `CUupdate_2.0.exe` to the machine, or run it from where it is stored.
+1. Copy `CUupdate_{{VERSION}}.exe` to the machine, or run it from where it is stored.
 2. Double-click it.
 3. The **CU Update — batch merge** window opens.
 
@@ -174,7 +174,7 @@ The point to remember is that the tool's input files must already be language-st
 
 ### 4.1 Steps
 
-1. Double-click `CUupdate_2.0.exe`.
+1. Double-click `CUupdate_{{VERSION}}.exe`.
 2. Next to **Job folder**, click **Browse…** and select the folder that contains the `A\` and
    `B\` sub-folders.
 3. Enter the **CU token** (for example `CU26Q1`) and your **Initials** (for example `RL`). These
@@ -325,7 +325,7 @@ The tool is normally used only through the window described above. This section 
 contained within the application, for background.
 
 The application is built from a small set of Python modules, which are bundled together into the
-single `CUupdate_2.0.exe` file. No part of this is required at run time other than the application
+single `CUupdate_{{VERSION}}.exe` file. No part of this is required at run time other than the application
 itself.
 
 | Component | Responsibility |
@@ -338,7 +338,7 @@ itself.
 | Executor | Builds the merged object C and performs the header and changelog bookkeeping. |
 
 The application is produced once, on a Windows machine, from the project source. It is then
-distributed as the single `CUupdate_2.0.exe` file. End users are given the finished application and
+distributed as the single `CUupdate_{{VERSION}}.exe` file. End users are given the finished application and
 do not build it themselves.
 
 ---
@@ -683,7 +683,7 @@ automatically only once its handler is built and validated against a real object
 
 ## 9. Quick reference
 
-**To run a job:** double-click `CUupdate_2.0.exe`; select the folder that contains `A\` and `B\`;
+**To run a job:** double-click `CUupdate_{{VERSION}}.exe`; select the folder that contains `A\` and `B\`;
 enter the CU token and your initials; tick **Dry run**; click **Run merge**; review the report;
 remove the tick; click **Run merge** again.
 

@@ -23,6 +23,11 @@
  *
  * IMPORTANT (handoff): editing USER_MANUAL.md then re-running this script is the
  * supported way to update the manual. Do NOT hand-edit the .docx.
+ *
+ * VERSION: the manual must NOT hardcode the tool version. Write {{VERSION}} in
+ * USER_MANUAL.md wherever the version/exe name appears; this script substitutes
+ * it from cuupdate/__init__.py __version__ at build time. So a release bump only
+ * needs __version__ changed + this script re-run - the manual can't go stale.
  */
 const fs = require('fs');
 const path = require('path');
@@ -39,6 +44,22 @@ const MD = path.join(DOCS, 'USER_MANUAL.md');
 const OUT = path.join(DOCS, 'USER_MANUAL.docx');
 const OFFICE = '/mnt/skills/public/docx/scripts/office';
 const CONTENT_W = 9360; // US Letter, 1" margins
+
+// ---------- version substitution ----------
+// The manual uses {{VERSION}} placeholders rather than a hardcoded version, so
+// a release bump can't silently stale it. We read the single source of truth
+// (cuupdate/__init__.py __version__) and substitute at build time. If the
+// version can't be read, we fail loudly rather than ship a manual with literal
+// {{VERSION}} text in it.
+const VERSION = (() => {
+  const initPy = path.join(DOCS, '..', 'cuupdate', '__init__.py');
+  const m = fs.readFileSync(initPy, 'utf8').match(/^__version__\s*=\s*["']([^"']+)["']/m);
+  if (!m) { console.error('FATAL: could not read __version__ from ' + initPy); process.exit(1); }
+  return m[1];
+})();
+function readManual() {
+  return fs.readFileSync(MD, 'utf8').replace(/\{\{VERSION\}\}/g, VERSION);
+}
 
 // ---------- inline formatting: **bold** (may wrap `code`), *italic*, `code` ----------
 function runs(text, base = {}) {
@@ -130,7 +151,7 @@ function imagePara(file, caption) {
 }
 
 // ---------- parse the markdown ----------
-const lines = fs.readFileSync(MD, 'utf8').split('\n');
+const lines = readManual().split('\n');
 const body = [];
 let i = 0, numListSeq = 0;
 const numberingConfigs = [
@@ -228,7 +249,7 @@ function bakeTOC() {
   const pdf = path.join(tmp, path.basename(OUT).replace(/\.docx$/, '.pdf'));
   // 2. heading list from the md (Title + #..#### in order)
   const heads = [];
-  for (const l of fs.readFileSync(MD, 'utf8').split('\n')) {
+  for (const l of readManual().split('\n')) {
     const mm = l.match(/^(#{1,4})\s+(.*)/); if (!mm) continue;
     let t = mm[2].trim().replace(/\*\*(.+?)\*\*/g, '$1').replace(/`([^`]+)`/g, '$1').replace(/\*(.+?)\*/g, '$1');
     heads.push({ level: mm[1].length, text: t });
