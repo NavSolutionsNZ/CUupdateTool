@@ -193,6 +193,88 @@ class Scorer:
     # nesting is guaranteed by compilation).
     _ENDC=re.compile(r'^\s*END[;.]?\s*$', re.I)   # END / END; / END. (block closers)
 
+    # ---- structural nesting depth (general placement invariant) --------------
+    # END-count replay (above) is a special case of a deeper rule: a customer
+    # block belongs at a specific BRACE-NESTING DEPTH, and its insert point in B
+    # must sit at that SAME depth. END; closers are how depth falls here, but the
+    # invariant is depth itself, so it holds for CASE..END, REPEAT..UNTIL and
+    # WITH..DO BEGIN equally - not just a literal END; pair. We track depth by
+    # counting LIVE block keywords, treating brace { } comment interiors, //
+    # line-comments and string literals as opaque (an END inside a TextConst or a
+    # commented-out line must never move the counter).
+    _OPENKW=re.compile(r'\b(BEGIN|CASE|REPEAT)\b', re.I)
+    _CLOSEKW=re.compile(r'\b(END|UNTIL)\b', re.I)
+
+    def _strip_opaque(self, line, in_brace):
+        """Return (visible_text, in_brace_after) with brace { } comment
+        interiors, // line-comments and '...' string literals removed, so block
+        keywords inside them are not counted. in_brace carries multi-line brace
+        comment state across lines (incadea block comments span many lines)."""
+        out=[]; i=0; n=len(line)
+        while i<n:
+            c=line[i]
+            if in_brace:
+                if c=='}': in_brace=False
+                i+=1; continue
+            if c=='{':
+                in_brace=True; i+=1; continue
+            if c=="'":                      # C/AL string literal: '' escapes a quote
+                i+=1
+                while i<n:
+                    if line[i]=="'":
+                        if i+1<n and line[i+1]=="'": i+=2; continue
+                        i+=1; break
+                    i+=1
+                continue
+            if c=='/' and i+1<n and line[i+1]=='/':   # // line comment to EOL
+                break
+            out.append(c); i+=1
+        return ''.join(out), in_brace
+
+    def _line_delta(self, line, in_brace):
+        """Net depth change contributed by one line's LIVE keywords, and the
+        updated in_brace state. Openers +1, closers -1. 'DO BEGIN' is a single
+        +1 (BEGIN counts; DO is not a keyword we track), and CASE..END / WITH
+        DO BEGIN all balance through the same BEGIN/END, CASE/END, REPEAT/UNTIL
+        pairs."""
+        vis,in_brace=self._strip_opaque(line, in_brace)
+        delta=len(self._OPENKW.findall(vis))-len(self._CLOSEKW.findall(vis))
+        return delta,in_brace
+
+    def _depth_at(self, lines, start_idx, target_idx):
+        """Structural nesting depth at target_idx, accumulated from start_idx
+        (exclusive of target line's own keywords). Counts live openers/closers
+        only; opaque interiors skipped. Robust to lines added/removed between
+        start and target (it's a running count of unmatched openers, not an
+        offset)."""
+        depth=0; in_brace=False
+        for k in range(start_idx, target_idx):
+            d,in_brace=self._line_delta(lines[k], in_brace)
+            depth+=d
+        return depth
+
+    def _depth_correct_forward(self, lines, from_idx, target_depth, base_idx, hi):
+        """From from_idx (the before-anchor in B), the block would naively insert
+        right after it - at from_idx's depth. If that depth exceeds target_depth
+        (the block sits OUTSIDE a nest the before-anchor is INSIDE: the climb-out
+        case, e.g. C232's two END;s), walk forward consuming closer lines until
+        the running depth returns to target_depth, and return that landing index
+        (insert AFTER it). Depth is measured structurally from base_idx (the
+        enclosing proc BEGIN), so it's immune to lines added/removed by the CU.
+        Returns None when no correction applies (already at/below target depth =>
+        caller keeps the naive insert)."""
+        cur=self._depth_at(lines, base_idx, from_idx+1)   # depth AFTER the anchor line
+        if cur<=target_depth:
+            return None                                   # not a climb-out; leave as-is
+        depth=cur; j=from_idx; in_brace=False
+        while j+1<=hi and j+1<len(lines):
+            j+=1
+            d,in_brace=self._line_delta(lines[j], in_brace)
+            depth+=d
+            if depth<=target_depth:
+                return j        # landed back at the block's home depth; insert after j
+        return None
+
     def _a_index_of_anchor(self, kind, val, block_start):
         """A index of the before-anchor: nearest line ABOVE block_start that
         produced (kind,val). None if not found within the local window."""
@@ -260,6 +342,7 @@ class Scorer:
         # END-replay after-anchor positions (block sits AFTER these END; lines,
         # not immediately after the before-anchor). Empty in the normal case.
         end_replay_pos=set()
+        b_span=None                       # (proc BEGIN idx, proc END idx) in B, for depth baseline
         a_unit=self._a_enclosing(b['start'])
         if a_unit is not None:
             b_unit=self._b_match(a_unit)
@@ -267,6 +350,7 @@ class Scorer:
                 bpos=[]; apos=[]          # enclosing proc absent from B -> DEV
             else:
                 lo,hi=b_unit['start'],b_unit['end']
+                b_span=(lo,hi)
                 # The before-anchor must be strictly inside the proc body: a
                 # block can't legitimately anchor backward onto a prior region.
                 bpos=[p for p in bpos if lo<=p<=hi]
@@ -374,6 +458,29 @@ class Scorer:
         insert_after=None
         if coherent and chosen:
             insert_after = chosen[1] if chosen[1] in end_replay_pos else chosen[0]
+            # DEPTH-AWARE CORRECTION (general case of END-replay). The before-
+            # anchor may sit DEEPER in the brace nesting than the block does in A
+            # (the block lives outside a nest the anchor is inside - e.g. C232,
+            # where the before-anchor REPORT.RUN(...GLReg) is two END;s deeper
+            # than the DC5.00 block). Inserting right after such an anchor drops
+            # the block INTO that nest. Correct it structurally: the block's home
+            # depth is its OWN depth in A (NOT its trailing successor's depth - a
+            # block that is the TAIL element of a nest, e.g. P347's DC6.00 last
+            # arm of a CASE, has a successor one level shallower, and measuring
+            # there would wrongly walk past the nest's closing END;). Compare the
+            # block's A depth to the depth the naive B insert would sit at; only
+            # when the naive B point is DEEPER (climb-out) do we walk forward
+            # consuming closers until depth returns to the block's home depth.
+            # Equal depth => naive point is already correct => no correction
+            # (this is what keeps P347 intact). Climb-IN (naive shallower) is the
+            # rarer mirror case, deliberately NOT auto-corrected. Scoped to
+            # confined, non-END-replay blocks.
+            if b_span is not None and insert_after not in end_replay_pos and a_unit is not None:
+                depth_A=self._depth_at(self.A, a_unit['start'], b['start'])
+                landed=self._depth_correct_forward(
+                    self.B, insert_after, depth_A, b_span[0], b_span[1])
+                if landed is not None:
+                    insert_after=landed
         return dict(tag=f"{b['p']}{b['id']}",line=b['start']+1,content=content,
                     score=round(score,2),coherent=coherent,anchors=(bk,ak),orig_ok=orig_ok,verdict=verdict,
                     chosen=chosen,insert_after=insert_after)

@@ -378,6 +378,23 @@ Remaining caveats:
   `END;`, not after the before-anchor; a carried trailing blank is suppressed when B already has one at
   the insertion point. Made C231 (Direct Credit) auto-merge. Scoped to the confined, otherwise-anchorless
   case — inert for every block that already anchors.
+- **Depth-aware insert correction (v2.2, §8.25):** generalises END-count replay from the special case
+  (`END;` neighbours only) to the underlying invariant — a customer block belongs at a specific **brace-
+  nesting depth**, and its insert point in B must sit at that same depth. When the before-anchor sits
+  **deeper** than the block does in A (the block lives *outside* a nest the anchor is *inside* — e.g.
+  C232, where the before-anchor `REPORT.RUN(...GLReg)` is two `END;`s deeper than the `DC5.00` block),
+  the naive "insert after the before-anchor" drops the block **into** that nest. The scorer measures the
+  block's own structural depth in A and, when the naive B insert point is deeper, walks forward consuming
+  closers (`END`/`UNTIL`/CASE-`END`) until depth returns to the block's home depth. Depth is counted from
+  live block keywords with `{ }` block-comment interiors, `//` comments and string literals treated as
+  **opaque** (an `END` inside a `TextConst` or a commented-out line never moves the counter), so it holds
+  for `CASE..END` and `REPEAT..UNTIL` equally, not just literal `END;` pairs — and it is a count of
+  unmatched openers, never a line offset, so it survives the CU adding/removing lines above. Equal depth →
+  naive point already correct → no correction (keeps P347's tail-of-CASE block intact). Climb-*in* (naive
+  shallower than the block) is the rarer mirror case and is deliberately **not** auto-corrected. Made C232
+  (Direct Credit) auto-merge. Same release also hardened the test gate: `test_diffengine.py` and
+  `test_scorer.py` previously printed `PASS` / exited 0 unconditionally even with failures in the list;
+  both now exit non-zero on any failure.
 - **Stage 0 census BUILT:** `census.py` derives the customer-tag set from each object's Version List
   (leading-alpha prefix, vendor-prefix filter); `cu_gui.py` runs it automatically to fill `--cust`.
   See §8.9. (Languages still default-driven; full language census per §4 not yet wired.)

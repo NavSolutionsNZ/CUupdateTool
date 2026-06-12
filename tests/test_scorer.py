@@ -42,3 +42,5 @@ for name,a,b in OBJS:
         else:
             unknown+=1
 print(f"\nPASS={passed} FAIL={failed} (untested blocks={unknown})")
+import sys as _sys
+_sys.exit(1 if failed else 0)

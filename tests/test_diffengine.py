@@ -38,6 +38,8 @@ CUST_OVERRIDE = {
     'P21V2': {'AP', 'WBL'},         # FactBoxes now tagged AP-2362 -> auto-merge (pair to P21)
     'P347': {'AP', 'WBL', 'DC'},    # Direct Credit customisation; DC6.00 block + ReportUsage2 option ext
     'C231': {'AP', 'WBL', 'DC'},    # Direct Credit (DC5.00): two CODE blocks, one END-bracketed at proc tail
+    'C232': {'AP', 'WBL', 'DC'},    # Direct Credit (DC5.00): first block's before-anchor sits DEEPER than the
+                                    # block (climb-out) -> depth-aware insert correction places it after END;END;
 }
 
 
@@ -115,6 +117,11 @@ EXPECTED_VERDICTS = {
                                                                  # END-count replay. Global VAR DCRegNoG +
                                                                  # Version List/doc-trigger carries are
                                                                  # execution-layer (cf. T81).
+    'C232': Counter({(None, 'code', 'CARRY'): 2}),               # two DC5.00 blocks in Code@1. The 1st's
+                                                                 # before-anchor (REPORT.RUN...GLReg) sits two
+                                                                 # END;s DEEPER than the block -> depth-aware
+                                                                 # insert correction lands it after END;END;
+                                                                 # (outside the Posting Report branch).
 }
 
 # Objects that should auto-execute, and the fixture they must reproduce.
@@ -149,6 +156,9 @@ EXEC_CASES = {
     'C231': (os.path.join(FIX, 'EX-C231.stripped.txt'),
              os.path.join(FIX, 'CU-C231.stripped.txt'),
              os.path.join(FIX, 'MyMerged-C231.stripped.txt')),
+    'C232': (os.path.join(FIX, 'EX-C232.stripped.txt'),
+             os.path.join(FIX, 'CU-C232.stripped.txt'),
+             os.path.join(FIX, 'MyMerged-C232.stripped.txt')),
 }
 # Objects that should route to DEV in the narrow build (not execute).
 EXEC_GATED_TO_DEV = ['P21']
@@ -365,6 +375,11 @@ def run():
             fails.append(f"[date] {fmt}: got {got} want {want}")
 
     print()
+    if fails:
+        print(f"FAIL ({len(fails)})")
+        for f in fails:
+            print("  -", f)
+        sys.exit(1)
     print("PASS")
 
 

@@ -1198,3 +1198,72 @@ END-bracketed transplant note) and USER_MANUAL.docx regenerated via `build_manua
 cuupdate/__init__.py (2.1), tests/test_diffengine.py (C231 wired in: CUST_OVERRIDE, EXPECTED_VERDICTS,
 EXEC_CASES, OBJ), tests/fixtures/{EX,CU,MyMerged}-C231.stripped.txt, docs/{ARCHITECTURE,CONTEXT}.md,
 docs/USER_MANUAL.{md,docx}.
+
+---
+
+**§8.25 — Depth-aware insert correction (climb-out); C232 auto-merges; test-gate hardened; v2.2**
+
+**One-liner:** *Generalised §8.24's END-count replay into the real invariant — a customer block belongs
+at a specific brace-nesting DEPTH, and its insert point in B must sit at that depth. C232's first
+`DC5.00` block was being dropped INSIDE the Posting-Report-ID branch because its before-anchor sits two
+`END;`s deeper than the block; the depth correction now lands it after `END;END;` (outside the branch),
+reproducing the hand merge byte-exact. New frozen fixture C232. Suite green.*
+
+**Driver (Rich):** C232 (Codeunit 232, Gen. Jnl.-Post+Print, customer tag DC — Direct Credit NZ). Files
+EX (A, customer) / CU (B, new vendor base) / MyMerged (gold). Tool output (Merged) placed the first
+`// Start DC5.00 .. DCRegNoG := "Line No."; .. // Stop DC5.00` block one nesting level too deep: inside
+`IF GenJnlTemplate."Posting Report ID" <> 0 THEN BEGIN .. END`, immediately after `REPORT.RUN(...GLReg)`.
+Behaviourally wrong — `DCRegNoG` would then be assigned only when a posting report runs, not on every
+post.
+
+**Root cause.** Placement was decided by mapping the block's nearest distinctive neighbours into B and
+inserting after the before-anchor (`chosen[0]+1`). The before-anchor `REPORT.RUN(...GLReg)` is depth 4
+(inside `WITH..DO BEGIN` → `IF GLReg.GET..BEGIN` → `IF "Posting Report ID"..BEGIN`); the block in A is
+depth 2 (inside `WITH`, outside the GLReg.GET block). The scorer had **no model of nesting depth** — it
+knew the anchor line matched B at 100% but not that the block lived two `END;`s shallower. So it inserted
+right after the anchor, dropping the block into the branch. §8.24's END-replay would have fixed it but
+only fires in the `not apos and bpos` case (block has NO forward anchor); C232's block has a valid
+forward anchor (`IF "Line No." = 0 THEN`), so that path never triggered.
+
+**Fix (agreed, depth-as-invariant).** Express the rule as DEPTH, not END-counting (Rich: *"the END END
+is not always going to be the reason… there should be some logical way to determine if the customer
+code is within another block of code or not. This went from being outside a nest, to being inside"*).
+- New structural-depth primitives in `scorer.py`: `_strip_opaque` (removes `{ }` block-comment interiors
+  — multi-line state carried —, `//` comments, and `'...'` string literals so block keywords inside them
+  are never counted), `_line_delta` (net `BEGIN`/`CASE`/`REPEAT` openers minus `END`/`UNTIL` closers on
+  a line's visible text), `_depth_at` (running depth from the enclosing proc `BEGIN` to a target line —
+  a count of unmatched openers, invariant to lines added/removed above), and `_depth_correct_forward`.
+- In `score_block`, after `chosen`/`insert_after` are set (and only for confined, non-END-replay blocks):
+  measure the block's OWN depth in A (`depth_A` at `b['start']`); if the naive B insert point sits
+  DEEPER than `depth_A`, walk forward from it consuming closers until depth returns to `depth_A`, and
+  insert there. Equal depth → no correction. The executor already honours `insert_after`, so no exec
+  change was needed.
+
+**The trap that made me run the full suite (caught + fixed before commit).** First implementation
+measured `depth_A` from the block's *trailing sibling* (first live line after the block). That broke
+**P347**: its `DC6.00` block is the TAIL arm of a `CASE ReportUsage2 OF`, so the first live line after it
+(`SETRANGE("Make Code"...)`) is one level SHALLOWER — outside the CASE. Measuring there walked the insert
+past the CASE's closing `END;` and displaced it. Fix: measure `depth_A` from the block's **own** line, not
+its successor. P347 then has naive-B-depth == block-A-depth → no correction (correct); C232 has
+naive 4 ≠ block 2 → corrected. Both right. (This is exactly the regression the unconditional-`PASS`
+harness would have hidden — see below.)
+
+**Test gate hardened (same release).** `test_diffengine.py` built a `fails` list but printed `PASS`
+**unconditionally** and never exited non-zero — the P347 regression above showed `PASS` with a diff dump.
+`test_scorer.py` had the same shape (`PASS=N FAIL=M` then exit 0 regardless). Both now exit 1 on any
+failure. Verified the gate genuinely fails (rc=1) on a deliberately-broken C232 fixture and passes
+(rc=0) restored. `test_census.py` already exited correctly.
+
+**Verification.** C232 reproduces the hand merge byte-exact (modulo agreed `_norm` masking of header
+`Date=` and the CU-stamp doc-trigger line). Full suite green: scorer 20/20, census 5/5, diffengine PASS
+(now incl. C232 verdict — two `code`/CARRY rows — + byte-exact EXEC, and P347 still byte-exact). Second
+`DC5.00` block (END-bracketed at proc tail) continues to anchor via §8.24 END-replay — untouched. No
+language layer to strip (ENU base only), so `.stripped` fixtures equal source.
+
+**Version bumped 2.1 → 2.2** (merge-output-altering change). `CUupdate_2.2.exe`.
+
+**Files:** cuupdate/scorer.py (`_strip_opaque`/`_line_delta`/`_depth_at`/`_depth_correct_forward`,
+depth-aware correction in `score_block`), cuupdate/__init__.py (2.2), tests/test_diffengine.py (C232
+wired in: CUST_OVERRIDE, EXPECTED_VERDICTS, EXEC_CASES; fails-checked exit), tests/test_scorer.py
+(non-zero exit on failure), tests/fixtures/{EX,CU,MyMerged}-C232.stripped.txt (NEW),
+docs/{ARCHITECTURE,CONTEXT}.md.

@@ -374,7 +374,7 @@ Each object type has its own handler. The current status is:
 | Object type | Status | What runs |
 |---|---|---|
 | **Table** | Merges automatically | field graft, whole-procedure graft, code transplant, caption and option carry, description-tag carry, variable-declaration carry, changelog carry, header bookkeeping |
-| **Codeunit** | Merges automatically | code transplant (including blocks at the tail of a procedure, bracketed only by `END;` lines), changelog carry, header bookkeeping (no field rules) |
+| **Codeunit** | Merges automatically | code transplant (placing each block at its correct nesting depth — including blocks at the tail of a procedure bracketed only by `END;` lines, and blocks whose surrounding code changed depth between versions), changelog carry, header bookkeeping (no field rules) |
 | **Page** | Merges automatically | control-add graft, caption and option carry with a vendor-rename guard, variable-declaration carry, changelog carry |
 | **Report** | Manual review only | the whole object is sent to manual review until a handler is built |
 | **XMLport** | Manual review only | the whole object is sent to manual review until a handler is built |
@@ -513,6 +513,29 @@ doubled up where the vendor's code already has one).
   a `// Start DC5.00` block that is the last statement in the `Code` procedure, sitting just before
   the procedure's closing `END;`. It is now carried into the correct position automatically, exactly
   matching the hand-merged result. (An earlier version sent the whole object to manual review.)
+
+#### 8.1.5c A code block that sits just outside a block of code, not inside it
+
+The line a customer block is positioned against is sometimes **inside** a deeper block of code — an
+`IF ... THEN BEGIN ... END`, a `CASE`, and so on — while the customer's block itself belongs
+**outside** that block. The landmark line and the block are at different nesting depths. Reading only
+the nearest line of text, an earlier version of the tool could place the block immediately after that
+landmark, which dropped it *inside* the deeper block. That changes behaviour: code that should run on
+every pass would instead run only when the inner block runs.
+
+The tool now checks the **nesting depth** the block occupies in the customer's object and makes sure
+the position it chooses in the vendor's object sits at the same depth. If the chosen landmark is
+deeper, the tool steps forward past the closing lines (`END;`, `UNTIL`, the end of a `CASE`) until the
+depth matches, and places the block there — outside the deeper block, where the customer wrote it.
+Depth is read from the code's own `BEGIN`/`END`/`CASE` structure, ignoring anything inside comments or
+text strings, and it does not depend on indentation. When the landmark is already at the block's own
+depth, nothing is changed.
+
+- *Validated on Codeunit 232 (Gen. Jnl.-Post+Print):* the customer's `// Start DC5.00` block assigning
+  `DCRegNoG := "Line No.";` sits just after a posting-report `IF ... THEN BEGIN ... END` block, at the
+  outer level. The nearest landmark line above it is the `REPORT.RUN(...)` call *inside* that block, two
+  levels deeper. The tool now steps back out to the outer level and places the block there, exactly
+  matching the hand-merged result. (An earlier version placed it inside the posting-report block.)
 
 #### 8.1.6 A caption or option change — CARRY (always take the customer value)
 
