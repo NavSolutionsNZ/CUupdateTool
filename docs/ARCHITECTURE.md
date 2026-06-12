@@ -365,6 +365,19 @@ Remaining caveats:
   isn't in the census (AP001691 ∉ Version List) no longer gates the object.
   - NOT yet executing: VANILLA_MOD/SUPPRESS (DEV by rule); RDLC layout (DEV); local (in-procedure) VAR
     additions; page/report structural diff beyond field-grafts.
+- **Procedure-scope anchor confinement (v2.0, §8.23):** a CODE-section block's anchor search is confined
+  to its enclosing procedure (A→B by `@id` first, name second); a block whose enclosing proc is absent
+  from B routes the whole object to DEV. Stops vendor-boilerplate anchors that recur across procedures
+  from grafting a block into the wrong one (T17).
+- **END-bracketed transplant / END-count replay (v2.1, §8.24):** a code block whose nearest distinctive
+  neighbours are `END;` lines (boilerplate, anchor-excluded) — typically the **tail of a procedure body**
+  — cannot be string-anchored forward. Its home is recovered **structurally**: count the `END`-class
+  lines between the before-anchor and the block in A, replay that count forward in B (`_walk_ends`), and
+  anchor after the n-th `END;`. Indentation-independent (balanced nesting is guaranteed by compilation).
+  The scorer emits an explicit `insert_after` so the executor places the block after the bracketing
+  `END;`, not after the before-anchor; a carried trailing blank is suppressed when B already has one at
+  the insertion point. Made C231 (Direct Credit) auto-merge. Scoped to the confined, otherwise-anchorless
+  case — inert for every block that already anchors.
 - **Stage 0 census BUILT:** `census.py` derives the customer-tag set from each object's Version List
   (leading-alpha prefix, vendor-prefix filter); `cu_gui.py` runs it automatically to fill `--cust`.
   See §8.9. (Languages still default-driven; full language census per §4 not yet wired.)

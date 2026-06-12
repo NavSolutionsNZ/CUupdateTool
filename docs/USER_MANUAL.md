@@ -374,7 +374,7 @@ Each object type has its own handler. The current status is:
 | Object type | Status | What runs |
 |---|---|---|
 | **Table** | Merges automatically | field graft, whole-procedure graft, code transplant, caption and option carry, description-tag carry, variable-declaration carry, changelog carry, header bookkeeping |
-| **Codeunit** | Merges automatically | code transplant, changelog carry, header bookkeeping (no field rules) |
+| **Codeunit** | Merges automatically | code transplant (including blocks at the tail of a procedure, bracketed only by `END;` lines), changelog carry, header bookkeeping (no field rules) |
 | **Page** | Merges automatically | control-add graft, caption and option carry with a vendor-rename guard, variable-declaration carry, changelog carry |
 | **Report** | Manual review only | the whole object is sent to manual review until a handler is built |
 | **XMLport** | Manual review only | the whole object is sent to manual review until a handler is built |
@@ -491,6 +491,28 @@ object is sent to manual review rather than guessed.
   The block is carried into `CopyFromGenJnlLine`, where the `GenJnlLine` parameter it reads is in
   scope — not into one of the other procedures that share the same anchor text. (An earlier version
   of the tool carried this block into the wrong procedure.)
+
+#### 8.1.5b A code block at the very end of a procedure, with only END; lines around it
+
+A customer block sometimes sits as the **last statement of a procedure**, with nothing below it but
+the `END;` lines that close the procedure. These `END;` lines are not distinctive — every block in
+the object ends with them — so they cannot be used as a landmark to position the block. Without a
+distinctive line below it, an earlier version of the tool could not work out where the block
+belonged and sent the object to manual review, even though the placement was obvious to a developer
+reading it.
+
+The tool now positions such a block by its **structure** rather than by matching a line of text: it
+counts how many `END;` lines sit between the block and the line above it in the customer's object,
+then steps past the same number of `END;` lines in the vendor's object to find the matching spot.
+Because the object compiles, its `END;` nesting is balanced, so this count carries across reliably —
+and it does **not** depend on how the code is indented, which can vary between developers. The block
+is placed after the correct `END;`, with its blank-line spacing kept tidy (a blank line is not
+doubled up where the vendor's code already has one).
+
+- *Validated on Codeunit 231 (Gen. Jnl.-Post):* the customer's Direct Credit customisation includes
+  a `// Start DC5.00` block that is the last statement in the `Code` procedure, sitting just before
+  the procedure's closing `END;`. It is now carried into the correct position automatically, exactly
+  matching the hand-merged result. (An earlier version sent the whole object to manual review.)
 
 #### 8.1.6 A caption or option change — CARRY (always take the customer value)
 

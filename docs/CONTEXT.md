@@ -1149,3 +1149,52 @@ example; exe references) and USER_MANUAL.docx regenerated via `build_manual.js`.
 cuupdate/__init__.py (2.0), tests/test_diffengine.py (T17 wired in; `_norm` param-masking; overrides
 removed), tests/fixtures/{EX,CU,MyMerged}-T17.stripped.txt, docs/{ARCHITECTURE,CONTEXT}.md,
 docs/USER_MANUAL.{md,docx}.
+
+---
+
+**§8.24 — END-bracketed code blocks at procedure tail; END-count replay; v2.1**
+
+Identified via **C231 (Gen. Jnl.-Post)**, but the change is to the **behaviour**, not to C231: a customer
+code block whose nearest distinctive neighbours on *both* sides are `END;` lines could not be
+forward-anchored and false-gated to DEV. C231's customer customisation (`DC5.00`, Direct Credit NZ) is
+two `// Start DC5.00` code blocks in `Code@1`. The second sits at the **tail of the procedure body**,
+immediately before the `WITH`/proc `END;` lines. `END;` is non-distinctive boilerplate (excluded as an
+anchor, BOILER), so the scorer's forward walk skipped past it, overshot the procedure onto the object-
+trigger changelog (`PA-Number Date`), and procedure-scope confinement (§8.23) then stripped that out-of-
+proc anchor → `apos` empty → coherent=False → DEV. The block has a legitimate home but the string-
+matching scorer had no anchor to express it.
+
+Fix (agreed, **Option A′**): when a confined block has no string-anchorable forward anchor, recover its
+home **structurally, not by indentation** (operators' indent discipline varies; indentation is a
+developer skill, not a guarantee). Count the `END`-class lines between the before-anchor and the block
+in A, then **replay that exact count forward from each matched before-anchor in B** (`_walk_ends`); the
+block anchors after the n-th `END;`. Balanced `END` nesting is guaranteed by compilation, so the count
+transfers even when whitespace does not. Scoped to the confined, otherwise-anchorless case: it cannot
+perturb any block that already anchors, nor any unconfined object-scope block (`a_unit is None`).
+
+Two coupled execution fixes were needed to reproduce the hand-merge byte-exact:
+- **`insert_after` (explicit insertion point).** The executor previously always inserted after
+  `chosen[0]` (the before-anchor). An END-replay block sits *after* the `END;` it was bracketed against
+  (`chosen[1]`), not after the before-anchor. The scorer now emits an explicit `insert_after` (= `chosen[1]`
+  for END-replay blocks, else `chosen[0]`), plumbed scorer → diffengine → executor; the executor honours
+  it and never re-derives placement from `chosen[0]` alone. Default preserves prior behaviour for every
+  existing block.
+- **Trailing-blank collision.** When a carried block ends in a blank AND B already has a blank at the
+  insertion point, the two doubled. The executor now drops the carried trailing blank in that case (B's
+  own blank already separates the block from the following vendor line). Fires only on a real collision;
+  no existing fixture hits it.
+
+C231 frozen as a known-answer fixture (verdict: two `code`/CARRY rows; byte-exact EXEC). Global VAR
+`DCRegNoG` and Version List / doc-trigger carries are execution-layer (cf. T81). No language layer to
+strip (object carries only the ENU base), so `.stripped` fixtures equal the source.
+
+**Version bumped 2.0 → 2.1** (standing rule: a change that alters merge output bumps the version, for
+exe-name + GUI merge traceability). `CUupdate_2.1.exe`. USER_MANUAL.md updated (Codeunit capability +
+END-bracketed transplant note) and USER_MANUAL.docx regenerated via `build_manual.js`.
+
+**Files:** cuupdate/scorer.py (`_a_index_of_anchor`/`_end_count_between`/`_walk_ends`, END-replay in
+`score_block`, `insert_after`), cuupdate/diffengine.py (`insert_after` plumbed through code row +
+`_scorer_blocks`), cuupdate/execute.py (honour `insert_after`; trailing-blank collision suppression),
+cuupdate/__init__.py (2.1), tests/test_diffengine.py (C231 wired in: CUST_OVERRIDE, EXPECTED_VERDICTS,
+EXEC_CASES, OBJ), tests/fixtures/{EX,CU,MyMerged}-C231.stripped.txt, docs/{ARCHITECTURE,CONTEXT}.md,
+docs/USER_MANUAL.{md,docx}.
