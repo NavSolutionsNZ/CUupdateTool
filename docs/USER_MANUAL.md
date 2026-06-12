@@ -29,7 +29,7 @@ to the developer.
 
 ### 1.2 The A / B to C model
 
-Every merge involves three objects:
+Where a merge is produced, it involves three objects:
 
 - **A** is the customer's current object: the previous vendor version together with the
   customer's own code.
@@ -41,6 +41,9 @@ Every merge involves three objects:
 C is not simply "B with a few changes." A and B are equal inputs. The tool finds where each
 piece of customer content belongs in B, takes that content from A, and writes both into C. B
 itself is never altered — it is one of two read-only inputs.
+
+A merge is not always required. When the vendor made no change to an object in this CU, the
+customer's object A is already correct and no C is produced — see "No CU change" in section 5.2.
 
 ### 1.3 What the tool does not do
 
@@ -192,11 +195,14 @@ The point to remember is that the tool's input files must already be language-st
 For each A and B pair in the job, the tool:
 
 1. Determines the customer tags from the version lists of the A objects (section 4.4).
-2. Compares A and B, classifies every difference, and decides for each object whether it can be
-   merged automatically or must go to manual review.
-3. For each automatically merged object, builds C, writes it out, and moves the source files
+2. Compares A and B and classifies every difference, deciding for each object whether it needs no
+   merge at all (the vendor changed nothing), can be merged automatically, or must go to manual
+   review.
+3. For each object the vendor did not change, copies A across unchanged and moves the source files
+   aside (see "No CU change" in section 5.2).
+4. For each automatically merged object, builds C, writes it out, and moves the source files
    aside.
-4. For each manual object, leaves the source files in place and reports the reason.
+5. For each manual object, leaves the source files in place and reports the reason.
 
 While the tool is working, the window shows a progress indicator. It then prints the full report
 and a summary line in the form `--- N auto-merged, K no CU change, M left for manual review ---`.
@@ -236,9 +242,9 @@ The customer tags are not entered by hand.
 ### 5.1 Use Dry run first
 
 The **Dry run** option classifies every object and prints the full report **without writing or
-moving any files**. Use it to preview a job: it shows which objects will be merged automatically
-and which will be left for manual review, before anything is changed. When the preview is
-satisfactory, remove the tick and run the merge.
+moving any files**. Use it to preview a job: it shows which objects need no merge, which will be
+merged automatically, and which will be left for manual review, before anything is changed. When
+the preview is satisfactory, remove the tick and run the merge.
 
 ### 5.2 Where the files go after a merge
 
@@ -294,9 +300,11 @@ meaning of each kind of item is described in section 8.
 
 The first line of the report (section 4.4) shows the customer tags the tool determined from the
 version lists. The version list is the curated, authoritative source for these tags, so this is
-the correct set in normal use. The customer tags affect only whether a customer **code block**
-is recognised; caption, option, field and changelog carries do not depend on them. The report
-records the tags used so that the run is documented and auditable.
+the correct set in normal use. The customer tags affect whether a customer **code block** is
+recognised during a merge, and also whether an object is recognised as needing **no merge** at all
+(section 5.2 — that test attributes each difference to the customer's tags and markers); caption,
+option, field and changelog carries do not depend on them. The report records the tags used so
+that the run is documented and auditable.
 
 ---
 
@@ -393,6 +401,12 @@ Each object type has its own handler. The current status is:
 
 An object type that is not yet validated sends the **whole object** to manual review **before
 any rule runs**, so that no rule written for one type can ever be applied wrongly to another.
+
+Before any per-type rule runs, the tool also applies the **no-CU-change** check (section 5.2): for
+any type, if every difference between A and B is attributable to the customer's own tags and
+markers, the vendor changed nothing and the object is set aside as "no CU change" rather than
+merged. This is a short-circuit, not a per-type rule — it changes none of the rules below; it only
+decides that they need not run for that object.
 
 ### 8.1 Table
 
@@ -744,9 +758,10 @@ automatically only once its handler is built and validated against a real object
 enter the CU token and your initials; tick **Dry run**; click **Run merge**; review the report;
 remove the tick; click **Run merge** again.
 
-**After a merge:** the `Merged\` folder holds the completed objects; whatever remains in `A\` and
-`B\` is the manual TortoiseMerge worklist; the report gives the field and line of each flagged
-item.
+**After a merge:** the `Merged\` folder holds the completed objects; the `NoCuChangesDetected\`
+folder holds objects the vendor did not change (A copied across unchanged); whatever remains in
+`A\` and `B\` is the manual TortoiseMerge worklist; the report gives the field and line of each
+flagged item.
 
 **Then:** join the objects by type; re-apply the language layer in the development environment;
 import and compile.
