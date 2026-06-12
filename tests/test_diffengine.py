@@ -49,16 +49,15 @@ PARAMS = dict(cu_token='CU26Q1', initials='RL', text='CU upgrade.',
 
 # Per-object PARAMS overrides: a fixture bakes in the date it was hand-merged,
 # so an object merged on a different day needs its own date params. (Everything
-# else - cu_token/initials/text - is shared.) P14's gold was merged 10/06/26.
+# else - cu_token/initials/text - is shared.)
+#
+# NOTE: header Date and the CU-stamp doc-trigger line are PARAM-driven, not
+# merge logic, and are now masked in _norm() before comparison (see _norm).
+# So fixtures no longer need a per-object date/text override just to match a
+# baked-in hand-merge date - the shared PARAMS are used for every object and
+# the param-driven lines are ignored. Add an override here only if a future
+# object needs different cu_token/initials (the parts that are NOT masked).
 PARAMS_OVERRIDE = {
-    'P14': dict(PARAMS, merge_date='06/10/26', merge_date_dots='10.06.26'),
-    # P21V2 gold: header date 06/10/25 (hand-typed in the gold), doc-trigger
-    # 10.06.26, text 'CU Upgrade.'. The tool stamps exactly what it's given;
-    # these match the gold so the fixture reproduces byte-exact.
-    'P21V2': dict(PARAMS, merge_date='06/10/25', merge_date_dots='10.06.26',
-                  text='CU Upgrade.'),
-    # P347 hand-merged 10/06/26; doc-trigger text 'CU upgrade.' (harness default).
-    'P347': dict(PARAMS, merge_date='06/10/26', merge_date_dots='10.06.26'),
 }
 
 
@@ -104,6 +103,11 @@ EXPECTED_VERDICTS = {
     'P347': Counter({(11,   'caption',    'CARRY'): 1,           # OptionString carry on field 11
                      (None, 'code',       'CARRY'): 1,           # DC6.00 CODE-section block
                      (None, 'var-option', 'CARRY'): 1}),         # ReportUsage2 global option ext
+    'T17': Counter({(50000, 'field-graft', 'CARRY'): 1,          # AP001994 "Posted Description"
+                    (None,  'code',        'CARRY'): 1}),        # AP001994 block in CopyFromGenJnlLine.
+                                                                 # Block's after-anchor (// Start PA036544)
+                                                                 # recurs across 5 procedures; procedure-
+                                                                 # scope confinement keeps it in @4.
 }
 
 # Objects that should auto-execute, and the fixture they must reproduce.
@@ -132,6 +136,9 @@ EXEC_CASES = {
     'P347': (os.path.join(FIX, 'EX-P347.stripped.txt'),
              os.path.join(FIX, 'CU-P347.stripped.txt'),
              os.path.join(FIX, 'MyMerged-P347.stripped.txt')),
+    'T17': (os.path.join(FIX, 'EX-T17.stripped.txt'),
+            os.path.join(FIX, 'CU-T17.stripped.txt'),
+            os.path.join(FIX, 'MyMerged-T17.stripped.txt')),
 }
 # Objects that should route to DEV in the narrow build (not execute).
 EXEC_GATED_TO_DEV = ['P21']
@@ -180,10 +187,20 @@ OBJ = {
               os.path.join(FIX, 'CU-P21V2.stripped.txt')),
     'P347': (os.path.join(FIX, 'EX-P347.stripped.txt'),
              os.path.join(FIX, 'CU-P347.stripped.txt')),
+    'T17': (os.path.join(FIX, 'EX-T17.stripped.txt'),
+            os.path.join(FIX, 'CU-T17.stripped.txt')),
 }
 
 
-def _norm(text):
+def _norm(text, cu_token=None):
+    """Normalise for comparison. Beyond TortoiseMerge artifacts, mask the two
+    fields the tool stamps from per-run PARAMS (not from merge logic):
+      - the OBJECT-PROPERTIES 'Date=...;' header
+      - the CU-stamp doc-trigger entry (the line carrying cu_token)
+    A fixture bakes in whatever date/text it was hand-merged with; the tool
+    stamps exactly what it's handed. Those differences are param-handled, not
+    merge correctness, so we blank them rather than force per-object PARAMS
+    overrides to chase each fixture's baked-in date."""
     out = []
     for l in text.replace('\r\n', '\n').replace('\r', '\n').split('\n'):
         l = l.rstrip()
@@ -192,6 +209,14 @@ def _norm(text):
         m = re.match(r'^\s+([A-Za-z0-9.\-]+)\s+(\d{2}\.\d{2}\.\d{2}\s.*)$', l)
         if m:
             l = '      ' + m.group(1).ljust(11) + m.group(2)
+        # mask param-driven header Date
+        if re.match(r'^\s*Date=.*;\s*$', l):
+            l = '    Date=<PARAM>;'
+        # mask the CU-stamp doc-trigger line (date + initials + free text are
+        # all per-run params); keep only the tag so a mis-placed stamp is still
+        # caught, but date/initials/text differences are ignored.
+        if cu_token and re.match(rf'^\s*{re.escape(cu_token)}\b', l):
+            l = '      ' + cu_token.ljust(11) + '<PARAM>'
         out.append(l)
     return '\n'.join(out)
 
@@ -262,9 +287,10 @@ def run():
             continue
         with open(merged, encoding='latin-1') as f:
             want = f.read()
-        if _norm(out) != _norm(want):
+        _tok = _params_for(name)['cu_token']
+        if _norm(out, _tok) != _norm(want, _tok):
             fails.append(f"[exec] {name}: output != fixture (see diff dump)")
-            _dump_diff(name, _norm(out), _norm(want))
+            _dump_diff(name, _norm(out, _tok), _norm(want, _tok))
         else:
             print(f"[exec] {name}: OK (reproduces fixture)")
 

@@ -42,6 +42,75 @@ class Scorer:
         for i,l in enumerate(self.B):
             k=self._vkey(l)
             if k: self.Bvt.setdefault(k,[]).append(i)
+        # procedure-unit maps for A and B (identity = name@id). Used to confine
+        # a CODE-section block's anchor search to its OWN enclosing procedure,
+        # so a vendor-boilerplate anchor (e.g. '// Start PA036544') that recurs
+        # across several procedures can't graft the block into the wrong one.
+        self.Aproc=self._proc_units(self.A)
+        self.Bproc=self._proc_units(self.B)
+        # B-procedure lookup by id and by name (id is the durable C/AL identity;
+        # vendors rename-without-renumber, so id wins, name is the fallback key).
+        self.Bproc_by_id={}; self.Bproc_by_name={}
+        for key,u in self.Bproc.items():
+            self.Bproc_by_id[u['id']]=u
+            self.Bproc_by_name.setdefault(u['name'],u)
+
+    # ---- procedure-unit parsing (mirrors diffengine._proc_units) ------------
+    _PROC_NAME=re.compile(r'^    (?:LOCAL )?PROCEDURE\s+(\w+)@(\d+)\s*\(')
+    _ATTR_LINE=re.compile(r'^    \[[A-Za-z][\w ]*\]\s*$')
+
+    def _proc_units(self, lines):
+        """Return {name@id: {'name','id','start','end'}} for every CODE-section
+        procedure. 'start' is the attribute line if one directly precedes the
+        signature, else the signature line; 'end' is the index of the
+        procedure's terminating END; (inclusive). Identity is name@id.
+
+        Boundary detection uses C/AL's fixed indentation: a procedure body is
+        opened by BEGIN at 4-space indent ('    BEGIN') and closed by END; at
+        4-space indent ('    END;'). Inner BEGIN/END (IF..THEN BEGIN, END ELSE
+        BEGIN, CASE..END) are always indented deeper, so this avoids the
+        END-ELSE-BEGIN depth-underflow that token counting hits. The object
+        trigger closes with '    END.' (dot), which is not a procedure."""
+        units={}; i=0; n=len(lines)
+        while i<n:
+            pm=self._PROC_NAME.match(lines[i])
+            if pm:
+                name,pid=pm.group(1),pm.group(2)
+                start=i
+                if i-1>=0 and self._ATTR_LINE.match(lines[i-1]):
+                    start=i-1
+                # find the proc-level BEGIN ('    BEGIN'), then the next
+                # proc-level END; ('    END;') closes the procedure.
+                j=i+1; seen_begin=False
+                while j<n:
+                    l=lines[j]
+                    if not seen_begin:
+                        if l=='    BEGIN': seen_begin=True
+                        # a following PROCEDURE before any BEGIN => malformed;
+                        # bail so we don't swallow the next procedure.
+                        elif self._PROC_NAME.match(l): j-=1; break
+                    else:
+                        if l=='    END;' or l=='    END.': break
+                    j+=1
+                units[f'{name}@{pid}']={'name':name,'id':pid,'start':start,'end':j}
+                i=j+1; continue
+            i+=1
+        return units
+
+    def _a_enclosing(self, idx):
+        """The A-procedure unit containing A-line idx, or None if idx lies
+        outside any procedure (global VAR / object trigger scope)."""
+        for u in self.Aproc.values():
+            if u['start']<=idx<=u['end']:
+                return u
+        return None
+
+    def _b_match(self, a_unit):
+        """Resolve a_unit's matching B-procedure: by id first, name fallback.
+        Returns the B unit or None (vendor removed/renamed-and-renumbered)."""
+        u=self.Bproc_by_id.get(a_unit['id'])
+        if u is not None: return u
+        return self.Bproc_by_name.get(a_unit['name'])
     def _vkey(self,l):
         m=self.OPEN.match(l) or self.CLOSE.match(l)
         return f"{m.group(1).upper()}{m.group(2)}" if (m and m.group(1).upper() not in self.CUST) else None
@@ -120,6 +189,40 @@ class Scorer:
         vmod=(content=='VANILLA_MOD')
         bk,bv=self._anchor(b['start'],-1); ak,av=self._anchor(b['stop'],+1)
         bpos=self._locate(bk,bv); apos=self._locate(ak,av)
+        # PROCEDURE-SCOPE CONFINEMENT: a CODE-section block belongs to exactly
+        # one procedure in A; it must anchor inside the SAME-identity procedure
+        # in B. Vendor boilerplate anchors (e.g. '// Start PA036544') recur
+        # across procedures, so an unconfined search can bracket the block into
+        # the wrong one. Resolve the enclosing A-procedure, match it in B (id
+        # first, name fallback), and keep only anchor positions inside that B
+        # span. A block enclosed in A by a procedure with NO B-match (vendor
+        # removed/renamed-and-renumbered it) gets no valid anchor -> DEV.
+        # Blocks OUTSIDE any procedure (global VAR / object trigger) are left
+        # unconfined - their existing object-scope anchoring is unchanged.
+        a_unit=self._a_enclosing(b['start'])
+        if a_unit is not None:
+            b_unit=self._b_match(a_unit)
+            if b_unit is None:
+                bpos=[]; apos=[]          # enclosing proc absent from B -> DEV
+            else:
+                lo,hi=b_unit['start'],b_unit['end']
+                # The before-anchor must be strictly inside the proc body: a
+                # block can't legitimately anchor backward onto a prior region.
+                bpos=[p for p in bpos if lo<=p<=hi]
+                # The after-anchor may reach one line PAST the proc's closing
+                # END; - the boundary line that follows (the next PROCEDURE
+                # header, or a blank then header). A block at the TAIL of a
+                # procedure anchors forward onto that boundary; without this it
+                # would lose its only after-anchor and false-gate to DEV. The
+                # extension stops at the first following boundary, so it can't
+                # reach into a sibling procedure's interior.
+                hi_after=hi
+                j=hi+1
+                while j<len(self.B) and self.B[j].strip()=='':
+                    j+=1
+                if j<len(self.B) and BOUNDARY.match(self.B[j]):
+                    hi_after=j
+                apos=[p for p in apos if lo<=p<=hi_after]
         # POSITION VALIDATION: after must follow before within a bounded window
         # in B. When the before-anchor occurs in B more than once (e.g. a vendor
         # tag reused several times), the FIRST valid pair is not necessarily the
