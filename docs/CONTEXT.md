@@ -1004,3 +1004,47 @@ P347 verdict + exec), scorer 20/20, census 5/5.
 cuupdate/execute.py (-_carry_global_vars, +_var_blocks, +_carry_vars, +_carry_var_options, +var-option
 executable kind, rewired execute), tests/test_diffengine.py (P347 across verdict + exec layers),
 tests/fixtures/{EX,CU,MyMerged}-P347.stripped.txt (NEW).
+
+### 8.21 Session log — User Manual + Rules Index deliverable; reproducible docx build
+**Outcome: a distribution-quality User Manual now exists at `docs/USER_MANUAL.md` (source) +
+`docs/USER_MANUAL.docx` (generated), with section 8 = the Rules Index by object type (the
+user-facing statement of every auto-merge-vs-manual rule, with object evidence). Regenerated from
+the .md by a single committed script `docs/build_manual.js`. No engine change this session.**
+
+**Audience/scope (agreed, discuss-first):** developers + managers, English-second-language. The GUI
+exe is the ONLY supported run path presented to users — the CLI (`run_batch`/`run_one`) is NOT
+surfaced in the manual; §7 is just a brief "what's inside the application" overview. Professional
+register: full words (no "doc"/jargon/slang). Four real screenshots embedded (`docs/img/`:
+gui-launch, gui-running [census line], gui-report [DEV report], folders-after-run).
+
+**Domain corrections captured in the manual (Rich):**
+- Language layer is stripped IN THE NAV/GUI DEV ENVIRONMENT BEFORE export (not via standalone
+  cmdlet steps); the cmdlets are mentioned only "for reference". Same for re-applying the language
+  layer after merge — done in the GUI dev environment as part of import/compile.
+- Customer tags are stated as automatic with NO "older instructions had you pass them by hand"
+  framing (new users, no history). A new dev CANNOT confirm the full tag set, so the manual does
+  NOT ask the operator to verify the census `customer tags` line — it only explains what the line
+  reports.
+- §8.20 deferred Description-tag item is intentionally LEFT OUT of the user manual (open bug, not
+  user-facing behaviour).
+
+**Build mechanics (the one gotcha for future regeneration):** docx-js emits the Table of Contents
+as an EMPTY field — so until Word repaginates (F9), EVERY TOC entry shows "page 1", and a non-Word
+viewer shows it wrong permanently. `docs/build_manual.js` therefore (1) generates the docx from the
+.md, then (2) BAKES real page numbers into the TOC: renders a PDF (LibreOffice via the docx-skill
+office helpers), maps each heading to its page (pdfplumber), injects a bookmark per heading, and
+replaces the empty TOC field with pre-built hyperlink+page-number entries (dot leaders, level
+indent). Result is correct on first open in any viewer and still updatable in Word.
+- **DO NOT hand-edit the .docx.** Edit `docs/USER_MANUAL.md`, then run `node docs/build_manual.js`
+  (needs: `npm i -g docx`, python3 `pdfplumber`, and the docx-skill office helpers for the bake
+  step; if the helpers are absent the script still writes a valid docx but skips the bake and the
+  TOC reverts to the page-1 problem until F9).
+
+**Standing rule (added to §7 working principles this session):** keep `docs/USER_MANUAL.{md,docx}`
+in sync — update it (and rebuild the docx) IN THE SAME COMMIT as CONTEXT.md/ARCHITECTURE.md whenever
+a change alters behaviour, a rule, the pipeline, the GUI, or the supported workflow. The manual must
+never describe behaviour the engine no longer has, nor omit a rule the engine now applies.
+
+**Files:** docs/USER_MANUAL.md (NEW), docs/USER_MANUAL.docx (NEW, generated), docs/build_manual.js
+(NEW, reproducible builder), docs/img/{gui-launch,gui-running,gui-report,folders-after-run}.png
+(NEW), docs/CONTEXT.md (§7 maintenance rule + this §8.21 entry).
