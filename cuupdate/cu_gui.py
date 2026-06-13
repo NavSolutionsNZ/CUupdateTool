@@ -203,13 +203,19 @@ class App:
 
     # --- attribution list state --------------------------------------------
     # _counts: prefix -> occurrence count (for the display label).
-    # _orig_cust/_orig_vendor: the census's FIRST-PASS proposal (before any
-    # developer move), so the deltas we send back are computed relative to it:
-    #   force_vendor = prefixes now on the vendor side that started customer
-    #   force_cust   = prefixes now on the customer side that started vendor
+    #
+    # The developer's corrections are stored as ABSOLUTE INTENT, not as a delta
+    # against a shifting baseline:
+    #   _force_vendor: prefixes the developer has declared vendor (regardless of
+    #                  what the raw census proposes) -> stop gating carries
+    #   _force_cust:   prefixes the developer has declared customer
+    # These survive every repopulate (post-run, same-folder auto-census). The
+    # census applies them idempotently after its startswith pass, so a second
+    # consecutive run reapplies the same correction rather than dropping it.
+    # They are cleared only on a genuine folder change (see _maybe_census).
     _counts = {}
-    _orig_cust = set()
-    _orig_vendor = set()
+    _force_vendor = set()
+    _force_cust = set()
 
     def _fmt(self, pfx):
         return f"{pfx:8} x{self._counts.get(pfx, 0)}"
@@ -218,11 +224,10 @@ class App:
         return label.split()[0] if label else ''
 
     def populate_lists(self, lists):
-        """Fill both list boxes from a census result, recording the original
-        proposal so subsequent moves can be expressed as deltas."""
+        """Fill both list boxes from a census result. The census result already
+        reflects the persisted corrections (it is called with them), so we just
+        render it - we do NOT reset any correction state here."""
         self._counts = {p: c for p, c in lists['cust'] + lists['vendor']}
-        self._orig_cust = {p for p, _ in lists['cust']}
-        self._orig_vendor = {p for p, _ in lists['vendor']}
         self.cust_list.delete(0, 'end')
         self.vendor_list.delete(0, 'end')
         for p, _ in lists['cust']:
@@ -235,8 +240,17 @@ class App:
         if not sel:
             return
         label = src.get(sel[0])
+        pfx = self._pfx_of(label)
         src.delete(sel[0])
         dst.insert('end', label)
+        # Record the move as absolute intent. A move to one side clears any
+        # opposite-side intent for that prefix (the latest move wins).
+        if dst is self.vendor_list:
+            self._force_vendor.add(pfx)
+            self._force_cust.discard(pfx)
+        else:
+            self._force_cust.add(pfx)
+            self._force_vendor.discard(pfx)
 
     def move_to_vendor(self):
         self._move(self.cust_list, self.vendor_list)
@@ -245,15 +259,8 @@ class App:
         self._move(self.vendor_list, self.cust_list)
 
     def current_overrides(self):
-        """Return (force_vendor, force_cust) as the delta from the original
-        census proposal to the current list state."""
-        cur_vendor = {self._pfx_of(self.vendor_list.get(i))
-                      for i in range(self.vendor_list.size())}
-        cur_cust = {self._pfx_of(self.cust_list.get(i))
-                    for i in range(self.cust_list.size())}
-        force_vendor = sorted(cur_vendor - self._orig_vendor)   # moved cust->vendor
-        force_cust = sorted(cur_cust - self._orig_cust)         # moved vendor->cust
-        return force_vendor, force_cust
+        """Return the persisted (force_vendor, force_cust) as absolute intent."""
+        return sorted(self._force_vendor), sorted(self._force_cust)
 
     def _maybe_census(self):
         """Auto-populate the attribution lists from the selected folder.
@@ -271,15 +278,23 @@ class App:
         already_populated = self.cust_list.size() or self.vendor_list.size()
         if root == self._censused_root and already_populated:
             return
+        if root != self._censused_root:
+            # Genuine folder change: corrections from the previous job don't
+            # apply to a different customer. Clear them.
+            self._force_vendor.clear()
+            self._force_cust.clear()
         self._censused_root = root
         threading.Thread(target=self._census_work, args=(root,),
                          daemon=True).start()
 
     def _census_work(self, root):
         """Background census-only pass; hands lists back via the queue. Silent
-        on any failure - the lists just stay as they were."""
+        on any failure - the lists just stay as they were. The persisted
+        corrections are applied so the displayed split matches what a run uses."""
         try:
-            _cust, _summary, lists = derive_cust(root)
+            _cust, _summary, lists = derive_cust(
+                root, force_vendor=sorted(self._force_vendor),
+                force_cust=sorted(self._force_cust))
             if lists['cust'] or lists['vendor']:
                 self.q.put(("CENSUS", lists))
         except Exception:
