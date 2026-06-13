@@ -311,6 +311,11 @@ class App:
             self.run_btn.config(state='normal')
 
     def on_run(self):
+        # Re-entrancy guard: a synchronous flag, checked before anything else,
+        # so a run cannot be launched twice (e.g. a double event) even before
+        # _set_busy disables the button. Cleared when the run completes (DONE).
+        if getattr(self, '_running', False):
+            return
         root = self.root_var.get().strip()
         cu = self.cu_var.get().strip()
         initials = self.initials_var.get().strip()
@@ -330,6 +335,7 @@ class App:
             messagebox.showerror("Missing", "CU token and initials are required.")
             return
 
+        self._running = True
         self._set_busy(True)
         self.log.delete('1.0', 'end')
         force_vendor, force_cust = self.current_overrides()
@@ -368,6 +374,7 @@ class App:
             while True:
                 item = self.q.get_nowait()
                 if isinstance(item, tuple) and item and item[0] == "DONE":
+                    self._running = False
                     self._set_busy(False)
                     r = item[1]
                     if r is not None:
