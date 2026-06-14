@@ -1,0 +1,14 @@
+OBJECT Codeunit 80 SalesPost
+{
+  OBJECT-PROPERTIES
+  {
+    Date=01/01/24;
+    Modified=Yes;
+    Version List=NAVW1.x,WBL;
+  }
+  CODE
+  {
+    BEGIN
+    END.
+  }
+}

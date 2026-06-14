@@ -1,0 +1,21 @@
+OBJECT Table 40 ItemLedger
+{
+  OBJECT-PROPERTIES
+  {
+    Date=01/01/24;
+    Modified=Yes;
+    Version List=NAVW1.x,WBL;
+  }
+  FIELDS
+  {
+    { 1   ;   ;No                  ;Code20        }
+  }
+  CODE
+  {
+    BEGIN
+    {
+      PA060000   05.05.21 ENU vendor note
+    }
+    END.
+  }
+}

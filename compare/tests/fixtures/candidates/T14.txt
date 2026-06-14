@@ -1,0 +1,35 @@
+OBJECT Table 14 Location
+{
+  OBJECT-PROPERTIES
+  {
+    Date=09/02/23;
+    Time=[ 2:43:48 PM];
+    Modified=Yes;
+    Version List=NAVW1.x,N.7.2.1,AP001651,WBL;
+  }
+  PROPERTIES
+  {
+    OnInsert=BEGIN
+               // Start WBL001
+               MyField := 1;
+               // Stop WBL001
+             END;
+  }
+  FIELDS
+  {
+    { 1   ;   ;Code                ;Code10        }
+    { 50000;  ;MyCustomField       ;Text50        }
+  }
+  CODE
+  {
+    BEGIN
+    {
+      // @ Area General
+      PA-Number  Date
+      ------------------------------------------------
+      WBL001     14.06.26 ENU Custom field added
+      AP001651   01.01.20 ENU Vendor patch
+    }
+    END.
+  }
+}

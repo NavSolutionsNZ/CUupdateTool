@@ -1,0 +1,14 @@
+OBJECT Table 38 PurchHeader
+{
+  OBJECT-PROPERTIES
+  {
+    Date=01/01/24;
+    Time=[ 9:00:00 AM];
+    Modified=Yes;
+    Version List=NAVW1.x,WBL;
+  }
+  FIELDS
+  {
+    { 1   ;   ;No                  ;Code20        }
+  }
+}

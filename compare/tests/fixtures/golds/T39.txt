@@ -1,0 +1,22 @@
+OBJECT Table 39 PurchLine
+{
+  OBJECT-PROPERTIES
+  {
+    Date=01/01/24;
+    Modified=Yes;
+    Version List=NAVW1.x,WBL;
+  }
+  FIELDS
+  {
+    { 1   ;   ;No                  ;Code20        }
+  }
+  CODE
+  {
+    BEGIN
+    {
+      WBL020     03.03.20 ENU original description text
+      PA050000   05.05.21 ENU vendor note
+    }
+    END.
+  }
+}

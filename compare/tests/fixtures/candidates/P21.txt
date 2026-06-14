@@ -1,0 +1,9 @@
+OBJECT Page 21 CustomerCard
+{
+  OBJECT-PROPERTIES
+  {
+    Date=01/01/24;
+    Modified=Yes;
+    Version List=NAVW1.x,WBL;
+  }
+}
