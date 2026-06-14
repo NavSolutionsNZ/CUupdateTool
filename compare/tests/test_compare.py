@@ -19,7 +19,6 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..'))
 import compareengine as ce
-import run_compare
 
 FIX = os.path.join(HERE, 'fixtures')
 GOLDS = os.path.join(FIX, 'golds')
@@ -126,7 +125,7 @@ def test_header_only_guard():
 def test_report_builds():
     print("report:")
     results, miss_c, miss_g = ce.compare_dirs(GOLDS, CANDS)
-    report = run_compare.build_report(results, miss_c, miss_g)
+    report = ce.build_report(results, miss_c, miss_g)
     check("report mentions matched-except-header",
           'matched-except-header' in report, True)
     check("report has detail block",

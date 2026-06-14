@@ -375,3 +375,106 @@ def compare_dirs(gold_dir, cand_dir):
         results.append(res)
 
     return results, missing_candidate, missing_gold
+
+
+# ---------------------------------------------------------------------------
+# Report rendering (shared by the CLI runner and the GUI)
+# ---------------------------------------------------------------------------
+
+VERDICT_ORDER = {
+    'unmatched': 0,
+    'matched-except-header': 1,
+    'missing-candidate': 2,
+    'missing-gold': 3,
+    'matched': 4,
+}
+
+
+def _fmt_row(file, typ, oid, verdict, sections, w):
+    t = f'{typ or "?"} {oid or ""}'.strip()
+    secs = ', '.join(sections) if sections else ''
+    return (f'{file:<{w["file"]}}  {t:<{w["type"]}}  '
+            f'{verdict:<{w["verdict"]}}  {secs}')
+
+
+def build_report(results, missing_candidate, missing_gold):
+    """Return the full report as a single string (console, file, and GUI all
+    render the identical text).
+    """
+    rows = []
+    for r in results:
+        rows.append({
+            'file': r['file'], 'type': r.get('type'), 'id': r.get('id'),
+            'verdict': r['verdict'], 'sections': r.get('sections', []),
+            'diffs': r.get('diffs', []),
+            'missing_doc_tags': r.get('missing_doc_tags', []),
+        })
+    for fn in missing_candidate:
+        rows.append({'file': fn, 'type': None, 'id': None,
+                     'verdict': 'missing-candidate', 'sections': [],
+                     'diffs': [], 'missing_doc_tags': []})
+    for fn in missing_gold:
+        rows.append({'file': fn, 'type': None, 'id': None,
+                     'verdict': 'missing-gold', 'sections': [],
+                     'diffs': [], 'missing_doc_tags': []})
+
+    rows.sort(key=lambda r: (VERDICT_ORDER.get(r['verdict'], 9), r['file']))
+
+    if not rows:
+        return 'No files found in either folder.'
+
+    w = {
+        'file': max([4] + [len(r['file']) for r in rows]),
+        'type': max([4] + [len(f'{r["type"] or "?"} {r["id"] or ""}'.strip())
+                           for r in rows]),
+        'verdict': max(len('matched-except-header'),
+                       *[len(r['verdict']) for r in rows]),
+    }
+
+    out = []
+    header = (f'{"FILE":<{w["file"]}}  {"OBJECT":<{w["type"]}}  '
+              f'{"VERDICT":<{w["verdict"]}}  SECTIONS')
+    out.append(header)
+    out.append('-' * len(header))
+    for r in rows:
+        out.append(_fmt_row(r['file'], r['type'], r['id'], r['verdict'],
+                            r['sections'], w))
+
+    tally = {}
+    for r in rows:
+        tally[r['verdict']] = tally.get(r['verdict'], 0) + 1
+    out.append('')
+    out.append('Summary: ' + ', '.join(
+        f'{k}={tally[k]}'
+        for k in sorted(tally, key=lambda k: VERDICT_ORDER.get(k, 9))))
+
+    detail = [r for r in rows if r['verdict'] in
+              ('unmatched', 'matched-except-header')]
+    if detail:
+        out.append('')
+        out.append('=' * len(header))
+        out.append('DETAIL (non-matched objects)')
+        out.append('=' * len(header))
+        for r in detail:
+            out.append('')
+            out.append(f'### {r["file"]}  [{r["verdict"]}]  '
+                       f'sections: {", ".join(r["sections"]) or "-"}')
+            if r.get('missing_doc_tags'):
+                out.append('  doc-trigger tags in gold but missing from '
+                           'candidate: ' + ', '.join(r['missing_doc_tags']))
+            for lineno, g, c in r['diffs']:
+                gtxt = '<absent>' if g is None else g
+                ctxt = '<absent>' if c is None else c
+                out.append(f'  line {lineno}:')
+                out.append(f'    gold: {gtxt}')
+                out.append(f'    cand: {ctxt}')
+
+    return '\n'.join(out)
+
+
+def needs_attention(results, missing_candidate, missing_gold):
+    """True if anything in the run needs a human eye (unmatched or missing)."""
+    return bool(
+        any(r['verdict'] in ('unmatched', 'missing-candidate', 'missing-gold')
+            for r in results)
+        or missing_candidate or missing_gold)
