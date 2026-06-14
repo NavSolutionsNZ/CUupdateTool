@@ -25,12 +25,17 @@ print('=' * 60)
 print('  compare.spec: building %s.exe  (version %s)' % (EXE_NAME, VERSION))
 print('=' * 60)
 
-# Clean dist/ so a rebuild never leaves a stale (previous-version) exe sitting
-# next to the current one. dist/ is no longer tracked (version bumps handle
-# distribution), but a clean build dir still avoids shipping the wrong file.
+# Clean only THIS tool's own previous exe(s) from dist/ so a rebuild never
+# leaves a stale (previous-version) CUcompare exe next to the current one.
+# Scoped to the 'CUcompare' prefix so building this oracle does NOT delete the
+# main tool's CUupdate exe sharing the same dist/ - the two specs no longer step
+# on each other. dist/ itself is not tracked (version bumps handle distribution).
 _dist = 'dist'
+_prefix = 'CUcompare'
 if os.path.isdir(_dist):
     for _f in os.listdir(_dist):
+        if not _f.startswith(_prefix):
+            continue
         _p = os.path.join(_dist, _f)
         try:
             shutil.rmtree(_p) if os.path.isdir(_p) else os.remove(_p)
