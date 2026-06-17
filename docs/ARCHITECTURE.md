@@ -211,21 +211,29 @@ unattributable difference means the vendor touched the object → fall through t
      object correctly falls through to the merge path (safe error = "don't fire"). This is what makes
      **C364** qualify: one new `DeleteICReference@4` proc marked only by an inner `Start/Stop AP2326`
      block. Applied in `no_cu_change` (needs the A-vs-B opcodes), not the B-free `_nocu_attribute`.
-  7. the **scaffolding of a wholly A-only Page FIELD control** (PAGE objects only) whose `Description=`
-     line carries a customer tag. A field control `{ N ; lvl ; Field ; … }` has only one taggable
-     line — `Description=` (a field has nowhere else to put a tag); its opener and `SourceExpr`/closer
-     lines bracket that tag and fall outside the cat-5 token span, leaving the unit partly unattributed
-     and suppressing the short-circuit. Cat 7 sweeps that scaffolding, but **only** for an A-only
-     *insert* span containing a complete Field unit that already has ≥1 line attributed by a **code
-     marker** (cat 5 — the customer token on `Description=`). A customer tag on `Description=` means the
-     customer **owns** that control — whether they added the field or ticketed a caption/property change
-     on it — so on a vendor-unchanged object A's form is final either way; mixed customer+vendor tags on
-     one `Description=` still attribute (any customer token suffices). The guard mirrors cat 6: a field
-     the **vendor retired** (A-only, no customer tag) has no flagged line, so cat 7 does not fire and
-     the object falls through to merge (safe error = "don't fire"). This is what makes **P47** qualify:
-     a customer-added `"Profit %"` field tagged `Description=AP001714`. Scoped to **PAGE + Field** by
-     design — other control types (Action/Group) are not yet validated; widen only with a fixture.
-     Applied in `no_cu_change` (needs the A-vs-B opcodes), like cat 6.
+  7. **(PAGE only) strip-and-compare for customer-owned Field controls.** The line-by-line
+     attribution of cats 1–6 justifies each *differing* line in place — robust for CODE idioms, but
+     brittle for a Page **Field** control: a field's only taggable line is `Description=`, and its
+     structural lines (`{ N;;Field;` opener, `SourceExpr`, a separate `Editable=FALSE }` or bare `}`
+     closer) carry no token. Worse, those structural lines **repeat** across fields, so the line-level
+     differ slips its insert boundary onto a neighbouring identical closer and sweeps a real vendor
+     line into the "inserted" span — leaving an unjustifiable stray line and suppressing the
+     short-circuit (**P138**: the RUID field's own `Editable=FALSE }` closer matched the previous
+     field's, shifting the boundary). The diff cannot be trusted to bound a field unit. So for Pages
+     the field case is decided the way the tool reconstructs a baseline everywhere else: **strip the
+     customer layer and compare to B.** Every wholly customer-owned Field control (its `Description=`
+     bears a customer token) is removed — resolved by **brace structure** on full A, *not* by diff
+     opcodes — and the residual A body is compared to B. Match ⇒ the vendor changed nothing but the
+     customer's field(s) ⇒ take A. This is immune to the boundary slip: brace structure draws the
+     unit, the differ does not. **Guard:** a field whose `Description=` has no customer token is **not**
+     stripped (vendor-retired or untagged field), so it stays in the residual, the residual ≠ B, and
+     the object falls through to merge (safe error = "don't fire"). A customer tag on `Description=`
+     means the customer **owns** that control — new field *or* a ticketed caption/property change — so
+     A's form is final on a vendor-unchanged object; mixed customer+vendor tags still strip (any
+     customer token suffices). This is what makes **P47** (3-line field, fused closer) and **P138**
+     (4-line field, separate closer, slip shape) qualify. Scoped to **PAGE + Field** by design — other
+     control types (Action/Group) are not yet validated; widen only with a fixture. Runs inside
+     `no_cu_change` before the cats 1–6 fallback; non-Page objects never enter it.
 
 **Token-shape addendum (global, per-job).** Category 5 needs to know what each customer token *looks
 like* so it can be recognised wherever it appears. This is an **addendum to the version list**: the

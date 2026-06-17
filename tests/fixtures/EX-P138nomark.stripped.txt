@@ -1,0 +1,565 @@
+OBJECT Page 138 Posted Purchase Invoice
+{
+  OBJECT-PROPERTIES
+  {
+    Date=09/15/23;
+    Time=10:18:00 AM;
+    Modified=Yes;
+    Version List=NAVW1.x,N.7.2.1,APOP000010;
+  }
+  PROPERTIES
+  {
+    CaptionML=ENU=Posted Purchase Invoice;
+    Description=PA032178,PA037533;
+    InsertAllowed=No;
+    DeleteAllowed=No;
+    ModifyAllowed=No;
+    SourceTable=Table122;
+    SourceTableView=SORTING(Order Type,Buy-from Vendor No.)
+                    WHERE(General Document=FILTER(No));
+    PageType=Document;
+    RefreshOnActivate=Yes;
+    OnOpenPage=BEGIN
+                 // Start INC
+                 EnableImporter();
+                 // Stop INC
+               END;
+
+    ActionList=ACTIONS
+    {
+      { 1900000003;0 ;ActionContainer;
+                      ActionContainerType=RelatedInformation }
+      { 1101353000;1 ;ActionGroup;
+                      Name=LineBtn;
+                      CaptionML=ENU=&Line;
+                      Visible=LineBtnVisible }
+      { 1101353009;2 ;Action    ;
+                      CaptionML=ENU=Item Charge &Assignment;
+                      Description=PA037533;
+                      Visible=FALSE;
+                      Image=Allocations;
+                      OnAction=BEGIN
+                                 // Start INC
+                                 CurrPage."Sales Lines".PAGE.ItemChargeAssgnt;
+                                 // Stop INC
+                               END;
+                                }
+      { 53      ;1   ;ActionGroup;
+                      CaptionML=ENU=&Invoice }
+      { 45      ;2   ;Action    ;
+                      ShortCutKey=F7;
+                      CaptionML=ENU=&Statistics;
+                      Description=PA037533;
+                      RunObject=Page 400;
+                      RunPageLink=No.=FIELD(No.);
+                      Promoted=No;
+                      PromotedIsBig=Yes;
+                      Image=Statistics;
+                      PromotedCategory=Process }
+      { 55      ;2   ;Action    ;
+                      CaptionML=ENU=Co&mments;
+                      Description=INC,PA037533;
+                      RunObject=Page 66;
+                      RunPageLink=Document Type=CONST(Posted Invoice),
+                                  No.=FIELD(No.),
+                                  Document Line No.=CONST(0);
+                      Promoted=No;
+                      Visible=FALSE;
+                      Image=ViewComments;
+                      PromotedCategory=Process }
+      { 89      ;2   ;Action    ;
+                      ShortCutKey=Shift+Ctrl+D;
+                      CaptionML=ENU=Dimensions;
+                      Description=PA035597,PA037533;
+                      Visible=FALSE;
+                      Image=Dimensions;
+                      OnAction=BEGIN
+                                 ShowDimensions;
+                               END;
+                                }
+      { 1055603 ;1   ;ActionGroup;
+                      CaptionML=ENU=Text;
+                      Description=PA037533 }
+      { 95      ;2   ;Action    ;
+                      CaptionML=ENU=&Header Text;
+                      Description=PA037533;
+                      RunObject=Page 5028698;
+                      RunPageLink=Document Type=CONST(Invoice),
+                                  Document No.=FIELD(No.),
+                                  Header/Footer=CONST(Header);
+                      PromotedIsBig=Yes;
+                      Image=Note }
+      { 96      ;2   ;Action    ;
+                      CaptionML=ENU=&Footer Text;
+                      Description=PA037533;
+                      RunObject=Page 5028698;
+                      RunPageLink=Document Type=CONST(Invoice),
+                                  Document No.=FIELD(No.),
+                                  Header/Footer=CONST(Footer);
+                      PromotedIsBig=Yes;
+                      Image=Note }
+      { 1900000004;0 ;ActionContainer;
+                      ActionContainerType=ActionItems }
+      { 57      ;1   ;Action    ;
+                      CaptionML=ENU=&Navigate;
+                      Description=PA037533;
+                      Promoted=No;
+                      PromotedIsBig=Yes;
+                      Image=Navigate;
+                      PromotedCategory=Process;
+                      OnAction=BEGIN
+                                 Navigate;
+                               END;
+                                }
+      { 1055601 ;1   ;ActionGroup;
+                      CaptionML=ENU=Print;
+                      Description=PA037533 }
+      { 56      ;2   ;Action    ;
+                      Ellipsis=Yes;
+                      CaptionML=ENU=&Print;
+                      Description=PA037533;
+                      Promoted=No;
+                      PromotedIsBig=Yes;
+                      Image=Print;
+                      PromotedCategory=Process;
+                      OnAction=BEGIN
+                                 CurrPage.SETSELECTIONFILTER(PurchInvHeader);
+                                 // Start INC
+                                 PurchInvHeader := Rec;
+                                 // Stop INC
+
+                                 // Start PA032178
+                                 PurchInvHeader.PrintRecords(TRUE);
+                                 // Stop PA032178
+                               END;
+                                }
+    }
+  }
+  CONTROLS
+  {
+    { 1900000001;0;Container;
+                ContainerType=ContentArea }
+
+    { 1   ;1   ;Group     ;
+                CaptionML=ENU=General }
+
+    { 2   ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="No.";
+                Importance=Promoted;
+                Editable=FALSE;
+                QuickEntry=FALSE }
+
+    { 4   ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Buy-from Vendor No.";
+                Editable=FALSE;
+                QuickEntry=FALSE }
+
+    { 59  ;2   ;Field     ;
+                Description=PA032438,PA037533;
+                SourceExpr="Buy-from Vendor Name";
+                Importance=Standard;
+                Editable=FALSE;
+                QuickEntry=FALSE }
+
+    { 61  ;2   ;Field     ;
+                Description=PA032438,PA037533;
+                SourceExpr="Buy-from Address";
+                Editable=FALSE;
+                QuickEntry=FALSE }
+
+    { 6   ;2   ;Field     ;
+                CaptionML=ENU=Buy-from Post Code/City;
+                Description=PA037533;
+                SourceExpr="Buy-from Post Code";
+                AutoFormatExpr='JMD';
+                Editable=FALSE;
+                QuickEntry=FALSE }
+
+    { 65  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Buy-from City";
+                Editable=FALSE;
+                QuickEntry=FALSE }
+
+    { 1055602;2;Field     ;
+                Description=PA041023,PA041187.89776;
+                SourceExpr="Supply VIN" }
+
+    { 1055604;2;Field     ;
+                Description=PA041023,PA041187.88803,PA041187.89776;
+                SourceExpr="Reference License No.";
+                Visible=FALSE }
+
+    { 12  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Posting Date";
+                Importance=Promoted;
+                Editable=FALSE;
+                QuickEntry=FALSE }
+
+    { 71  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Document Date";
+                Editable=FALSE;
+                QuickEntry=FALSE }
+
+    { 10  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Purchaser Code";
+                AutoFormatExpr='JMD';
+                Importance=Promoted;
+                Editable=FALSE;
+                QuickEntry=FALSE }
+
+    { 16  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="No. Printed";
+                Editable=FALSE;
+                QuickEntry=FALSE }
+
+    { 100 ;2   ;Field     ;
+                Description=PA032438,PA037533;
+                SourceExpr="Buy-from Vendor Name 2";
+                Visible=FALSE;
+                Editable=FALSE }
+
+    { 63  ;2   ;Field     ;
+                Description=PA032438,PA037533;
+                SourceExpr="Buy-from Address 2";
+                Visible=FALSE;
+                Editable=FALSE }
+
+    { 67  ;2   ;Field     ;
+                Description=PA032438,PA037533;
+                SourceExpr="Buy-from Contact";
+                Visible=FALSE;
+                Editable=FALSE }
+
+    { 74  ;2   ;Field     ;
+                Description=PA035597,PA037533;
+                SourceExpr="Shortcut Dimension 2 Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE;
+                Editable=FALSE }
+
+    { 7   ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Order Address Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE;
+                Editable=FALSE }
+
+    { 83  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Pre-Assigned No.";
+                Visible=FALSE;
+                Editable=FALSE }
+
+    { 1055600;2;Field     ;
+                Description=PA038140;
+                SourceExpr="Your Reference";
+                Visible=FALSE;
+                Editable=FALSE }
+
+    { 1101353001;2;Field  ;
+                SourceExpr=RUID;
+                Editable=FALSE }
+
+    { 1905885101;1;Group  ;
+                CaptionML=ENU=Invoicing }
+
+    { 18  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Pay-to Vendor No.";
+                Importance=Promoted;
+                Editable=FALSE;
+                QuickEntry=FALSE }
+
+    { 20  ;2   ;Field     ;
+                Description=PA032438,PA037533;
+                SourceExpr="Pay-to Name";
+                Importance=Standard;
+                Editable=FALSE;
+                QuickEntry=FALSE }
+
+    { 22  ;2   ;Field     ;
+                Description=PA032438,PA037533;
+                SourceExpr="Pay-to Address";
+                Editable=FALSE;
+                QuickEntry=FALSE }
+
+    { 78  ;2   ;Field     ;
+                CaptionML=ENU=Pay-to Post Code/City;
+                Description=PA037533;
+                SourceExpr="Pay-to Post Code";
+                AutoFormatExpr='JMD';
+                Editable=FALSE;
+                QuickEntry=FALSE }
+
+    { 26  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Pay-to City";
+                Editable=FALSE;
+                QuickEntry=FALSE }
+
+    { 30  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Payment Terms Code";
+                AutoFormatExpr='JMD';
+                Importance=Promoted;
+                Editable=FALSE;
+                QuickEntry=FALSE }
+
+    { 32  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Due Date";
+                Importance=Promoted;
+                Editable=FALSE;
+                QuickEntry=FALSE }
+
+    { 84  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Payment Method Code";
+                AutoFormatExpr='JMD';
+                Importance=Promoted;
+                Editable=FALSE;
+                QuickEntry=FALSE }
+
+    { 14  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Vendor Invoice No.";
+                Importance=Promoted;
+                Editable=FALSE;
+                QuickEntry=FALSE }
+
+    { 101 ;2   ;Field     ;
+                Description=PA032438,PA037533;
+                SourceExpr="Pay-to Name 2";
+                Visible=FALSE;
+                Editable=FALSE }
+
+    { 24  ;2   ;Field     ;
+                Description=PA032438,PA037533;
+                SourceExpr="Pay-to Address 2";
+                Visible=FALSE;
+                Editable=FALSE }
+
+    { 28  ;2   ;Field     ;
+                Description=PA032438,PA037533;
+                SourceExpr="Pay-to Contact";
+                Visible=FALSE;
+                Editable=FALSE }
+
+    { 72  ;2   ;Field     ;
+                Description=PA035597,PA037533;
+                SourceExpr="Shortcut Dimension 1 Code";
+                AutoFormatExpr='JMD';
+                Visible=FALSE;
+                Editable=FALSE }
+
+    { 34  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Payment Discount %";
+                Visible=FALSE;
+                Editable=FALSE }
+
+    { 36  ;2   ;Field     ;
+                Description=PA037533;
+                SourceExpr="Pmt. Discount Date";
+                Visible=FALSE;
+                Editable=FALSE }
+
+    { 1109400000;2;Field  ;
+                Description=PA035597,PA037533;
+                SourceExpr="Campaign No.";
+                Visible=FALSE;
+                Editable=FALSE }
+
+    { 52  ;1   ;Part      ;
+                Name=Sales Lines;
+                Description=PA037533;
+                SubPageLink=Document No.=FIELD(No.);
+                PagePartID=Page139 }
+
+    { 1906801201;1;Group  ;
+                CaptionML=ENU=Shipping;
+                Description=PA037533;
+                Visible=FALSE }
+
+    { 38  ;2   ;Field     ;
+                SourceExpr="Ship-to Name";
+                Editable=FALSE }
+
+    { 98  ;2   ;Field     ;
+                SourceExpr="Ship-to Name 2";
+                Editable=FALSE }
+
+    { 40  ;2   ;Field     ;
+                SourceExpr="Ship-to Address";
+                Editable=FALSE }
+
+    { 42  ;2   ;Field     ;
+                SourceExpr="Ship-to Address 2";
+                Editable=FALSE }
+
+    { 8   ;2   ;Field     ;
+                CaptionML=ENU=Ship-to Post Code/City;
+                SourceExpr="Ship-to Post Code";
+                AutoFormatExpr='JMD';
+                Editable=FALSE }
+
+    { 44  ;2   ;Field     ;
+                SourceExpr="Ship-to City";
+                Editable=FALSE }
+
+    { 46  ;2   ;Field     ;
+                SourceExpr="Ship-to Contact";
+                Editable=FALSE }
+
+    { 76  ;2   ;Field     ;
+                SourceExpr="Location Code";
+                AutoFormatExpr='JMD';
+                Importance=Promoted;
+                Editable=FALSE }
+
+    { 48  ;2   ;Field     ;
+                SourceExpr="Shipment Method Code";
+                AutoFormatExpr='JMD';
+                Importance=Promoted;
+                Editable=FALSE }
+
+    { 50  ;2   ;Field     ;
+                SourceExpr="Expected Receipt Date";
+                Importance=Promoted;
+                Editable=FALSE }
+
+    { 81  ;2   ;Field     ;
+                SourceExpr="Order No.";
+                Importance=Promoted;
+                Editable=FALSE }
+
+    { 1109400004;2;Field  ;
+                SourceExpr="Vendor Order No.";
+                Importance=Promoted;
+                Editable=FALSE }
+
+    { 1907468901;1;Group  ;
+                CaptionML=ENU=Foreign Trade;
+                Visible=FALSE }
+
+    { 87  ;2   ;Field     ;
+                SourceExpr="Currency Code";
+                AutoFormatExpr='JMD';
+                Importance=Promoted;
+                OnAssistEdit=BEGIN
+                               ChangeExchRate.SetParameter("Currency Code","Currency Factor","Posting Date");
+                               ChangeExchRate.EDITABLE(FALSE);
+                               IF ChangeExchRate.RUNMODAL = ACTION::OK THEN BEGIN
+                                 "Currency Factor" := ChangeExchRate.GetParameter;
+                                 MODIFY;
+                               END;
+                               CLEAR(ChangeExchRate);
+                             END;
+                              }
+
+    { 1900000007;0;Container;
+                ContainerType=FactBoxArea }
+
+    { 1901138007;1;Part   ;
+                Description=PA037533;
+                SubPageLink=No.=FIELD(Buy-from Vendor No.),
+                            Global Dimension 1 Filter=FIELD(FILTER(Shortcut Dimension 1 Code)),
+                            Global Dimension 2 Filter=FIELD(FILTER(Shortcut Dimension 2 Code)),
+                            Location Filter=FIELD(FILTER(Location Code)),
+                            Currency Filter=FIELD(FILTER(Currency Code));
+                PagePartID=Page9093;
+                Visible=TRUE;
+                PartType=Page }
+
+    { 1902770807;1;Part   ;
+                SubPageLink=Item Type=CONST(Item),
+                            No.=FIELD(No.),
+                            Global Dimension 1 Filter=FIELD(FILTER(Shortcut Dimension 1 Code)),
+                            Global Dimension 2 Filter=FIELD(FILTER(Shortcut Dimension 2 Code)),
+                            Location Filter=FIELD(FILTER(Location Code)),
+                            Bin Filter=FIELD(FILTER(Bin Code)),
+                            Variant Filter=FIELD(FILTER(Variant Code)),
+                            Branch Code Filter=FIELD(FILTER(Branch Book No.));
+                PagePartID=Page5207267;
+                ProviderID=52;
+                Visible=FALSE;
+                PartType=Page }
+
+    { 1900383207;1;Part   ;
+                Visible=FALSE;
+                PartType=System;
+                SystemPartID=RecordLinks }
+
+    { 1905767507;1;Part   ;
+                Visible=FALSE;
+                PartType=System;
+                SystemPartID=Notes }
+
+  }
+  CODE
+  {
+    VAR
+      PurchInvHeader@1000 : Record 122;
+      ChangeExchRate@1001 : Page 511;
+      LineBtnVisible@19039005 : Boolean INDATASET;
+
+    PROCEDURE __IMM__@1101353000();
+    BEGIN
+    END;
+
+    LOCAL PROCEDURE EnableImporter@1101353001();
+    VAR
+      CompanyInfoL@1101353000 : Record 79;
+    BEGIN
+      // Start INC
+      IF CompanyInfoL.IMSCheck THEN BEGIN
+        LineBtnVisible := TRUE;
+      END;
+      // Stop INC
+    END;
+
+    BEGIN
+    {
+      // @ Area PartsPurchase
+      PA-Number  Date
+      ------------------------------------------------
+      PA032178   11.01.11 PR 2501860: Modified form property 'SourceTableView' to display only
+                                             Posted Parts Purchase Invoices.
+                                             As the records are filtered based on area in form level,
+                                             in print button, conditions can be removed to open the repective area report.
+      PA032396   22.03.11 GE DeleteAllowed Property Changed to No
+      PA032473   17.05.11 MA 3745287: Set correct Filter to call forms from multiple menu areas
+      PA032727   12.07.11 PR Removal of DocMS functionality. Deleted 'Call Doc. Management System' menuitem in Functions
+                             menubutton.
+      PA033067   12.04.12 DR DE Captions implemented
+      PA032651   25.04.12 DR 6012646: DEU and ENU Captions corrected
+      PA033259   09.08.12 AI Deletion of Start/Stop History in Code, update copyright and Version List
+      PA033259   18.09.12 DR Variable names changed according to incadea styleguide
+      PA033733   10.12.12 DR DE Captions added for version: N.6.1.2
+      PA033082   30.03.12 DR 12:51:10 All available FlowFilter fields from the SourceTable added to the SubFormLink of attached FactBox
+                             Pages
+      PA035597   10.02.14 GC NAV 2013 R2 Technical Upgrade
+      PA035901   13.11.14 CH NAV 2013 R2 General Ledger Integration.
+      PA036773   24.09.14 LR Set propperty IsFilter to TRUE in filters of the FactBoxes
+      PA036548   24.09.14 LR Merge PA036373
+      PA038140   30.07.15 UX "Your Reference" added.
+      PA037533   19.10.15 GU Actions modified and field sequence rearranged for UI.
+      PA041728   15.09.16 GW Removed link to wrong Factbox.
+      PA041729   15.09.16 GW Merge of PA041728.
+      PA041023   27.12.16 SV Enabled fields "Reference License No." and "Supply VIN".
+      PA041187   23.02.17 SV 88803 Default show/hide enhanced in fields "Reference License No.".
+      PA041187   02.03.17 JV 89776 "Supply VIN" and "Reference License No" placed after Buy from Vendor Address and City
+      EU.0114065 25.03.21 DS Added page filter on "General Documents" field as False.
+      APOP000010 15.09.23 QQ Added Esker RUID field.
+    }
+    END.
+  }
+}
+

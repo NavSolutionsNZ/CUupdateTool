@@ -865,6 +865,49 @@ class DiffEngine:
                     flag[i] = True
         return flag
 
+    def _nocu_strip_cust_fields(self, lines):
+        """PAGE-only. Remove every wholly customer-owned Field control from a
+        body line-list and return the residual. A Field control is customer-owned
+        when its `Description=` carries a customer token (cat-5 shape) - the only
+        place a field can be tagged. Units are resolved by BRACE STRUCTURE on the
+        full line-list (opener `{ N;lvl;Field;` -> the line where net brace depth
+        returns to zero), NOT by any A-vs-B diff opcode: a structurally identical
+        neighbouring line (a repeated `Editable=FALSE }` / bare `}`) makes the
+        line-level differ slip its insert boundary, so the diff cannot be trusted
+        to bound the unit. Brace structure can.
+
+        This is the strip half of strip-and-compare: the caller compares the
+        residual to B. Removing a customer field and finding the remainder equals
+        B *is* the no-vendor-change proof for the Page-field case - it does not
+        depend on the differ drawing the unit boundary correctly. A field whose
+        Description has no customer token is left in place (a vendor-retired or
+        untagged field stays in the residual, so the residual will NOT equal B and
+        the object correctly falls through to merge - same guard as before)."""
+        tok = self._cust_token_re()
+        if tok is None:
+            return list(lines)
+        out = []
+        i = 0
+        n = len(lines)
+        while i < n:
+            if self._NOCU_FIELD.search(lines[i]):
+                # resolve the field unit by brace depth on the full list
+                depth = lines[i].count('{') - lines[i].count('}')
+                j = i
+                while depth > 0 and j + 1 < n:
+                    j += 1
+                    depth += lines[j].count('{') - lines[j].count('}')
+                unit = lines[i:j + 1]
+                # customer-owned iff a Description= line in the unit bears a token
+                owned = any(re.match(r'^\s*Description=', u) and tok.search(u)
+                            for u in unit)
+                if owned:
+                    i = j + 1            # drop the whole unit
+                    continue
+            out.append(lines[i])
+            i += 1
+        return out
+
     def no_cu_change(self):
         """True iff the vendor made no change to this object in the CU - i.e.
         every A-vs-B body difference is customer-attributable. See the block
@@ -921,47 +964,38 @@ class DiffEngine:
                     for k in range(i, j):
                         flag[k] = True
                 i = j
-        # cat 7: structural A-only Field-control scaffolding (PAGE only). A
-        # customer-added or customer-modified Page field appears as a wholly
-        # A-only control node `{ N ; lvl ; Field ; ... }`. A Field node carries
-        # its only taggable line in Description= (there is nowhere else inside a
-        # field control to put a tag); the node's own structural lines - the
-        # `{ N ; ; Field ;` opener and the `SourceExpr=... }` closer - bracket
-        # that Description line and so fall outside the cat-5 token attribution,
-        # leaving them unattributed and suppressing the short-circuit. Here we
-        # sweep that scaffolding, but ONLY for an A-only INSERT span containing a
-        # complete Field unit that ALREADY has >=1 line attributed by a CODE
-        # MARKER (the marker_flag snapshot - here that is the cat-5 customer token
-        # on the Description line). The guard is the same safety as cat 6: a field
-        # the vendor RETIRED in the CU (A-only, no customer tag) has no flagged
-        # line, so cat 7 does not fire and the object correctly falls through to
-        # the merge path rather than being silently skipped. A Description bearing
-        # a customer tag means the customer OWNS that control (new field, or a
-        # caption/property change they ticketed) - either way A's form is final on
-        # a vendor-unchanged object. Mixed customer+vendor tags on one Description
-        # still attribute (any customer token is sufficient ownership). Restricted
-        # to PAGE + Field by design; widen to other types/controls only with a
-        # validating fixture. Insert-only, whole-unit; never replace/delete.
+        # cat 7 (PAGE only): strip-and-compare for customer-owned Field controls.
+        # The line-level attribution above (cats 1-6) justifies each DIFFERING
+        # line in place; that is robust for CODE idioms but brittle for a Page
+        # FIELD control, because a field's only taggable line is `Description=`
+        # and its structural lines (`{ N;;Field;` opener, `SourceExpr`, a separate
+        # `Editable=FALSE }` / bare `}` closer) carry no token. Worse, those
+        # structural lines REPEAT across fields, so the line-level differ slips its
+        # insert boundary onto a neighbouring identical closer - sweeping a real
+        # vendor line into the "inserted" span (P138: the RUID field's own
+        # `Editable=FALSE }` closer matched the previous field's, shifting the
+        # boundary and leaving an unjustifiable stray line). The diff cannot be
+        # trusted to bound a field unit.
+        #
+        # So for Pages we do what the tool does conceptually everywhere: strip the
+        # customer layer and compare the baseline to B. Remove every wholly
+        # customer-owned Field control (Description= bears a customer token),
+        # resolved by BRACE STRUCTURE on full A - not by diff opcodes - then test
+        # the residual A body against B. If they match, the vendor changed nothing
+        # but the customer's field(s) -> take A. This is immune to the boundary
+        # slip: brace structure draws the unit, the differ does not.
+        #
+        # Guard (unchanged in spirit): a field whose Description has NO customer
+        # token is NOT stripped (vendor-retired or untagged field), so it stays in
+        # the residual, the residual will not equal B, and the object falls through
+        # to merge - never silently skipped. Scoped to PAGE + Field by design;
+        # widen to other control types only with a validating fixture.
         if self.obj_type == 'PAGE':
-            for tag, b1, b2, a1, a2 in sm.get_opcodes():
-                if tag != 'insert':
-                    continue
-                i = a1
-                while i < a2:
-                    if not self._NOCU_FIELD.search(A[i]):
-                        i += 1
-                        continue
-                    # field unit: opener at i -> line whose net brace depth
-                    # returns to zero (the closing `}`), bounded by the span.
-                    depth = A[i].count('{') - A[i].count('}')
-                    j = i
-                    while depth > 0 and j + 1 < a2:
-                        j += 1
-                        depth += A[j].count('{') - A[j].count('}')
-                    if any(marker_flag[k] for k in range(i, j + 1)):
-                        for k in range(i, j + 1):
-                            flag[k] = True
-                    i = j + 1
+            Ar = [norm(l) for l in self._nocu_strip_cust_fields(A) if l.strip()]
+            if Ar == Bn:
+                return True
+        # Fallback / non-Page path: every A-vs-B body difference must be
+        # customer-attributable line-by-line (cats 1-6).
         for tag, b1, b2, a1, a2 in sm.get_opcodes():
             if tag == 'equal':
                 continue

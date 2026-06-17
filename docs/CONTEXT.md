@@ -1503,3 +1503,56 @@ additive — `classify()`/`execute()` untouched.
 **Files:** cuupdate/diffengine.py (cat 7 + `_NOCU_FIELD` regex; contract block-comment),
 cuupdate/__init__.py (2.7), tests/test_diffengine.py (P47 fire case + P47nomark guard assertion),
 tests/fixtures/{EX-P47,CU-P47,EX-P47nomark}.stripped.txt (NEW), docs/{ARCHITECTURE,CONTEXT}.md.
+
+---
+
+**§8.30 — No-CU-change cat 7 reworked: strip-and-compare for Page fields; P138; v2.8**
+
+**Symptom.** P138 (Posted Purchase Invoice) is another vendor-unchanged Page — the customer added one
+field, `{ 1101353001;2;Field; SourceExpr=RUID; Description=APOP000010; Editable=FALSE }` — yet it
+merged instead of short-circuiting, even with cat 7 (v2.7) in place.
+
+**Root cause — the line-level differ slips on repeated structural lines.** v2.7 cat 7 attributed the
+field *in place*: find the `{ ;;Field;` opener inside an A-vs-B *insert* span, brace-walk to the closer,
+sweep the unit if a marker is inside. But P138's field ends in a SEPARATE `Editable=FALSE }` closer line
+that is **content-identical to the previous field's closer**. SequenceMatcher anchored on that identical
+line and shifted the insert boundary one line early: it reported the span as
+`[Editable=FALSE }(prev), {opener, SourceExpr, Description]` and pushed the RUID field's *own*
+`Editable=FALSE }` into the following "equal" block. So the opener sat mid-span (preceded by a stray
+vendor closer) and the matching `}` fell *outside* the span — the brace walk never balanced, the unit
+never resolved, the stray line stayed unjustified, object merged. The diff cannot be trusted to bound a
+field unit when structural lines repeat.
+
+**Fix — make the Page-field path strip-and-compare (Rich's model).** Rich reframed it: a customer-tagged
+field absent from B *is* customer layer — so **remove the field and check the baseline against B**, which
+is what the whole tool does conceptually. New `_nocu_strip_cust_fields(lines)` (PAGE path) removes every
+wholly customer-owned Field control — `Description=` bears a customer token — resolving each unit by
+**brace structure on full A**, NOT by any diff opcode. `no_cu_change` then compares the residual to B; a
+match returns True. Immune to the boundary slip: brace structure draws the unit, the differ does not.
+The v2.7 in-place cat-7 sweep was removed entirely and replaced by this; cats 1–6 (the line-level path)
+are untouched and remain the fallback for non-Page objects and for Pages whose residual ≠ B.
+
+**Guard.** A field whose `Description=` has no customer token is not stripped, so it stays in the
+residual, residual ≠ B, object merges. `EX-P138nomark` (RUID field with the Description line removed →
+untagged field WITH the separate-closer slip shape) asserts the strip does NOT fire — proving the guard
+holds on the very shape that broke the line-level approach. P47nomark (fused-closer shape) retained.
+
+**Note on P138 content.** The object also contains `EnableImporter@1101353001` + a call site — but those
+live in **B** too (CU baseline), so they are equal lines, not a customer add. The ONLY customer delta is
+the RUID field; after stripping it the residual is byte-equal to B (457 == 457 lines).
+
+**Scope (Rich, confirmed).** PAGE-only, Field-only. Not a shared-gate change: the new logic lives inside
+the `if self.obj_type == 'PAGE'` branch; Tables/Codeunits never enter it. Table suite run first anyway as
+a paranoia net (stayed in lane).
+
+**Shared-path regression net.** P47 + P138 fire; C1201/C231/C232/C10/C364 still fire; T14/T36/T77/P347
+still do NOT (P347 = a Page with real deltas, confirms strip-and-compare does not over-fire on Pages);
+C364nomark + P47nomark + P138nomark guards hold. Full suite green: diffengine PASS, scorer 20/20, census
+6/6. `classify()`/`execute()` untouched.
+
+**Version bumped 2.7 → 2.8.** `CUupdate_2.8.exe`.
+
+**Files:** cuupdate/diffengine.py (`_nocu_strip_cust_fields` + strip-and-compare in `no_cu_change`;
+removed the v2.7 in-place cat-7 sweep; contract block-comment + ARCHITECTURE §5a rewritten),
+cuupdate/__init__.py (2.8), tests/test_diffengine.py (P138 fire case + P138nomark guard + P138 prefix
+override), tests/fixtures/{EX-P138,CU-P138,EX-P138nomark}.stripped.txt (NEW), docs/{ARCHITECTURE,CONTEXT}.md.

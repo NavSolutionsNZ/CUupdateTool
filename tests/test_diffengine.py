@@ -34,7 +34,7 @@ CUST_OVERRIDE = {
     'T80': {'AP', 'WBL', 'DC'},
     'T81': {'AP', 'WBL', 'DC'},
     'P14': {'AP', 'WBL', 'APOP'},   # customer's E-Mail field tagged APOP000010
-    'P21': {'AP', 'WBL'},           # WBL10 field add + AP-2362 FactBoxes (DEV-gate)
+    'P138': {'AP', 'WBL', 'APOP'},  # customer's RUID field tagged APOP000010 (Esker)    'P21': {'AP', 'WBL'},           # WBL10 field add + AP-2362 FactBoxes (DEV-gate)
     'P21V2': {'AP', 'WBL'},         # FactBoxes now tagged AP-2362 -> auto-merge (pair to P21)
     'P347': {'AP', 'WBL', 'DC'},    # Direct Credit customisation; DC6.00 block + ReportUsage2 option ext
     'C231': {'AP', 'WBL', 'DC'},    # Direct Credit (DC5.00): two CODE blocks, one END-bracketed at proc tail
@@ -395,6 +395,19 @@ def run():
         # when its Description carries a customer token; PAGE+Field scoped).
         'P47':   (os.path.join(FIX, 'EX-P47.stripped.txt'),
                   os.path.join(FIX, 'CU-P47.stripped.txt')),
+        # P138 (PAGE): customer added one field `{ 1101353001;;Field; RUID }`
+        # tagged Description=APOP000010, with a SEPARATE `Editable=FALSE }` closer
+        # line. That closer is content-identical to the PREVIOUS field's closer,
+        # so the line-level differ slipped its insert boundary onto the neighbour
+        # and swept a real vendor line into the "inserted" span - the in-place
+        # cat-7 attribution could not justify it and the object wrongly merged.
+        # Fires now via strip-and-compare: the RUID field is removed by brace
+        # bounds (not by diff opcodes) and the residual equals B. Note the object
+        # also contains EnableImporter@1101353001 - but that proc lives in B too
+        # (CU baseline), so it is an equal line, not a customer add: the ONLY
+        # customer delta is the RUID field.
+        'P138':  (os.path.join(FIX, 'EX-P138.stripped.txt'),
+                  os.path.join(FIX, 'CU-P138.stripped.txt')),
     }
     NOCU_NOFIRE = ['T14', 'T36', 'T77', 'P347']   # real customer/vendor deltas
     for name, (a, b) in NOCU_FIRE.items():
@@ -443,6 +456,23 @@ def run():
                      "breached (a vendor-added/untagged field would be skipped)")
     else:
         print("[nocu] P47nomark: OK (no field tag -> cat-7 guard holds)")
+
+    # cat-7 guard (P138 variant): the same RUID field with its Description=APOP000010
+    # line removed -> an untagged A-only field with a SEPARATE closer line. The
+    # strip step must not remove an untagged field, so the residual keeps RUID,
+    # the residual != B, and the object falls through to merge. Distinct from
+    # P47nomark in that the field has a separate `Editable=FALSE }` closer (the
+    # boundary-slip shape) - proving strip-and-compare's guard holds on the very
+    # shape that broke the line-level approach.
+    _p138nm = DiffEngine(os.path.join(FIX, 'EX-P138nomark.stripped.txt'),
+                         os.path.join(FIX, 'CU-P138.stripped.txt'),
+                         {'AP', 'WBL', 'APOP'}, VEND, LANGS,
+                         cust_digit_required=CUST_DIGITS)
+    if _p138nm.no_cu_change():
+        fails.append("[nocu] P138nomark: fired without a field tag - cat-7 guard "
+                     "breached (an untagged field would be skipped)")
+    else:
+        print("[nocu] P138nomark: OK (no field tag -> cat-7 guard holds)")
 
     # token-shape safety: AP (digits-required) must NOT match inside ordinary
     # words; WBL (digits-optional) must match as a bounded unit but not as a
