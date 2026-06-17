@@ -1452,3 +1452,54 @@ C364nomark guard + token-shape safety), scorer 20/20, census 6/6. Method still a
 **Files:** cuupdate/diffengine.py (cat 6 + marker-only guard snapshot; contract block-comment), 
 cuupdate/__init__.py (2.6), tests/test_diffengine.py (C364 fire case + C364nomark guard assertion),
 tests/fixtures/{EX-C364,CU-C364,EX-C364nomark}.stripped.txt (NEW), docs/{ARCHITECTURE,CONTEXT}.md.
+
+---
+
+**§8.29 — No-CU-change category 7: A-only Page Field-control scaffolding; P47; v2.7**
+
+**Symptom.** P47 (Sales Invoice Subform) is a clean no-vendor-change object: the customer added one
+field, `{ 1101353000;2;Field; SourceExpr="Profit %" }`, tagged `Description=AP001714`, and the vendor
+shipped nothing else. The merge output was byte-correct, but the object should never have *reached* the
+merge path — it should have short-circuited to take-A. Rich's point: a correct result via the long path
+is the unreliability, not a mitigation of it. A clean take-A must be recognised up front, not depend on
+every downstream rule reproducing A.
+
+**Root cause.** A field control's only taggable line is `Description=` — a field has nowhere else to
+carry a tag. The control is a 3-line A-only insert: the `{ N;;Field;` opener, the `Description=AP001714`
+line, and the `SourceExpr=… }` closer. Cat 5 attributes the `Description` line (the `AP001714` token),
+but the opener and closer carry no token, so the all-lines-attributable test saw 1 of 3 flagged and
+returned False → fell through to merge. Cat 6 doesn't help: `_NOCU_PROC` only matches `PROCEDURE`
+headers, not a `{ … ;Field; }` node.
+
+**Fix — category 7.** Symmetric with cat 6, scoped to **PAGE objects + Field controls**. For an A-only
+*insert* span, identify each complete Field unit (opener `{ N;lvl;Field;` → the line where brace depth
+returns to zero) and attribute the **whole unit** iff ≥1 of its lines is in the `marker_flag` snapshot
+(cats 1–3, 5 — here the cat-5 token on `Description=`). The guard is the same safety as cat 6: a field
+the **vendor retired** (A-only, no customer tag) has no flagged line, cat 7 does not fire, object falls
+through to merge. A customer tag on `Description=` = customer **owns** the control (new field *or* a
+ticketed caption/property change — Rich's point that the tag may mark a caption change, not only an
+add); mixed customer+vendor tags still attribute (any customer token suffices). Insert-only, whole-unit;
+never replace/delete.
+
+**Scope decision (Rich).** Page-only, to keep the rest of the object types consistent; Field-only for
+now, widen to Action/Group adds later when there's a validating fixture. `Description=` is the only
+place a field tag can live, and a Description may carry multiple tags — handled, since the cat-5 token
+matches any customer prefix on the line regardless of co-present vendor tags.
+
+**Guard test.** `EX-P47nomark` (the same object with the `Description=AP001714` line removed → an
+untagged A-only field) asserts cat 7 does NOT fire — proving scaffolding alone never licenses the sweep.
+
+**Where it lives.** Cat 7 runs inside `no_cu_change` (needs the A-vs-B SequenceMatcher opcodes to know
+a span is B-absent), not the B-free `_nocu_attribute`. `self.obj_type == 'PAGE'` gates it.
+
+**Shared-path change — regression net.** Cat 7 broadens attribution, so the whole fixture set is the net
+(Table suite run first). Verified: P47 fires; C1201/C231/C232/C10/C364 still fire; T14/T36/T77/P347
+still do NOT (real deltas, still merge); C364nomark + new P47nomark guards hold. Full suite green:
+diffengine PASS (P47 fire + P47nomark guard + token-shape safety), scorer 20/20, census 6/6. Method
+additive — `classify()`/`execute()` untouched.
+
+**Version bumped 2.6 → 2.7.** `CUupdate_2.7.exe`.
+
+**Files:** cuupdate/diffengine.py (cat 7 + `_NOCU_FIELD` regex; contract block-comment),
+cuupdate/__init__.py (2.7), tests/test_diffengine.py (P47 fire case + P47nomark guard assertion),
+tests/fixtures/{EX-P47,CU-P47,EX-P47nomark}.stripped.txt (NEW), docs/{ARCHITECTURE,CONTEXT}.md.

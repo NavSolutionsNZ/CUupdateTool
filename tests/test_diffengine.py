@@ -386,8 +386,15 @@ def run():
         # BEGIN..END. The proc's own scaffolding (header/VAR/BEGIN/END;) brackets
         # that block - fires via category 6 (structural A-only proc scaffolding,
         # guarded by the code marker inside the span).
-        'C364':  (os.path.join(FIX, 'EX-C364.stripped.txt'),
-                  os.path.join(FIX, 'CU-C364.stripped.txt')),
+        # P47 (PAGE): customer added one field control `{ 1101353000;;Field; }`
+        # for "Profit %", tagged Description=AP001714 - the ONLY taggable line in
+        # a field control. The node's opener and SourceExpr/closer lines bracket
+        # that tag, so cat 5 alone attributes only the Description line and the
+        # short-circuit was wrongly suppressed (object merged though the vendor
+        # changed nothing). Fires via category 7 (A-only Field scaffolding swept
+        # when its Description carries a customer token; PAGE+Field scoped).
+        'P47':   (os.path.join(FIX, 'EX-P47.stripped.txt'),
+                  os.path.join(FIX, 'CU-P47.stripped.txt')),
     }
     NOCU_NOFIRE = ['T14', 'T36', 'T77', 'P347']   # real customer/vendor deltas
     for name, (a, b) in NOCU_FIRE.items():
@@ -420,6 +427,22 @@ def run():
                      "guard breached (a retired/unmarked proc would be skipped)")
     else:
         print("[nocu] C364nomark: OK (no code marker -> cat-6 guard holds)")
+
+    # cat-7 guard: the SAME P47 object with its field's Description=AP001714 tag
+    # removed - a whole A-only Page Field control carrying NO customer tag (the
+    # only place a field can be tagged). This stands in for a vendor-ADDED or
+    # untagged field: cat 7 must NOT fire (no marker on the Description line to
+    # satisfy the guard), so the object falls through to the merge path rather
+    # than being silently skipped. Proves cat 7 sweeps scaffolding only when a
+    # real customer tag is present, never on structure alone.
+    _p47nm = DiffEngine(os.path.join(FIX, 'EX-P47nomark.stripped.txt'),
+                        os.path.join(FIX, 'CU-P47.stripped.txt'),
+                        CUST, VEND, LANGS, cust_digit_required=CUST_DIGITS)
+    if _p47nm.no_cu_change():
+        fails.append("[nocu] P47nomark: fired without a field tag - cat-7 guard "
+                     "breached (a vendor-added/untagged field would be skipped)")
+    else:
+        print("[nocu] P47nomark: OK (no field tag -> cat-7 guard holds)")
 
     # token-shape safety: AP (digits-required) must NOT match inside ordinary
     # words; WBL (digits-optional) must match as a bounded unit but not as a

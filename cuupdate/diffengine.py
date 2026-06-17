@@ -721,6 +721,23 @@ class DiffEngine:
     #      path rather than being silently skipped. Applied in no_cu_change (it
     #      needs the A-vs-B opcodes B-side absence gives), not _nocu_attribute
     #      (which is deliberately B-free).
+    #   7. the SCAFFOLDING of a wholly A-only Page FIELD control (PAGE objects
+    #      only) whose Description= line carries a customer tag. A field control
+    #      `{ N ; lvl ; Field ; ... }` has only one taggable line - Description=
+    #      (a field has nowhere else to put a tag); its opener and SourceExpr/
+    #      closer lines bracket that tag and fall outside the cat-5 token span,
+    #      leaving them unattributed and suppressing the short-circuit. Cat 7
+    #      sweeps that scaffolding, but ONLY for an A-only INSERT span containing
+    #      a complete Field unit that ALREADY has >=1 line attributed by a CODE
+    #      MARKER (cat 5 - the customer token on Description=). A customer tag on
+    #      Description= means the customer owns that control (new field OR a
+    #      ticketed caption/property change); on a vendor-unchanged object A's
+    #      form is final either way. Mixed customer+vendor tags still attribute
+    #      (any customer token suffices). The guard mirrors cat 6: a vendor-
+    #      RETIRED field (A-only, no customer tag) has no flagged line, so cat 7
+    #      does not fire and the object falls through to the merge path. Scoped
+    #      to PAGE + Field by design - other control types (Action/Group) are not
+    #      yet validated; widen only with a fixture. Insert-only, whole-unit.
     #
     # The customer token (cat 5) is an ADDENDUM to the version list, applied
     # globally: the version list remains the authoritative per-object census of
@@ -733,6 +750,11 @@ class DiffEngine:
     _NOCU_HDR  = re.compile(r'(^\s*Date=|^\s*Time=|^\s*Modified=|^\s*Version List=)')
     _NOCU_VARD = re.compile(r'^\s*\w+@\d+\s*:\s*.+;\s*$')
     _NOCU_PROC = re.compile(r'^\s*(?:LOCAL\s+)?PROCEDURE\b', re.I)
+    # cat 7: opener of a Page Field control node `{ N ; level ; Field ; ... }`.
+    # Used only on PAGE objects to bracket a customer-marked A-only field as one
+    # unit (see cat 7 in no_cu_change). Field-type only by design - other control
+    # types (Action/Group) are not yet validated and stay out of scope.
+    _NOCU_FIELD = re.compile(r'^\s*\{\s*\d+\s*;\s*\d*\s*;\s*Field\b', re.I)
 
     def _cust_token_re(self):
         """Regex matching any customer prefix as a bounded token, shaped per the
@@ -899,6 +921,47 @@ class DiffEngine:
                     for k in range(i, j):
                         flag[k] = True
                 i = j
+        # cat 7: structural A-only Field-control scaffolding (PAGE only). A
+        # customer-added or customer-modified Page field appears as a wholly
+        # A-only control node `{ N ; lvl ; Field ; ... }`. A Field node carries
+        # its only taggable line in Description= (there is nowhere else inside a
+        # field control to put a tag); the node's own structural lines - the
+        # `{ N ; ; Field ;` opener and the `SourceExpr=... }` closer - bracket
+        # that Description line and so fall outside the cat-5 token attribution,
+        # leaving them unattributed and suppressing the short-circuit. Here we
+        # sweep that scaffolding, but ONLY for an A-only INSERT span containing a
+        # complete Field unit that ALREADY has >=1 line attributed by a CODE
+        # MARKER (the marker_flag snapshot - here that is the cat-5 customer token
+        # on the Description line). The guard is the same safety as cat 6: a field
+        # the vendor RETIRED in the CU (A-only, no customer tag) has no flagged
+        # line, so cat 7 does not fire and the object correctly falls through to
+        # the merge path rather than being silently skipped. A Description bearing
+        # a customer tag means the customer OWNS that control (new field, or a
+        # caption/property change they ticketed) - either way A's form is final on
+        # a vendor-unchanged object. Mixed customer+vendor tags on one Description
+        # still attribute (any customer token is sufficient ownership). Restricted
+        # to PAGE + Field by design; widen to other types/controls only with a
+        # validating fixture. Insert-only, whole-unit; never replace/delete.
+        if self.obj_type == 'PAGE':
+            for tag, b1, b2, a1, a2 in sm.get_opcodes():
+                if tag != 'insert':
+                    continue
+                i = a1
+                while i < a2:
+                    if not self._NOCU_FIELD.search(A[i]):
+                        i += 1
+                        continue
+                    # field unit: opener at i -> line whose net brace depth
+                    # returns to zero (the closing `}`), bounded by the span.
+                    depth = A[i].count('{') - A[i].count('}')
+                    j = i
+                    while depth > 0 and j + 1 < a2:
+                        j += 1
+                        depth += A[j].count('{') - A[j].count('}')
+                    if any(marker_flag[k] for k in range(i, j + 1)):
+                        for k in range(i, j + 1):
+                            flag[k] = True
+                    i = j + 1
         for tag, b1, b2, a1, a2 in sm.get_opcodes():
             if tag == 'equal':
                 continue
