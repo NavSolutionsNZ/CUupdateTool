@@ -197,6 +197,20 @@ unattributable difference means the vendor touched the object → fall through t
      The match keys on the token, not on any divider styling (a `"---- WBL ----"` separator is caught
      because its name contains WBL, not because of the dashes — so differently-styled dividers, or
      none at all, make no difference).
+  6. the **scaffolding of a wholly A-only procedure** whose body already carries a customer **code
+     marker** (cat 2 `Start..Stop` block or cat 5 token). A new customer procedure (in A, absent
+     from B) commonly tags itself with a `// Start AP#### .. // Stop AP####` block *inside* its
+     `BEGIN..END`; the procedure's own structural lines (`PROCEDURE` header, `VAR` keyword, `BEGIN`,
+     closing `END;`) bracket that marker and so fall outside the marked span. Cat 6 sweeps that
+     scaffolding, but **only** for an A-only *insert* span containing a complete procedure unit that
+     already has ≥1 line attributed by a **code marker** (cats 1–3, 5). Cat 4 (VAR) is **excluded
+     from the guard**: a VAR can't carry a marker and every new proc brings its own locals, so
+     VAR-attribution means "new procedure", not "customer-authored" — admitting it would collapse
+     cat 6 into a pure-structural sweep of *any* A-only proc, including one the **vendor retired** in
+     the CU. With the guard, a retired/unmarked proc has no code marker, cat 6 does not fire, and the
+     object correctly falls through to the merge path (safe error = "don't fire"). This is what makes
+     **C364** qualify: one new `DeleteICReference@4` proc marked only by an inner `Start/Stop AP2326`
+     block. Applied in `no_cu_change` (needs the A-vs-B opcodes), not the B-free `_nocu_attribute`.
 
 **Token-shape addendum (global, per-job).** Category 5 needs to know what each customer token *looks
 like* so it can be recognised wherever it appears. This is an **addendum to the version list**: the

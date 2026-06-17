@@ -1389,3 +1389,66 @@ ctor param), cuupdate/run_batch.py + run_one.py (`--cust-digits` / `cust_digits`
 cuupdate/cu_gui.py ("Prefixes needing digits" field → `_work` → run), cuupdate/__init__.py (2.4),
 tests/test_diffengine.py (C10 fire case + token-shape safety assertion; AP digits-required),
 tests/fixtures/{EX,CU}-C10.stripped.txt (NEW), docs/{ARCHITECTURE,CONTEXT,USER_MANUAL}.md.
+
+
+**§8.28 — No-CU-change category 6: structural A-only procedure scaffolding; C364; v2.6**
+
+**One-liner:** *C364 (Codeunit 364) is a no-vendor-change object the §8.26/§8.27 contract missed: the
+customer added ONE whole procedure (`DeleteICReference@4`) whose only marker is a `// Start AP2326 ..
+// Stop AP2326` block INSIDE its `BEGIN..END`. Cat 2 attributes the block; cat 5 misses it (the AP2326
+token is in the inner comment, not the proc header, and the proc name carries no token); so the proc's
+own scaffolding — `PROCEDURE` header, `VAR` keyword, `BEGIN`, closing `END;` — was 4 unattributed
+inserts and the object fell to merge (showed as AUTO-MERGED). New category 6: an A-only insert span
+that is a whole procedure unit, already carrying a customer CODE MARKER (cats 1–3, 5) inside it, has
+its scaffolding swept. Fires C364; C1201/C231/C232/C10 still fire; T14/T36/T77/P347 still merge.
+Suite green.*
+
+**Driver (Rich):** flagged C364 in the batch AUTO-MERGED list — "another codeunit that should not
+require any merging." The object's only A-vs-B delta is the customer's `DeleteICReference@4` procedure
+(present in EX/A, absent from the CU/B baseline) plus its Version List + doc-trigger `AP2326` lines.
+There is no vendor change anywhere; the right bucket is NO CU CHANGE, A used verbatim.
+
+**The gap — scaffolding outside the marked span.** The customer's authorship marker is a
+`// Start AP2326 .. // Stop AP2326` block, which cat 2 attributes (the block span, A58–A65). But the
+procedure's structural lines bracket that block and sit outside it: header `PROCEDURE DeleteICReference@4`
+(A54), `VAR` (A55), `BEGIN` (A57), `END;` (A66). Cat 5 (token-in-proc-header → whole span) does not
+help here: the incadea idiom puts the tag in an inner `// Start AP####` comment, not in the procedure
+name, so the header line carries no token. Four unattributed inserts → short-circuit suppressed.
+
+**Category 6 (new) — and why the guard excludes VAR.** For each A-only INSERT opcode, find each
+complete procedure unit it contains (`PROCEDURE`/`LOCAL PROCEDURE` header → line before next proc
+header or end of span); if that unit already has ≥1 line attributed by a **code marker**, flag the
+whole unit (scaffolding included). The guard is what keeps cat 6 from becoming a pure-structural sweep.
+**Critical subtlety Rich surfaced:** the first guard attempt counted ANY prior attribution, including
+cat 4 (A-only VAR). But a new procedure's own local VAR is *always* A-only (the vendor never had it),
+so cat 4 flags it regardless of customer authorship — meaning the guard would fire for ANY whole
+A-only procedure, including one the **vendor RETIRED** in the CU. Rich's point: "a VAR cannot be
+explicitly labelled with a marker" — VAR attribution is purely structural and says "new procedure",
+not "customer-authored". Fix: snapshot the marker-only flags (cats 1–3, 5) BEFORE cat 4 mutates the
+array, and test the guard against that snapshot. cat 4 still attributes VARs into the main array as
+before; it just no longer *satisfies the cat-6 guard*.
+
+**Safe error preserved.** A vendor-retired procedure (A-only, no customer code marker) has no flagged
+line in its span under the snapshot → cat 6 does not fire → object falls through to merge. Rich noted a
+retired customer procedure is unlikely (only an internal pre-CU patch later superseded by a CU bug-fix
+would produce it), but the guard makes that case fail safe rather than be silently skipped. Negative
+fixture `EX-C364nomark` (C364 with the `// Start/Stop AP2326` markers + AP2326 tokens stripped, leaving
+the proc + its cat-4 local VAR) asserts cat 6 does NOT fire — proving the VAR alone can't license the
+sweep.
+
+**Where it lives.** Cat 6 runs inside `no_cu_change` (it needs the A-vs-B SequenceMatcher opcodes to
+know a span is B-absent), NOT `_nocu_attribute` (deliberately B-free, per its docstring). Insert-only,
+whole-proc-only; never touches replace/delete or partial spans.
+
+**Shared-path change — regression net.** Cat 6 broadens attribution, so the whole fixture set is the
+net (Table suite run first). Verified: C364 fires; C1201/C231/C232/C10 still fire; T14/T36/T77/P347
+still do NOT (real deltas, still merge); C364nomark guard holds. C364 end-to-end via `run_one.py`:
+NO CU CHANGE short-circuit, A used verbatim, no merge. Full suite green: diffengine PASS (C364 fire +
+C364nomark guard + token-shape safety), scorer 20/20, census 6/6. Method still additive —
+`classify()`/`execute()` untouched.
+
+**Version bumped 2.5 → 2.6.** `CUupdate_2.6.exe`.
+
+**Files:** cuupdate/diffengine.py (cat 6 + marker-only guard snapshot; contract block-comment), 
+cuupdate/__init__.py (2.6), tests/test_diffengine.py (C364 fire case + C364nomark guard assertion),
+tests/fixtures/{EX-C364,CU-C364,EX-C364nomark}.stripped.txt (NEW), docs/{ARCHITECTURE,CONTEXT}.md.

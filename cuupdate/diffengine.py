@@ -705,6 +705,22 @@ class DiffEngine:
     #      header, the WHOLE procedure span (header -> next procedure boundary or
     #      end of CODE) is attributed as one unit, pulling in unsuffixed helper
     #      lines and comments inside that customer procedure.
+    #   6. the SCAFFOLDING of a wholly A-only procedure whose body already carries
+    #      a customer marker. A new customer procedure (present in A, absent from
+    #      B) often tags itself with a Start..Stop block (cat 2) or token (cat 5)
+    #      INSIDE its BEGIN..END; the procedure's own structural lines (PROCEDURE
+    #      header, VAR keyword, BEGIN, closing END;) bracket that marker and so
+    #      fall outside the attributed span. Cat 6 sweeps that scaffolding, but
+    #      ONLY for an A-only INSERT span containing a complete procedure unit that
+    #      ALREADY has >=1 line attributed by a CODE MARKER (cats 1-3, 5). cat 4
+    #      (VAR) is excluded from the guard: a VAR cannot carry a marker and every
+    #      new proc brings its own locals, so VAR-attribution means "new proc", not
+    #      "customer-authored". That guard is the safety: a procedure the vendor
+    #      RETIRED in the CU (A-only, no code marker) has no flagged line and so
+    #      cat 6 does not fire - the object correctly falls through to the merge
+    #      path rather than being silently skipped. Applied in no_cu_change (it
+    #      needs the A-vs-B opcodes B-side absence gives), not _nocu_attribute
+    #      (which is deliberately B-free).
     #
     # The customer token (cat 5) is an ADDENDUM to the version list, applied
     # globally: the version list remains the authoritative per-object census of
@@ -837,12 +853,52 @@ class DiffEngine:
         An = [norm(l) for l in A]
         Bn = [norm(l) for l in B]
         flag = self._nocu_attribute(A)
+        # cats 1-3,5 produced `flag` so far - all CODE markers. Snapshot this
+        # marker-only attribution BEFORE cat 4 mutates the array: it is what the
+        # cat-6 guard tests against (a VAR alone must not license scaffolding -
+        # see below). cat 4 still attributes VARs into `flag` exactly as before.
+        marker_flag = list(flag)
         # cat 4: A-only VAR declaration (present in A, absent from B)
         Bset = set(Bn)
         for i, nl in enumerate(An):
             if not flag[i] and self._NOCU_VARD.match(nl) and nl not in Bset:
                 flag[i] = True
         sm = SequenceMatcher(None, Bn, An)
+        # cat 6: structural A-only procedure scaffolding. A wholly new customer
+        # procedure (present in A, absent from B) carries its customer marker -
+        # a Start..Stop block (cat 2) or token (cat 5) - INSIDE its BEGIN..END.
+        # The procedure's own scaffolding (PROCEDURE header, VAR keyword, BEGIN,
+        # closing END;) brackets that marker and so falls outside the attributed
+        # span, leaving it unattributed and suppressing the short-circuit. Here
+        # we sweep that scaffolding, but ONLY for an A-only INSERT span that
+        # contains a complete procedure unit which already has >=1 line attributed
+        # by a CODE MARKER (cats 1-3, 5 - the marker_flag snapshot). The guard is
+        # the safety: a procedure the vendor RETIRED in the CU (A-only) has no
+        # customer code marker, so cat 6 does not fire and the object correctly
+        # falls through to the merge path rather than being silently skipped.
+        # cat 4 (VAR) is DELIBERATELY EXCLUDED from the guard: a VAR declaration
+        # cannot carry a marker and every new procedure brings its own locals, so
+        # a VAR's structural A-only-ness says "new procedure", not "customer-
+        # authored" - letting it satisfy the guard would collapse cat 6 into a
+        # pure-structural sweep of any A-only proc, retired ones included.
+        # Insert-only, whole-proc-only; never touches replace/delete or partials.
+        for tag, b1, b2, a1, a2 in sm.get_opcodes():
+            if tag != 'insert':
+                continue
+            i = a1
+            while i < a2:
+                if not self._NOCU_PROC.search(A[i]):
+                    i += 1
+                    continue
+                # proc unit: header at i -> line before next proc header, bounded
+                # by the insert span (a whole new proc is wholly inside the span).
+                j = i + 1
+                while j < a2 and not self._NOCU_PROC.search(A[j]):
+                    j += 1
+                if any(marker_flag[k] for k in range(i, j)):
+                    for k in range(i, j):
+                        flag[k] = True
+                i = j
         for tag, b1, b2, a1, a2 in sm.get_opcodes():
             if tag == 'equal':
                 continue

@@ -1,0 +1,74 @@
+OBJECT Codeunit 364 PostPurchLines-Delete
+{
+  OBJECT-PROPERTIES
+  {
+    Date=08/08/12;
+    Time=10:57:14 AM;
+    Version List=NAVW1.x,N.6.1.2;
+  }
+  PROPERTIES
+  {
+    Permissions=TableData 121=rd,
+                TableData 123=d,
+                TableData 125=d;
+    OnRun=BEGIN
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      PurchReceiptLine@1109400000 : Record 121;
+      PurchInvLine@1109400001 : Record 123;
+      PurchCrMemoLine@1109400002 : Record 125;
+      PurchShptLine@1000 : Record 6651;
+
+    PROCEDURE DeletePurchRcptLines@1(PurchReceiptHeader@1109400000 : Record 120);
+    BEGIN
+      PurchReceiptLine.SETRANGE("Document No.",PurchReceiptHeader."No.");
+      // Start INC
+      //WHILE PurchReceiptLine.FIND('-') DO BEGIN
+      IF PurchReceiptLine.FIND('-') THEN
+        REPEAT
+
+          PurchReceiptLine.TESTFIELD("Quantity Invoiced",PurchReceiptLine.Quantity);
+          PurchReceiptLine.DELETE;
+      //END;
+        UNTIL PurchReceiptLine.NEXT = 0;
+      // Stop INC
+    END;
+
+    PROCEDURE DeletePurchInvLines@2(PurchInvHeader@1109400000 : Record 122);
+    BEGIN
+      PurchInvLine.SETRANGE("Document No.",PurchInvHeader."No.");
+      PurchInvLine.DELETEALL;
+    END;
+
+    PROCEDURE DeletePurchCrMemoLines@3(PurchCrMemoHeader@1109400000 : Record 124);
+    BEGIN
+      PurchCrMemoLine.SETRANGE("Document No.",PurchCrMemoHeader."No.");
+      PurchCrMemoLine.DELETEALL;
+    END;
+
+    PROCEDURE DeletePurchShptLines@5800(ReturnShptHeader@1000 : Record 6650);
+    BEGIN
+      // Start INC
+      PurchShptLine.SETRANGE("Document No.",ReturnShptHeader."No.");
+      IF PurchShptLine.FIND('-') THEN
+        REPEAT
+          PurchShptLine.TESTFIELD("Quantity Invoiced",PurchShptLine.Quantity);
+          PurchShptLine.DELETE;
+        UNTIL PurchShptLine.NEXT = 0;
+      // Stop INC
+    END;
+
+    BEGIN
+    {
+      PA-Number  Date
+      ------------------------------------------------
+      PA033259   07.08.12 AI Deletion of Start/Stop History in Code, update copyright and Version List.
+    }
+    END.
+  }
+}
+

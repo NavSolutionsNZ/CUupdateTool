@@ -381,6 +381,13 @@ def run():
         # + whole-procedure span).
         'C10':   (os.path.join(FIX, 'EX-C10.stripped.txt'),
                   os.path.join(FIX, 'CU-C10.stripped.txt')),
+        # C364: customer added ONE whole procedure (DeleteICReference@4) whose
+        # only marker is a `// Start AP2326 .. // Stop AP2326` block INSIDE its
+        # BEGIN..END. The proc's own scaffolding (header/VAR/BEGIN/END;) brackets
+        # that block - fires via category 6 (structural A-only proc scaffolding,
+        # guarded by the code marker inside the span).
+        'C364':  (os.path.join(FIX, 'EX-C364.stripped.txt'),
+                  os.path.join(FIX, 'CU-C364.stripped.txt')),
     }
     NOCU_NOFIRE = ['T14', 'T36', 'T77', 'P347']   # real customer/vendor deltas
     for name, (a, b) in NOCU_FIRE.items():
@@ -398,6 +405,21 @@ def run():
             fails.append(f"[nocu] {name}: fired but has real changes - would skip a merge")
         else:
             print(f"[nocu] {name}: OK (does not fire - real delta, merge needed)")
+
+    # cat-6 guard: the SAME C364 object with its `// Start/Stop AP2326` markers
+    # (and AP2326 tokens) stripped out - a whole A-only procedure carrying NO
+    # customer code marker, only its own structural lines + a cat-4 local VAR.
+    # This stands in for a vendor-RETIRED procedure: cat 6 must NOT fire (a VAR
+    # alone cannot satisfy the marker guard), so the object falls through to the
+    # merge path rather than being silently skipped.
+    _nomark = DiffEngine(os.path.join(FIX, 'EX-C364nomark.stripped.txt'),
+                         os.path.join(FIX, 'CU-C364.stripped.txt'),
+                         CUST, VEND, LANGS, cust_digit_required=CUST_DIGITS)
+    if _nomark.no_cu_change():
+        fails.append("[nocu] C364nomark: fired without a code marker - cat-6 "
+                     "guard breached (a retired/unmarked proc would be skipped)")
+    else:
+        print("[nocu] C364nomark: OK (no code marker -> cat-6 guard holds)")
 
     # token-shape safety: AP (digits-required) must NOT match inside ordinary
     # words; WBL (digits-optional) must match as a bounded unit but not as a
