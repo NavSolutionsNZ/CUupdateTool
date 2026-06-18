@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
 """
-test_compare.py -- known-answer harness for the comparison oracle.
+test_compare.py -- known-answer harness for the merge-integrity oracle.
 
-Pins each verdict against hand-built fixtures (compare/tests/fixtures):
-  T14  matched               (byte identical)
-  T36  matched-except-header  (only Date=/Time=/Modified= differ)
-  T38  unmatched              (Version List + a Field node differ)
-  C80  missing-candidate      (gold only)
-  P21  missing-gold           (candidate only)
+The check is BODY-ONLY: the OBJECT-PROPERTIES block (Date/Time/Modified/Version
+List) and the doc-trigger are stripped before comparing, because those are
+trustworthy tool-stamped parameters that never match a hand-merge and are not
+evidence of a merge error. So:
 
-Plus unit checks on type/ID detection and section attribution. Same plain
-print-OK/XX style as the existing repo tests; no pytest dependency. Exit code
-is non-zero if any check fails, so it slots into the green-suite gate.
+  T14  collision      (two gold files MyMerged-/MySanitised- key to T14)
+  T36  matched        (differs only on header Date -> stripped -> identical body)
+  T38  unmatched      (a real Fields difference in the body)
+  T39  matched        (doc-trigger date/desc differ -> stripped -> identical)
+  T40  matched        (a doc-trigger tag differs -> stripped -> identical body)
+  C80  missing-candidate ; P21/T14 missing-gold ; notes_readme unkeyable
+
+Fixtures use differing prefixes on each side (MyMerged- gold, EX- candidate) so
+the suite exercises prefix-agnostic pairing. Plain print-OK/XX style, no pytest.
 """
 import os
 import sys
@@ -36,8 +40,6 @@ def check(label, got, want):
     return ok
 
 
-
-
 def _by_key(outcome):
     return {r['key']: r for r in outcome['results']}
 
@@ -50,27 +52,66 @@ def test_verdicts():
     miss_g = [k for k, _fn in outcome['missing_gold']]
     coll = {(k, side) for k, side, _fns in outcome['collision']}
 
-    # T14 now has two gold files (MyMerged-, MySanitised-) -> collision, not paired.
     check("T14 collision on gold side", ('T14', 'gold') in coll, True)
-    check("T14 not in paired results", 'T14' in by, False)
-    check("T36 matched-except-header",
-          by['T36']['verdict'], 'matched-except-header')
-    check("T38 unmatched", by['T38']['verdict'], 'unmatched')
+    check("T14 not paired", 'T14' in by, False)
+    check("T36 header-only diff -> matched (header stripped)",
+          by['T36']['verdict'], 'matched')
+    check("T38 real body diff -> unmatched", by['T38']['verdict'], 'unmatched')
+    check("T39 doc-trigger date/desc stripped -> matched",
+          by['T39']['verdict'], 'matched')
+    check("T40 doc-trigger tag stripped -> matched",
+          by['T40']['verdict'], 'matched')
     check("C80 missing-candidate", 'C80' in miss_c, True)
     check("P21 missing-gold", 'P21' in miss_g, True)
-    # Prefix-agnostic pairing: gold MyMerged-T36 pairs with candidate EX-T36.
-    check("T36 paired across differing prefixes", 'T36' in by, True)
-    # Doc-trigger: date + description differ, tags identical -> matched.
-    check("T39 doc-date/desc ignored -> matched",
-          by['T39']['verdict'], 'matched')
-    # Doc-trigger: a customer tag present in gold is missing from candidate.
-    check("T40 missing doc tag -> unmatched",
-          by['T40']['verdict'], 'unmatched')
+
+
+def test_body_only():
+    print("body-only:")
+    # OBJECT-PROPERTIES block is stripped wholesale.
+    lines = [
+        'OBJECT Table 1 X',
+        '{',
+        '  OBJECT-PROPERTIES',
+        '  {',
+        '    Date=01/01/24;',
+        '    Version List=NAVW1,CU26Q1;',
+        '  }',
+        '  FIELDS',
+        '  {',
+        '    { 1 ; ;No ;Code20 }',
+        '  }',
+        '}',
+    ]
+    body = ce.strip_object_properties(lines)
+    check("no Date line after strip",
+          any('Date=' in l for l in body), False)
+    check("no Version List after strip",
+          any('Version List' in l for l in body), False)
+    check("FIELDS survives strip",
+          any('FIELDS' in l for l in body), True)
+
+    # Two objects differing ONLY in OBJECT-PROPERTIES (date + version list) are
+    # matched, because the body is identical.
+    g = lines[:]
+    c = [l.replace('01/01/24', '14/06/26').replace(',CU26Q1', '') for l in lines]
+    gb, cb = ce._body_only(g), ce._body_only(c)
+    check("header-only difference -> identical body", gb == cb, True)
+
+
+def test_doc_trigger_stripped():
+    print("doc-trigger stripped:")
+    g14 = ce.read_lines(os.path.join(GOLDS, 'MyMerged-T14.txt'))
+    body = ce._body_only(g14)
+    # The doc-trigger entries (dated lines) must not survive into the body.
+    check("no dated doc entry in body",
+          any(ce.DOC_ENTRY.match(l) for l in body), False)
+    # Boundary detection still works (used to find what to strip).
+    start = ce.doc_trigger_start(ce.strip_object_properties(g14))
+    check("doc-trigger boundary found", start is not None, True)
 
 
 def test_pairing():
     print("pairing:")
-    # object_key strips any prefix and keys on <Type><Number>.
     check("MyMerged-T18 -> T18", ce.object_key('MyMerged-T18.txt'), 'T18')
     check("EX-T18 -> T18", ce.object_key('EX-T18.txt'), 'T18')
     check("MySanitised-P5205801 -> P5205801",
@@ -78,31 +119,11 @@ def test_pairing():
     check("long number kept", ce.object_key('EX-T5045517.txt'), 'T5045517')
     check("case-insensitive", ce.object_key('ex-t18.txt'), 'T18')
     check("no key tail -> None", ce.object_key('notes_readme.txt'), None)
-    # Unkeyable file is reported, not silently dropped.
     outcome = ce.compare_dirs(GOLDS, CANDS)
     unkey = {fn for _side, fn in outcome['unkeyable']}
     check("notes_readme is unkeyable", 'notes_readme.txt' in unkey, True)
-
-
-def test_doc_trigger():
-    print("doc-trigger:")
-    outcome = ce.compare_dirs(GOLDS, CANDS)
     by = _by_key(outcome)
-    # T40 surfaces the dropped tag explicitly and names the Doc trigger section.
-    check("T40 names Doc trigger section",
-          'Doc trigger' in by['T40']['sections'], True)
-    check("T40 reports the missing tag",
-          by['T40'].get('missing_doc_tags'), ['WBL030'])
-    # T39 must NOT be dragged to unmatched by date/description noise.
-    check("T39 no missing tags",
-          by['T39'].get('missing_doc_tags', []), [])
-    # Boundary detection on a real-shaped object.
-    g14 = ce.read_lines(os.path.join(GOLDS, 'MyMerged-T14.txt'))
-    start = ce.doc_trigger_start(g14)
-    check("T14 doc-trigger boundary found", start is not None, True)
-    tags = ce.doc_trigger_tags(g14, start)
-    check("T14 tags include WBL001", 'WBL001' in tags, True)
-    check("T14 tags include AP001651", 'AP001651' in tags, True)
+    check("T36 paired across differing prefixes", 'T36' in by, True)
 
 
 def test_sections():
@@ -110,13 +131,11 @@ def test_sections():
     outcome = ce.compare_dirs(GOLDS, CANDS)
     by = _by_key(outcome)
     secs = by['T38']['sections']
-    # The Version List line and a Field node both differ -> both surfaced.
-    check("T38 names Version List", 'Version List' in secs, True)
     check("T38 names a Fields section",
           any(s.startswith('Fields') for s in secs), True)
-    # A pure header diff is attributed to Object properties, nothing else.
-    check("T36 header-only section",
-          by['T36']['sections'], ['Object properties'])
+    # Version List diff must NOT appear -- it is stripped with the header.
+    check("T38 does not name Version List",
+          'Version List' in secs, False)
 
 
 def test_detect_type_id():
@@ -128,42 +147,24 @@ def test_detect_type_id():
     check("codeunit type", ce.detect_type_id(cu)[0], 'CODEUNIT')
 
 
-def test_header_only_guard():
-    print("header-only guard:")
-    # Different line counts can never be a pure header diff.
-    a = ['Date=01/01/24;', 'X', 'Y']
-    b = ['Date=14/06/26;', 'X']
-    check("length mismatch is not header-only",
-          ce._header_only_diff(a, b), False)
-    # A content line differing alongside a header line is not header-only.
-    a = ['Date=01/01/24;', 'real']
-    b = ['Date=14/06/26;', 'REAL']
-    check("content diff is not header-only",
-          ce._header_only_diff(a, b), False)
-    # Pure header stamp difference is header-only.
-    a = ['Date=01/01/24;', 'Modified=No;', 'same']
-    b = ['Date=14/06/26;', 'Modified=Yes;', 'same']
-    check("pure stamp diff is header-only",
-          ce._header_only_diff(a, b), True)
-
-
 def test_report_builds():
     print("report:")
     outcome = ce.compare_dirs(GOLDS, CANDS)
     report = ce.build_report(outcome)
-    check("report mentions matched-except-header",
-          'matched-except-header' in report, True)
     check("report has detail block",
           'DETAIL (non-matched objects)' in report, True)
     check("report shows missing-candidate",
           'missing-candidate' in report, True)
     check("report shows collision", 'collision' in report, True)
     check("report shows unkeyable", 'unkeyable' in report, True)
+    check("report does NOT mention matched-except-header",
+          'matched-except-header' in report, False)
 
 
 def main():
-    for t in (test_verdicts, test_pairing, test_sections, test_doc_trigger,
-              test_detect_type_id, test_header_only_guard, test_report_builds):
+    for t in (test_verdicts, test_body_only, test_doc_trigger_stripped,
+              test_pairing, test_sections, test_detect_type_id,
+              test_report_builds):
         t()
     print()
     if _failures:

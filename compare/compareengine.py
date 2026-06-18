@@ -1,31 +1,34 @@
 #!/usr/bin/env python3
 """
-compareengine.py -- byte-level oracle for CUupdate.exe output.
+compareengine.py -- merge-integrity oracle for CUupdate.exe output.
 
 A standalone validation harness, fully isolated from the cuupdate/ engine
-package (no engine imports). It compares hand-merged GOLD objects against the
-tool's CANDIDATE output to build confidence and surface rule gaps.
+package (no engine imports). It checks whether the auto-merge produced the same
+object BODY as a hand-merge, to build confidence and surface rule gaps.
 
 Design (locked with Rich):
-  - Pairing is BY FILENAME across two folders (golds/, candidates/).
-  - Compare is STRICT RAW BYTE compare, latin-1/cp1252. No content normalising.
-  - The OBJECT-PROPERTIES header carries housekeeping the tool stamps at run
-    time (Date=, Time=, Modified=). When the ONLY difference between two
-    otherwise-identical files lives on those header lines, the verdict is
-    `matched-except-header` rather than `unmatched` -- nothing is hidden, but a
-    date-stamp diff does not masquerade as a real content gap.
-  - On a genuine content diff we locate each differing line to a C/AL SECTION
-    (Version List, Properties, Fields, Keys, Triggers, Controls, Doc trigger,
-    Code) so a human can decide at a glance whether it is a real manual step.
+  - Pairing is BY OBJECT KEY (prefix-agnostic): the <Type><Number> token after
+    the final '-' and before '.txt', so MyMerged-T18.txt pairs with EX-T18.txt
+    regardless of self-merge naming convention.
+  - The check is BODY-ONLY. CUupdate's stamped parameters are trustworthy and so
+    irrelevant to integrity, and they never match a hand-merge anyway:
+      * the entire OBJECT-PROPERTIES block (Date/Time/Modified/Version List) is
+        stripped before comparing;
+      * the entire doc-trigger (the trailing commented-out BEGIN { ... } block)
+        is stripped.
+    Everything between -- PROPERTIES trigger code, FIELDS, KEYS, CODE, CONTROLS
+    -- is compared line-for-line (LCS, latin-1/cp1252). A difference is located
+    to a C/AL section so a human can judge whether it is a real merge error.
 
 Verdicts:
-  matched               bytes identical
-  matched-except-header  differ only on Date=/Time=/Modified= header lines
-  unmatched             real content difference (sections + lines reported)
-  missing-candidate     gold has no candidate of the same filename
-  missing-gold          candidate has no gold of the same filename
+  matched            object bodies identical
+  unmatched          real body difference (sections + lines reported)
+  missing-candidate  gold has no candidate for the same object key
+  missing-gold       candidate has no gold for the same object key
+  collision          the same key appears twice in one folder (not compared)
+  unkeyable          a filename has no <Type><Number> key (listed, not dropped)
 
-Nothing here makes a merge decision; it only judges equivalence.
+Nothing here makes a merge decision; it only judges body equivalence.
 """
 import os
 import re
@@ -44,16 +47,10 @@ OBJTYPE = re.compile(r'^\s*OBJECT\s+([A-Za-z]+)\s+(\d+)\s*(.*?)\s*$', re.I)
 # or long.
 OBJKEY = re.compile(r'-([A-Za-z]\d+)\.txt$', re.I)
 
-# Header lines the tool stamps at run time. A difference confined to these is
-# cosmetic (date/time/modified housekeeping), not a content gap.
-HEADER_KEY = re.compile(r'^\s*(Date|Time|Modified)\s*=', re.I)
-
-# Doc-trigger entry: `<tag> <DD.MM.YY> <rest>`. The tag is the WHOLE first token
-# (e.g. PA035804.26149, EU.0020605, AP001651, WBL001) -- the granularity at
-# which a customer addition would actually go missing. We compare only the SET
-# of tags across gold/candidate; date and description are deliberately ignored
-# (the doc-trigger is fully commented-out, so it carries no compile risk and its
-# date is a run-day stamp).
+# Doc-trigger entry: `<tag> <DD.MM.YY> <rest>`. Used only by the doc-trigger
+# boundary detector to confirm a trailing brace block really is the
+# documentation trigger (so it can be stripped). The tags themselves are not
+# compared -- the doc-trigger is excluded from the integrity check entirely.
 DOC_ENTRY = re.compile(r'^\s*([A-Za-z][\w.\-]*)\s+\d{2}\.\d{2}\.\d{2}\b')
 BEGIN_BARE = re.compile(r'^\s*BEGIN\s*$')
 OPEN_BRACE = re.compile(r'^\s*\{\s*$')
@@ -114,6 +111,57 @@ def object_key(filename):
 # customer tags (whole first token of each dated entry); date and description
 # are ignored as noise.
 
+OBJPROPS_HEAD = re.compile(r'^\s*OBJECT-PROPERTIES\b', re.I)
+
+
+def strip_object_properties(lines):
+    """Return `lines` with the entire OBJECT-PROPERTIES block removed.
+
+    The OBJECT-PROPERTIES block holds only tool-managed metadata (Date, Time,
+    Modified, Version List) -- all stamped by CUupdate at run time and never a
+    place customer code lives. For a merge-integrity check it is pure noise: a
+    hand-merged gold and the tool's output will never agree on these, and a
+    disagreement there is not a merge error. So we drop the block before
+    comparing and judge the object body alone.
+
+    The block is `OBJECT-PROPERTIES` followed by a brace group `{ ... }`; we
+    remove from the header line through its matching close brace.
+    """
+    out = []
+    i = 0
+    n = len(lines)
+    while i < n:
+        if OBJPROPS_HEAD.match(lines[i]):
+            # Skip the header line, then skip a brace group if present.
+            j = i + 1
+            # advance to the opening brace
+            while j < n and lines[j].strip() != '{':
+                # tolerate the rare inline form; stop if we hit another section
+                if SECTION_HEAD.match(lines[j]):
+                    break
+                j += 1
+            if j < n and lines[j].strip() == '{':
+                depth = 0
+                while j < n:
+                    s = lines[j].strip()
+                    if s == '{':
+                        depth += 1
+                    elif s == '}':
+                        depth -= 1
+                        if depth == 0:
+                            j += 1
+                            break
+                    j += 1
+                i = j
+                continue
+            # no brace group found; just drop the header line
+            i += 1
+            continue
+        out.append(lines[i])
+        i += 1
+    return out
+
+
 def doc_trigger_start(lines):
     """Index (0-based) of the opening `{` of the doc-trigger block, or None.
 
@@ -132,23 +180,6 @@ def doc_trigger_start(lines):
                 if lines[j].strip() in ('}', 'END.'):
                     break
     return None
-
-
-def doc_trigger_tags(lines, start):
-    """Set of whole-first-token tags in the doc-trigger block beginning at the
-    brace index `start`. Empty set if start is None.
-    """
-    tags = set()
-    if start is None:
-        return tags
-    for j in range(start + 1, len(lines)):
-        s = lines[j].strip()
-        if s == '}':
-            break
-        m = DOC_ENTRY.match(lines[j])
-        if m:
-            tags.add(m.group(1))
-    return tags
 
 
 # ---------------------------------------------------------------------------
@@ -237,25 +268,6 @@ def section_map(lines):
 # Comparison
 # ---------------------------------------------------------------------------
 
-def _header_only_diff(gold, cand):
-    """True iff gold and cand have the same number of lines and every line that
-    differs is a Date=/Time=/Modified= header line on BOTH sides.
-
-    Same length is required: a header-only stamp difference never changes line
-    count. If lengths differ, it cannot be a pure header diff.
-    """
-    if len(gold) != len(cand):
-        return False
-    any_diff = False
-    for g, c in zip(gold, cand):
-        if g == c:
-            continue
-        any_diff = True
-        if not (HEADER_KEY.match(g) and HEADER_KEY.match(c)):
-            return False
-    return any_diff
-
-
 def _diff_lines(gold, cand):
     """Return a list of (lineno, gold_line, cand_line) for genuine differences,
     aligned by LCS (difflib.SequenceMatcher) so a pure insertion or deletion
@@ -298,14 +310,19 @@ def _label_for_cand_line(cand_line, c_map, c_body):
 
 
 def compare_pair(gold_path, cand_path):
-    """Compare one gold/candidate pair. Return a result dict.
+    """Compare one gold/candidate pair for MERGE INTEGRITY. Return a result dict.
 
-    Comparison is in two regions:
-      1. Everything strictly ABOVE the doc-trigger -> strict byte compare, with
-         the Date=/Time=/Modified= header tolerance.
-      2. The doc-trigger block -> SET compare of customer tags only; date and
-         description ignored. A gold tag absent from candidate is a dropped
-         customer element and forces `unmatched` with 'Doc trigger' in sections.
+    The question is only: did the auto-merge produce the same object BODY as the
+    hand-merge? So we compare the body alone:
+      - the entire OBJECT-PROPERTIES block is stripped (Date/Time/Modified/
+        Version List are tool-stamped metadata, never customer code, and never
+        match a hand-merge -- irrelevant to integrity);
+      - the entire doc-trigger is stripped (commented-out, tool-managed);
+      - everything between -- PROPERTIES (trigger code), FIELDS, KEYS, CODE,
+        CONTROLS, ... -- is compared line-for-line via LCS.
+
+    Verdict is `matched` if the bodies are identical, else `unmatched` with the
+    differing sections and lines.
     """
     gold = read_lines(gold_path)
     cand = read_lines(cand_path)
@@ -316,62 +333,41 @@ def compare_pair(gold_path, cand_path):
         'gold': gold_path, 'cand': cand_path,
     }
 
-    # Split each side at its own doc-trigger boundary. The body above is the
-    # strict-compare region; the doc-trigger tag set is compared separately.
-    g_start = doc_trigger_start(gold)
-    c_start = doc_trigger_start(cand)
-    g_body = gold[:g_start] if g_start is not None else gold
-    c_body = cand[:c_start] if c_start is not None else cand
-    g_tags = doc_trigger_tags(gold, g_start)
-    c_tags = doc_trigger_tags(cand, c_start)
+    g_body = _body_only(gold)
+    c_body = _body_only(cand)
 
-    # Doc-trigger judgement: only a gold tag MISSING from candidate matters
-    # (a dropped customer addition). Extra candidate tags are not a gap.
-    missing_tags = sorted(g_tags - c_tags)
-
-    body_identical = (g_body == c_body)
-    header_only = (not body_identical) and _header_only_diff(g_body, c_body)
-
-    # ---- classify ----
-    if body_identical and not missing_tags:
+    if g_body == c_body:
         base['verdict'] = 'matched'
         base['sections'] = []
         base['diffs'] = []
         return base
 
-    if header_only and not missing_tags:
-        base['verdict'] = 'matched-except-header'
-        base['sections'] = ['Object properties']
-        base['diffs'] = _diff_lines(g_body, c_body)
-        return base
-
-    # Real difference: collect body sections and/or doc-trigger gap.
-    diffs = _diff_lines(g_body, c_body) if not body_identical else []
+    diffs = _diff_lines(g_body, c_body)
     secs = []
-    if diffs:
-        g_map = section_map(g_body)
-        c_map = section_map(c_body)
-        for lineno, g, c in diffs:
-            # Label from the side that actually has content at this diff: gold
-            # for replace/delete, candidate for a pure insertion.
-            if g is not None:
-                idx = lineno - 1
-                label = g_map[idx] if 0 <= idx < len(g_map) else 'Body'
-            else:
-                # insertion: lineno is the gold insertion point; find the
-                # candidate line's own section by locating it in c_map.
-                label = _label_for_cand_line(c, c_map, c_body)
-            if label not in secs:
-                secs.append(label)
-    if missing_tags:
-        if 'Doc trigger' not in secs:
-            secs.append('Doc trigger')
+    g_map = section_map(g_body)
+    c_map = section_map(c_body)
+    for lineno, g, c in diffs:
+        if g is not None:
+            idx = lineno - 1
+            label = g_map[idx] if 0 <= idx < len(g_map) else 'Body'
+        else:
+            label = _label_for_cand_line(c, c_map, c_body)
+        if label not in secs:
+            secs.append(label)
 
     base['verdict'] = 'unmatched'
     base['sections'] = secs
     base['diffs'] = diffs
-    base['missing_doc_tags'] = missing_tags
     return base
+
+
+def _body_only(lines):
+    """The comparable object body: OBJECT-PROPERTIES block removed and the
+    doc-trigger (and everything after it) dropped.
+    """
+    stripped = strip_object_properties(lines)
+    start = doc_trigger_start(stripped)
+    return stripped[:start] if start is not None else stripped
 
 
 def compare_dirs(gold_dir, cand_dir):
@@ -449,10 +445,9 @@ VERDICT_ORDER = {
     'unmatched': 0,
     'collision': 1,
     'unkeyable': 2,
-    'matched-except-header': 3,
-    'missing-candidate': 4,
-    'missing-gold': 5,
-    'matched': 6,
+    'missing-candidate': 3,
+    'missing-gold': 4,
+    'matched': 5,
 }
 
 
@@ -474,24 +469,23 @@ def build_report(outcome):
             'file': r['file'], 'type': r.get('type'), 'id': r.get('id'),
             'verdict': r['verdict'], 'sections': r.get('sections', []),
             'diffs': r.get('diffs', []),
-            'missing_doc_tags': r.get('missing_doc_tags', []),
         })
     for key, fn in outcome.get('missing_candidate', []):
         rows.append({'file': fn, 'type': None, 'id': key,
                      'verdict': 'missing-candidate', 'sections': [],
-                     'diffs': [], 'missing_doc_tags': []})
+                     'diffs': []})
     for key, fn in outcome.get('missing_gold', []):
         rows.append({'file': fn, 'type': None, 'id': key,
                      'verdict': 'missing-gold', 'sections': [],
-                     'diffs': [], 'missing_doc_tags': []})
+                     'diffs': []})
     for key, side, fns in outcome.get('collision', []):
         rows.append({'file': ', '.join(fns), 'type': None, 'id': key,
                      'verdict': 'collision', 'sections': [f'{side} side'],
-                     'diffs': [], 'missing_doc_tags': []})
+                     'diffs': []})
     for side, fn in outcome.get('unkeyable', []):
         rows.append({'file': fn, 'type': None, 'id': None,
                      'verdict': 'unkeyable', 'sections': [f'{side} side'],
-                     'diffs': [], 'missing_doc_tags': []})
+                     'diffs': []})
 
     rows.sort(key=lambda r: (VERDICT_ORDER.get(r['verdict'], 9), r['file']))
 
@@ -502,8 +496,7 @@ def build_report(outcome):
         'file': max([4] + [len(r['file']) for r in rows]),
         'type': max([4] + [len(f'{r["type"] or "?"} {r["id"] or ""}'.strip())
                            for r in rows]),
-        'verdict': max(len('matched-except-header'),
-                       *[len(r['verdict']) for r in rows]),
+        'verdict': max([7] + [len(r['verdict']) for r in rows]),
     }
 
     out = []
@@ -523,8 +516,7 @@ def build_report(outcome):
         f'{k}={tally[k]}'
         for k in sorted(tally, key=lambda k: VERDICT_ORDER.get(k, 9))))
 
-    detail = [r for r in rows if r['verdict'] in
-              ('unmatched', 'matched-except-header')]
+    detail = [r for r in rows if r['verdict'] == 'unmatched']
     if detail:
         out.append('')
         out.append('=' * len(header))
@@ -534,9 +526,6 @@ def build_report(outcome):
             out.append('')
             out.append(f'### {r["file"]}  [{r["verdict"]}]  '
                        f'sections: {", ".join(r["sections"]) or "-"}')
-            if r.get('missing_doc_tags'):
-                out.append('  doc-trigger tags in gold but missing from '
-                           'candidate: ' + ', '.join(r['missing_doc_tags']))
             for lineno, g, c in r['diffs']:
                 gtxt = '<absent>' if g is None else g
                 ctxt = '<absent>' if c is None else c

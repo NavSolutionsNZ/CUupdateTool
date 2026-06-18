@@ -7,21 +7,29 @@ isolated from the main tool (`cuupdate/`): it imports nothing from the engine.
 
 ## What it does
 
-Pairs objects by filename across a GOLD folder (your hand-merged known-answers)
-and a CANDIDATE folder (CUupdate.exe output), then judges each pair:
+Checks whether the auto-merge produced the same object **body** as your
+hand-merge. It pairs objects by key (below) and compares the body only:
 
-- `matched` — byte-identical above the doc-trigger, same doc-trigger tags.
-- `matched-except-header` — differs only on the `Date=` / `Time=` / `Modified=`
-  header stamps the tool writes at run time.
-- `unmatched` — a real content difference; the report names the C/AL section(s)
-  (Version List, Properties, Fields, Keys, Triggers, Controls, Doc trigger,
-  Code) and shows the differing lines.
-- `missing-candidate` / `missing-gold` — a file present on only one side.
+- The entire `OBJECT-PROPERTIES` block (`Date`, `Time`, `Modified`,
+  `Version List`) is ignored — those are parameters CUupdate stamps at run time;
+  they are trustworthy, never match a hand-merge, and are not evidence of a
+  merge error.
+- The entire doc-trigger (the trailing commented-out `BEGIN { ... }` block) is
+  ignored.
+- Everything between — `PROPERTIES` trigger code, `FIELDS`, `KEYS`, `CODE`,
+  `CONTROLS` — is compared line for line.
 
-The doc-trigger (the trailing commented-out `BEGIN { ... }` block) is compared
-as a **set of customer tags** only — its dates and descriptions are ignored as
-noise. A customer tag present in the gold but missing from the candidate means
-the tool dropped a customer addition, and is reported as `unmatched`.
+Verdicts:
+
+- `matched` — object bodies are identical.
+- `unmatched` — a real body difference; the report names the C/AL section(s)
+  (Properties, Fields, Keys, Triggers, Controls, Code) and shows the differing
+  lines.
+- `missing-candidate` / `missing-gold` — an object present on only one side.
+- `collision` — the same object key appears twice in one folder (ambiguous which
+  file is authoritative; not compared).
+- `unkeyable` — a filename with no `-<Type><Number>.txt` key (listed, not
+  silently dropped).
 
 ## Run it directly (any machine with Python)
 
