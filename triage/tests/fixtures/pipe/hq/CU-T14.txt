@@ -1,0 +1,17 @@
+OBJECT Table 14 Obj14
+{
+  OBJECT-PROPERTIES
+  {
+    Date=01/01/24;
+    Version List=NAVW1,CU26Q2;
+  }
+  CODE
+  {
+    PROCEDURE Foo@1();
+    BEGIN
+      VendorNew := 1;
+    END;
+    BEGIN
+    END.
+  }
+}

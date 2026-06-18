@@ -1,0 +1,17 @@
+OBJECT Codeunit 80 Obj80
+{
+  OBJECT-PROPERTIES
+  {
+    Date=01/01/24;
+    Version List=NAVW1,CU26Q2;
+  }
+  CODE
+  {
+    PROCEDURE Foo@1();
+    BEGIN
+      X := 1;
+    END;
+    BEGIN
+    END.
+  }
+}
