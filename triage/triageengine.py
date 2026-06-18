@@ -239,3 +239,86 @@ def stage_new_baseline(result, new_dir, out_dir):
         shutil.copy2(os.path.join(new_dir, nf), os.path.join(out_dir, nf))
         staged.append(nf)
     return staged
+
+
+# ---------------------------------------------------------------------------
+# PowerShell export orchestration (Stage 3 seam)
+# ---------------------------------------------------------------------------
+# The tool drives the export by invoking Export-Baseline.ps1 on the user's
+# machine under Windows auth. Credentials never pass through here -- the script
+# connects under the caller's own Windows identity. This is a clean seam: the
+# rest of the triage works on folders regardless of how they were populated.
+
+def default_script_path():
+    """Locate Export-Baseline.ps1 relative to this module (works from source and
+    from a frozen build where the script is bundled alongside).
+    """
+    here = os.path.dirname(os.path.abspath(__file__))
+    candidates = [
+        os.path.join(here, 'scripts', 'Export-Baseline.ps1'),
+        os.path.join(here, 'Export-Baseline.ps1'),
+        # PyInstaller onefile: bundled data unpacks to sys._MEIPASS.
+        os.path.join(getattr(sys, '_MEIPASS', here), 'scripts',
+                     'Export-Baseline.ps1'),
+        os.path.join(getattr(sys, '_MEIPASS', here), 'Export-Baseline.ps1'),
+    ]
+    for c in candidates:
+        if os.path.isfile(c):
+            return c
+    return candidates[0]
+
+
+def export_baseline(server, database, out_folder, prefix,
+                    script_path=None, filter_str=None, module_path=None):
+    """Invoke Export-Baseline.ps1 to export+split+rename one database.
+
+    Returns (ok: bool, output: str). Windows-only (requires powershell.exe and
+    the NAV model-tools module on the calling machine). No credentials are
+    passed; the script runs under the caller's Windows identity.
+    """
+    import subprocess
+    script = script_path or default_script_path()
+    if not os.path.isfile(script):
+        return False, f'Export script not found: {script}'
+
+    cmd = [
+        'powershell.exe', '-NoProfile', '-ExecutionPolicy', 'Bypass',
+        '-File', script,
+        '-DatabaseServer', server,
+        '-DatabaseName', database,
+        '-OutFolder', out_folder,
+        '-Prefix', prefix,
+    ]
+    if filter_str:
+        cmd += ['-Filter', filter_str]
+    if module_path:
+        cmd += ['-ModulePath', module_path]
+
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True)
+    except FileNotFoundError:
+        return False, ('powershell.exe not found -- this step runs on Windows '
+                       'with the NAV model-tools module installed.')
+    out = (proc.stdout or '') + (proc.stderr or '')
+    return (proc.returncode == 0), out.strip()
+
+
+def export_both_baselines(server, existing_db, new_db, root,
+                          script_path=None, filter_str=None, module_path=None):
+    """Export both baselines into root/existing (prefix OB) and root/new
+    (prefix CU). Returns (ok, log, existing_dir, new_dir).
+    """
+    existing_dir = os.path.join(root, 'existing')
+    new_dir = os.path.join(root, 'new')
+    log = []
+
+    ok_e, out_e = export_baseline(server, existing_db, existing_dir, 'OB',
+                                  script_path, filter_str, module_path)
+    log.append(f'[Existing/OB] {existing_db}\n{out_e}')
+    if not ok_e:
+        return False, '\n\n'.join(log), existing_dir, new_dir
+
+    ok_n, out_n = export_baseline(server, new_db, new_dir, 'CU',
+                                  script_path, filter_str, module_path)
+    log.append(f'[New/CU] {new_db}\n{out_n}')
+    return ok_n, '\n\n'.join(log), existing_dir, new_dir

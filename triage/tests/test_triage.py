@@ -113,9 +113,23 @@ def test_staging(tmpdir='/tmp/_triage_stage_test'):
     shutil.rmtree(tmpdir, ignore_errors=True)
 
 
+def test_export_plumbing():
+    print("export plumbing:")
+    # The bundled PS1 is locatable.
+    sp = te.default_script_path()
+    check("Export-Baseline.ps1 found", os.path.isfile(sp), True)
+    # On a non-Windows host (no powershell.exe) the call fails cleanly, not
+    # with an exception -- proving the error path returns (False, message).
+    ok, out = te.export_baseline('srv', 'db', '/tmp/_x', 'OB',
+                                 script_path=sp)
+    check("missing powershell handled gracefully", ok, False)
+    check("failure returns a message", isinstance(out, str) and len(out) > 0,
+          True)
+
+
 def main():
     for t in (test_classification, test_strictness_vs_gold, test_body_only,
-              test_report, test_grouping, test_staging):
+              test_report, test_grouping, test_staging, test_export_plumbing):
         t()
     print()
     if _failures:

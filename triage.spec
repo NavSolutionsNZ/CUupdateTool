@@ -39,7 +39,7 @@ a = Analysis(
     # hiddenimports so the freezer bundles them regardless of dynamic import.
     pathex=['triage', 'compare', '.'],
     binaries=[],
-    datas=[],
+    datas=[('triage/scripts/Export-Baseline.ps1', 'scripts')],
     hiddenimports=['triageengine', 'compareengine'],
     hookspath=[],
     runtime_hooks=[],

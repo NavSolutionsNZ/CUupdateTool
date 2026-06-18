@@ -74,6 +74,31 @@ Produces `dist\CUtriage_<version>.exe`. The build clears only `CUtriage_*` from
 `triage/__init__.py`. (Builds on Windows only; PyInstaller does not
 cross-compile.)
 
+## Export baselines from the database (optional)
+
+Instead of pointing at two pre-exported folders, the GUI can export both
+baselines for you. Fill in the SQL server, the Existing and New database names,
+and an export root, then click **Export from DB, then triage**. The tool runs
+`triage/scripts/Export-Baseline.ps1` once per database:
+
+- exports all objects up to the incadea dev-license ceiling
+  (`Id=1..99008535`, so system/platform objects are skipped),
+- splits into one file per object with `-PreserveFormatting`,
+- renames to the `<Prefix>-<TypeChar><Id>.txt` convention (`OB-` for the
+  existing baseline, `CU-` for the new),
+
+into `root\existing` and `root\new`, then runs the triage on those folders.
+
+**Windows authentication only** — the script connects under the identity running
+the tool; no credentials are entered or stored. This step requires Windows, the
+NAV model-tools module (BC140 RoleTailored Client), and SQL access to the
+databases. The module path defaults to the BC140 location and is a parameter on
+the script if yours differs.
+
+While testing, the PS1 lives in `triage/scripts/` and ships bundled inside the
+exe. Once confirmed, you can keep a copy in a local folder on the SQL box (which
+may have no internet access) and point the tool at it.
+
 ## Roadmap (not yet built)
 
 - **Stage 2**: add the customer DB export as a third input; split the changed
