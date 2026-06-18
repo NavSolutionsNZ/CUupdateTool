@@ -268,18 +268,55 @@ def section_map(lines):
 # Comparison
 # ---------------------------------------------------------------------------
 
-def _diff_lines(gold, cand):
-    """Return a list of (lineno, gold_line, cand_line) for genuine differences,
-    aligned by LCS (difflib.SequenceMatcher) so a pure insertion or deletion
-    shows ONLY the changed lines -- not every line below the edit point.
+def _norm_ws(line):
+    """Normalise a line for the MATCH decision: collapse all runs of whitespace
+    OUTSIDE string literals to a single space and strip the ends, while
+    preserving whitespace INSIDE double-quoted strings verbatim.
 
-    lineno is 1-based in the gold file for 'replace' and 'delete' regions, and
-    the gold insertion point for 'insert' regions. A side absent at that
-    position is reported as None, so an inserted/deleted line reads cleanly as
-    gold:<absent> or cand:<absent>.
+    This makes the comparison indifferent to CU re-nesting and inter-token
+    spacing (which only ever changes whitespace outside quotes), matching the
+    engine's principle that indentation is not a structural signal -- while
+    still catching a genuine change to the spacing inside a quoted string
+    (a caption, message, or option value), which is real C/AL content.
+
+    The original lines are preserved for the report; only the comparison key is
+    normalised.
     """
     out = []
-    sm = difflib.SequenceMatcher(a=gold, b=cand, autojunk=False)
+    in_q = False
+    prev_space = False
+    for ch in line:
+        if ch == '"':
+            in_q = not in_q
+            out.append(ch)
+            prev_space = False
+        elif not in_q and (ch == ' ' or ch == '\t'):
+            if not prev_space:
+                out.append(' ')
+            prev_space = True
+        else:
+            out.append(ch)
+            prev_space = False
+    return ''.join(out).strip()
+
+
+def _diff_lines(gold, cand):
+    """Return a list of (lineno, gold_line, cand_line) for genuine differences.
+
+    Lines are aligned and compared on their whitespace-normalised form
+    (_norm_ws: collapse whitespace outside quotes), so CU re-nesting and
+    inter-token spacing are not differences. The REPORTED lines are the
+    originals, so the detail still shows real content and indentation.
+
+    Aligned by LCS (difflib.SequenceMatcher) so a pure insertion or deletion
+    shows ONLY the changed lines -- not every line below the edit point. lineno
+    is 1-based in the gold file for 'replace'/'delete', and the gold insertion
+    point for 'insert'. A side absent at that position is reported as None.
+    """
+    g_norm = [_norm_ws(l) for l in gold]
+    c_norm = [_norm_ws(l) for l in cand]
+    out = []
+    sm = difflib.SequenceMatcher(a=g_norm, b=c_norm, autojunk=False)
     for tag, i1, i2, j1, j2 in sm.get_opcodes():
         if tag == 'equal':
             continue
@@ -336,13 +373,21 @@ def compare_pair(gold_path, cand_path):
     g_body = _body_only(gold)
     c_body = _body_only(cand)
 
-    if g_body == c_body:
+    # Match decision is whitespace-normalised (CU re-nesting is not a diff).
+    if [_norm_ws(l) for l in g_body] == [_norm_ws(l) for l in c_body]:
         base['verdict'] = 'matched'
         base['sections'] = []
         base['diffs'] = []
         return base
 
     diffs = _diff_lines(g_body, c_body)
+    if not diffs:
+        # Normalised forms differ only in count/order that LCS realigns to
+        # nothing reportable -- treat as matched rather than empty-unmatched.
+        base['verdict'] = 'matched'
+        base['sections'] = []
+        base['diffs'] = []
+        return base
     secs = []
     g_map = section_map(g_body)
     c_map = section_map(c_body)

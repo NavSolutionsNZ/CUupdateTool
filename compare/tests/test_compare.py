@@ -63,6 +63,29 @@ def test_verdicts():
           by['T40']['verdict'], 'matched')
     check("C80 missing-candidate", 'C80' in miss_c, True)
     check("P21 missing-gold", 'P21' in miss_g, True)
+    # Re-nested candidate (different indentation only) -> matched.
+    check("T42 re-nesting ignored -> matched",
+          by['T42']['verdict'], 'matched')
+
+
+def test_whitespace():
+    print("whitespace:")
+    # Outside quotes: runs of whitespace collapse, ends stripped.
+    check("indent collapses",
+          ce._norm_ws('      // Start PA035597'),
+          ce._norm_ws('        // Start PA035597'))
+    check("inter-token spacing collapses",
+          ce._norm_ws('Y :=  1;'), ce._norm_ws('Y := 1;'))
+    check("trailing space stripped",
+          ce._norm_ws('END;   '), 'END;')
+    # Inside quotes: whitespace preserved, so a real in-string change differs.
+    check("in-quote double space preserved",
+          ce._norm_ws('MESSAGE("a  b")') != ce._norm_ws('MESSAGE("a b")'), True)
+    # A re-nested option line with in-quote double-space still matches.
+    a = '          ["Recurring Method"::"F  Fixed",'
+    b = '   ["Recurring Method"::"F  Fixed",'
+    check("re-nested option string matches",
+          ce._norm_ws(a), ce._norm_ws(b))
 
 
 def test_body_only():
@@ -162,9 +185,9 @@ def test_report_builds():
 
 
 def main():
-    for t in (test_verdicts, test_body_only, test_doc_trigger_stripped,
-              test_pairing, test_sections, test_detect_type_id,
-              test_report_builds):
+    for t in (test_verdicts, test_whitespace, test_body_only,
+              test_doc_trigger_stripped, test_pairing, test_sections,
+              test_detect_type_id, test_report_builds):
         t()
     print()
     if _failures:

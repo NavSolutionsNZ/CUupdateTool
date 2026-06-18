@@ -17,7 +17,10 @@ hand-merge. It pairs objects by key (below) and compares the body only:
 - The entire doc-trigger (the trailing commented-out `BEGIN { ... }` block) is
   ignored.
 - Everything between — `PROPERTIES` trigger code, `FIELDS`, `KEYS`, `CODE`,
-  `CONTROLS` — is compared line for line.
+  `CONTROLS` — is compared line for line. Whitespace **outside** string literals
+  is collapsed before comparing, so CU re-nesting and indentation changes are
+  not flagged; whitespace **inside** quotes is preserved, so a real change to a
+  caption, message, or option value still shows.
 
 Verdicts:
 
