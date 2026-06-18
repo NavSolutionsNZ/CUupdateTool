@@ -111,9 +111,9 @@ class CompareGUI:
 
     def _work(self, gold, cand):
         try:
-            results, miss_c, miss_g = ce.compare_dirs(gold, cand)
-            report = ce.build_report(results, miss_c, miss_g)
-            attention = ce.needs_attention(results, miss_c, miss_g)
+            outcome = ce.compare_dirs(gold, cand)
+            report = ce.build_report(outcome)
+            attention = ce.needs_attention(outcome)
             self.q.put(("done", report, attention))
         except Exception:
             self.q.put(("error", traceback.format_exc(), False))

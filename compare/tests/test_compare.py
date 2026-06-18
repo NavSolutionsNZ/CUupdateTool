@@ -36,43 +36,68 @@ def check(label, got, want):
     return ok
 
 
-def _by_file(results):
-    return {r['file']: r for r in results}
+
+
+def _by_key(outcome):
+    return {r['key']: r for r in outcome['results']}
 
 
 def test_verdicts():
     print("verdicts:")
-    results, miss_c, miss_g = ce.compare_dirs(GOLDS, CANDS)
-    by = _by_file(results)
+    outcome = ce.compare_dirs(GOLDS, CANDS)
+    by = _by_key(outcome)
+    miss_c = [k for k, _fn in outcome['missing_candidate']]
+    miss_g = [k for k, _fn in outcome['missing_gold']]
+    coll = {(k, side) for k, side, _fns in outcome['collision']}
 
-    check("T14 matched", by['T14.txt']['verdict'], 'matched')
+    # T14 now has two gold files (MyMerged-, MySanitised-) -> collision, not paired.
+    check("T14 collision on gold side", ('T14', 'gold') in coll, True)
+    check("T14 not in paired results", 'T14' in by, False)
     check("T36 matched-except-header",
-          by['T36.txt']['verdict'], 'matched-except-header')
-    check("T38 unmatched", by['T38.txt']['verdict'], 'unmatched')
-    check("C80 missing-candidate", 'C80.txt' in miss_c, True)
-    check("P21 missing-gold", 'P21.txt' in miss_g, True)
+          by['T36']['verdict'], 'matched-except-header')
+    check("T38 unmatched", by['T38']['verdict'], 'unmatched')
+    check("C80 missing-candidate", 'C80' in miss_c, True)
+    check("P21 missing-gold", 'P21' in miss_g, True)
+    # Prefix-agnostic pairing: gold MyMerged-T36 pairs with candidate EX-T36.
+    check("T36 paired across differing prefixes", 'T36' in by, True)
     # Doc-trigger: date + description differ, tags identical -> matched.
     check("T39 doc-date/desc ignored -> matched",
-          by['T39.txt']['verdict'], 'matched')
+          by['T39']['verdict'], 'matched')
     # Doc-trigger: a customer tag present in gold is missing from candidate.
     check("T40 missing doc tag -> unmatched",
-          by['T40.txt']['verdict'], 'unmatched')
+          by['T40']['verdict'], 'unmatched')
+
+
+def test_pairing():
+    print("pairing:")
+    # object_key strips any prefix and keys on <Type><Number>.
+    check("MyMerged-T18 -> T18", ce.object_key('MyMerged-T18.txt'), 'T18')
+    check("EX-T18 -> T18", ce.object_key('EX-T18.txt'), 'T18')
+    check("MySanitised-P5205801 -> P5205801",
+          ce.object_key('MySanitised-P5205801.txt'), 'P5205801')
+    check("long number kept", ce.object_key('EX-T5045517.txt'), 'T5045517')
+    check("case-insensitive", ce.object_key('ex-t18.txt'), 'T18')
+    check("no key tail -> None", ce.object_key('notes_readme.txt'), None)
+    # Unkeyable file is reported, not silently dropped.
+    outcome = ce.compare_dirs(GOLDS, CANDS)
+    unkey = {fn for _side, fn in outcome['unkeyable']}
+    check("notes_readme is unkeyable", 'notes_readme.txt' in unkey, True)
 
 
 def test_doc_trigger():
     print("doc-trigger:")
-    results, _c, _g = ce.compare_dirs(GOLDS, CANDS)
-    by = _by_file(results)
+    outcome = ce.compare_dirs(GOLDS, CANDS)
+    by = _by_key(outcome)
     # T40 surfaces the dropped tag explicitly and names the Doc trigger section.
     check("T40 names Doc trigger section",
-          'Doc trigger' in by['T40.txt']['sections'], True)
+          'Doc trigger' in by['T40']['sections'], True)
     check("T40 reports the missing tag",
-          by['T40.txt'].get('missing_doc_tags'), ['WBL030'])
+          by['T40'].get('missing_doc_tags'), ['WBL030'])
     # T39 must NOT be dragged to unmatched by date/description noise.
     check("T39 no missing tags",
-          by['T39.txt'].get('missing_doc_tags', []), [])
+          by['T39'].get('missing_doc_tags', []), [])
     # Boundary detection on a real-shaped object.
-    g14 = ce.read_lines(os.path.join(GOLDS, 'T14.txt'))
+    g14 = ce.read_lines(os.path.join(GOLDS, 'MyMerged-T14.txt'))
     start = ce.doc_trigger_start(g14)
     check("T14 doc-trigger boundary found", start is not None, True)
     tags = ce.doc_trigger_tags(g14, start)
@@ -82,24 +107,24 @@ def test_doc_trigger():
 
 def test_sections():
     print("sections:")
-    results, _c, _g = ce.compare_dirs(GOLDS, CANDS)
-    by = _by_file(results)
-    secs = by['T38.txt']['sections']
+    outcome = ce.compare_dirs(GOLDS, CANDS)
+    by = _by_key(outcome)
+    secs = by['T38']['sections']
     # The Version List line and a Field node both differ -> both surfaced.
     check("T38 names Version List", 'Version List' in secs, True)
     check("T38 names a Fields section",
           any(s.startswith('Fields') for s in secs), True)
     # A pure header diff is attributed to Object properties, nothing else.
     check("T36 header-only section",
-          by['T36.txt']['sections'], ['Object properties'])
+          by['T36']['sections'], ['Object properties'])
 
 
 def test_detect_type_id():
     print("detect_type_id:")
-    lines = ce.read_lines(os.path.join(GOLDS, 'T14.txt'))
+    lines = ce.read_lines(os.path.join(GOLDS, 'MyMerged-T14.txt'))
     check("type", ce.detect_type_id(lines)[0], 'TABLE')
     check("id", ce.detect_type_id(lines)[1], '14')
-    cu = ce.read_lines(os.path.join(GOLDS, 'C80.txt'))
+    cu = ce.read_lines(os.path.join(GOLDS, 'MyMerged-C80.txt'))
     check("codeunit type", ce.detect_type_id(cu)[0], 'CODEUNIT')
 
 
@@ -124,18 +149,20 @@ def test_header_only_guard():
 
 def test_report_builds():
     print("report:")
-    results, miss_c, miss_g = ce.compare_dirs(GOLDS, CANDS)
-    report = ce.build_report(results, miss_c, miss_g)
+    outcome = ce.compare_dirs(GOLDS, CANDS)
+    report = ce.build_report(outcome)
     check("report mentions matched-except-header",
           'matched-except-header' in report, True)
     check("report has detail block",
           'DETAIL (non-matched objects)' in report, True)
     check("report shows missing-candidate",
           'missing-candidate' in report, True)
+    check("report shows collision", 'collision' in report, True)
+    check("report shows unkeyable", 'unkeyable' in report, True)
 
 
 def main():
-    for t in (test_verdicts, test_sections, test_doc_trigger,
+    for t in (test_verdicts, test_pairing, test_sections, test_doc_trigger,
               test_detect_type_id, test_header_only_guard, test_report_builds):
         t()
     print()

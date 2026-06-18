@@ -34,8 +34,8 @@ def main(argv=None):
         if not os.path.isdir(d):
             ap.error(f'not a directory: {d}')
 
-    results, miss_c, miss_g = ce.compare_dirs(args.golds_dir, args.candidates_dir)
-    report = ce.build_report(results, miss_c, miss_g)
+    outcome = ce.compare_dirs(args.golds_dir, args.candidates_dir)
+    report = ce.build_report(outcome)
 
     print(report)
     if args.out:
@@ -43,7 +43,7 @@ def main(argv=None):
             f.write(report + '\n')
         print(f'\n[written] {args.out}')
 
-    return 1 if ce.needs_attention(results, miss_c, miss_g) else 0
+    return 1 if ce.needs_attention(outcome) else 0
 
 
 if __name__ == '__main__':

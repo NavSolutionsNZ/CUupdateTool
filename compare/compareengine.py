@@ -36,6 +36,14 @@ ENCODING = 'latin-1'
 # Object declaration: line 1 is `OBJECT <Type> <ID> <Name>` (NAV v14 export).
 OBJTYPE = re.compile(r'^\s*OBJECT\s+([A-Za-z]+)\s+(\d+)\s*(.*?)\s*$', re.I)
 
+# Pairing key parsed from the FILENAME: the <TypeLetter><Number> token between
+# the final '-' and '.txt' (e.g. MyMerged-T18.txt -> 'T18', EX-P5205801.txt ->
+# 'P5205801'). The prefix is ignored entirely, so a gold and a candidate for
+# the same object pair regardless of differing self-merge naming conventions
+# (MyMerged-, MySanitised-, EX-, ...). Case-insensitive; the number may be short
+# or long.
+OBJKEY = re.compile(r'-([A-Za-z]\d+)\.txt$', re.I)
+
 # Header lines the tool stamps at run time. A difference confined to these is
 # cosmetic (date/time/modified housekeeping), not a content gap.
 HEADER_KEY = re.compile(r'^\s*(Date|Time|Modified)\s*=', re.I)
@@ -79,6 +87,21 @@ def detect_type_id(lines):
     if not m:
         return (None, None, None)
     return (m.group(1).upper(), m.group(2), (m.group(3) or '').strip())
+
+
+def object_key(filename):
+    """Return the prefix-agnostic pairing key for a filename, or None.
+
+    The key is the <TypeLetter><Number> token after the final '-' and before
+    '.txt', upper-cased so pairing is case-insensitive. Examples:
+        MyMerged-T18.txt    -> 'T18'
+        EX-C5025612.txt     -> 'C5025612'
+        EX-P5205801.txt     -> 'P5205801'
+    A filename with no such tail returns None and is reported as unkeyable
+    rather than silently mispaired.
+    """
+    m = OBJKEY.search(filename)
+    return m.group(1).upper() if m else None
 
 
 # ---------------------------------------------------------------------------
@@ -352,29 +375,70 @@ def compare_pair(gold_path, cand_path):
 
 
 def compare_dirs(gold_dir, cand_dir):
-    """Pair files by identical filename across the two folders and compare each.
+    """Pair files by OBJECT KEY (prefix-agnostic) across the two folders.
 
-    Returns (results, missing_candidate, missing_gold) where results is a list
-    of compare_pair dicts and the two missing lists hold filenames present on
-    only one side.
+    The key is object_key(filename) -- the <Type><Number> token after the final
+    '-' -- so MyMerged-T18.txt pairs with EX-T18.txt. Returns a dict:
+        {
+          'results': [compare_pair dict, ...],   # paired objects
+          'missing_candidate': [(key, gold_filename), ...],
+          'missing_gold':      [(key, cand_filename), ...],
+          'collision':         [(key, side, [filenames]), ...],
+          'unkeyable':         [(side, filename), ...],
+        }
+    A key appearing more than once on a side is a collision (ambiguous which
+    file is authoritative) and is NOT compared. A file with no parseable key is
+    unkeyable and is listed rather than silently dropped.
     """
-    gold_files = {f for f in os.listdir(gold_dir)
-                  if os.path.isfile(os.path.join(gold_dir, f))}
-    cand_files = {f for f in os.listdir(cand_dir)
-                  if os.path.isfile(os.path.join(cand_dir, f))}
+    def index(folder, side):
+        keyed = {}
+        collisions = {}
+        unkeyable = []
+        for f in sorted(os.listdir(folder)):
+            if not os.path.isfile(os.path.join(folder, f)):
+                continue
+            k = object_key(f)
+            if k is None:
+                unkeyable.append((side, f))
+                continue
+            if k in keyed:
+                collisions.setdefault(k, [keyed[k]]).append(f)
+            else:
+                keyed[k] = f
+        # Drop any colliding key from the clean map so it is never paired.
+        for k in collisions:
+            keyed.pop(k, None)
+        return keyed, collisions, unkeyable
 
-    paired = sorted(gold_files & cand_files)
-    missing_candidate = sorted(gold_files - cand_files)   # gold, no candidate
-    missing_gold = sorted(cand_files - gold_files)         # candidate, no gold
+    g_keyed, g_coll, g_unkey = index(gold_dir, 'gold')
+    c_keyed, c_coll, c_unkey = index(cand_dir, 'candidate')
 
     results = []
-    for fn in paired:
-        res = compare_pair(os.path.join(gold_dir, fn),
-                            os.path.join(cand_dir, fn))
-        res['file'] = fn
+    for k in sorted(g_keyed.keys() & c_keyed.keys()):
+        gfn, cfn = g_keyed[k], c_keyed[k]
+        res = compare_pair(os.path.join(gold_dir, gfn),
+                           os.path.join(cand_dir, cfn))
+        # Show both filenames so a prefix-mismatch pair is legible in the report.
+        res['file'] = gfn if gfn == cfn else f'{gfn} / {cfn}'
+        res['key'] = k
         results.append(res)
 
-    return results, missing_candidate, missing_gold
+    missing_candidate = sorted((k, g_keyed[k])
+                               for k in g_keyed.keys() - c_keyed.keys())
+    missing_gold = sorted((k, c_keyed[k])
+                          for k in c_keyed.keys() - g_keyed.keys())
+
+    collision = ([(k, 'gold', v) for k, v in sorted(g_coll.items())]
+                 + [(k, 'candidate', v) for k, v in sorted(c_coll.items())])
+    unkeyable = sorted(g_unkey + c_unkey)
+
+    return {
+        'results': results,
+        'missing_candidate': missing_candidate,
+        'missing_gold': missing_gold,
+        'collision': collision,
+        'unkeyable': unkeyable,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -383,10 +447,12 @@ def compare_dirs(gold_dir, cand_dir):
 
 VERDICT_ORDER = {
     'unmatched': 0,
-    'matched-except-header': 1,
-    'missing-candidate': 2,
-    'missing-gold': 3,
-    'matched': 4,
+    'collision': 1,
+    'unkeyable': 2,
+    'matched-except-header': 3,
+    'missing-candidate': 4,
+    'missing-gold': 5,
+    'matched': 6,
 }
 
 
@@ -397,10 +463,11 @@ def _fmt_row(file, typ, oid, verdict, sections, w):
             f'{verdict:<{w["verdict"]}}  {secs}')
 
 
-def build_report(results, missing_candidate, missing_gold):
+def build_report(outcome):
     """Return the full report as a single string (console, file, and GUI all
-    render the identical text).
+    render the identical text). `outcome` is the dict from compare_dirs.
     """
+    results = outcome['results']
     rows = []
     for r in results:
         rows.append({
@@ -409,13 +476,21 @@ def build_report(results, missing_candidate, missing_gold):
             'diffs': r.get('diffs', []),
             'missing_doc_tags': r.get('missing_doc_tags', []),
         })
-    for fn in missing_candidate:
-        rows.append({'file': fn, 'type': None, 'id': None,
+    for key, fn in outcome.get('missing_candidate', []):
+        rows.append({'file': fn, 'type': None, 'id': key,
                      'verdict': 'missing-candidate', 'sections': [],
                      'diffs': [], 'missing_doc_tags': []})
-    for fn in missing_gold:
-        rows.append({'file': fn, 'type': None, 'id': None,
+    for key, fn in outcome.get('missing_gold', []):
+        rows.append({'file': fn, 'type': None, 'id': key,
                      'verdict': 'missing-gold', 'sections': [],
+                     'diffs': [], 'missing_doc_tags': []})
+    for key, side, fns in outcome.get('collision', []):
+        rows.append({'file': ', '.join(fns), 'type': None, 'id': key,
+                     'verdict': 'collision', 'sections': [f'{side} side'],
+                     'diffs': [], 'missing_doc_tags': []})
+    for side, fn in outcome.get('unkeyable', []):
+        rows.append({'file': fn, 'type': None, 'id': None,
+                     'verdict': 'unkeyable', 'sections': [f'{side} side'],
                      'diffs': [], 'missing_doc_tags': []})
 
     rows.sort(key=lambda r: (VERDICT_ORDER.get(r['verdict'], 9), r['file']))
@@ -433,7 +508,7 @@ def build_report(results, missing_candidate, missing_gold):
 
     out = []
     header = (f'{"FILE":<{w["file"]}}  {"OBJECT":<{w["type"]}}  '
-              f'{"VERDICT":<{w["verdict"]}}  SECTIONS')
+              f'{"VERDICT":<{w["verdict"]}}  SECTIONS / NOTE')
     out.append(header)
     out.append('-' * len(header))
     for r in rows:
@@ -472,9 +547,10 @@ def build_report(results, missing_candidate, missing_gold):
     return '\n'.join(out)
 
 
-def needs_attention(results, missing_candidate, missing_gold):
-    """True if anything in the run needs a human eye (unmatched or missing)."""
+def needs_attention(outcome):
+    """True if anything in the run needs a human eye."""
     return bool(
         any(r['verdict'] in ('unmatched', 'missing-candidate', 'missing-gold')
-            for r in results)
-        or missing_candidate or missing_gold)
+            for r in outcome['results'])
+        or outcome.get('missing_candidate') or outcome.get('missing_gold')
+        or outcome.get('collision') or outcome.get('unkeyable'))

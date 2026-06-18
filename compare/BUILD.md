@@ -70,5 +70,10 @@ Build on Windows, deploy the resulting `.exe` to the server.)
    needing a human eye get a DETAIL block beneath it.
 4. **Save report...** writes the shown text to a file.
 
-Pairing is by identical filename, so name the gold and candidate copies of the
-same object the same thing in their respective folders.
+Pairing is by **object key**, not by full filename: the `<Type><Number>` token
+after the final `-` and before `.txt` (e.g. `MyMerged-T18.txt` and `EX-T18.txt`
+both key to `T18` and pair). This is prefix-agnostic, so gold and candidate
+copies of the same object pair even when self-merge naming differs
+(`MyMerged-`, `MySanitised-`, `EX-`, ...). If the same key appears twice in one
+folder the pair is ambiguous and reported as a `collision` (not compared); a
+file with no `-<Type><Number>.txt` tail is reported as `unkeyable`.
