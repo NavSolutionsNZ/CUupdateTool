@@ -1,0 +1,13 @@
+OBJECT Table 36 SalesHeader
+{
+  OBJECT-PROPERTIES
+  {
+    Date=14/06/26;
+    Version List=NAVW1,CU26Q1;
+  }
+  FIELDS
+  {
+    { 1 ; ;No ;Code20 }
+    { 2 ; ;VendorNewField ;Text50 }
+  }
+}

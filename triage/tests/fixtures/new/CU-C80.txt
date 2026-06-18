@@ -1,0 +1,18 @@
+OBJECT Codeunit 80 SalesPost
+{
+  OBJECT-PROPERTIES
+  {
+    Date=14/06/26;
+    Version List=NAVW1,CU26Q1;
+  }
+  CODE
+  {
+    PROCEDURE Foo@1();
+    BEGIN
+        IF X THEN
+            Y := 1;
+    END;
+    BEGIN
+    END.
+  }
+}

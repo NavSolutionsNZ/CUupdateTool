@@ -1,0 +1,20 @@
+OBJECT Table 18 Customer
+{
+  OBJECT-PROPERTIES
+  {
+    Date=01/01/23;
+    Version List=NAVW1,CU22Q1;
+  }
+  FIELDS
+  {
+    { 1 ; ;No ;Code20 }
+  }
+  CODE
+  {
+    BEGIN
+    {
+      VEN001 01.01.23 ENU base
+    }
+    END.
+  }
+}

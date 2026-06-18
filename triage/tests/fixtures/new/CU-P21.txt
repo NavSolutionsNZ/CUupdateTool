@@ -1,0 +1,8 @@
+OBJECT Page 21 CustomerCard
+{
+  OBJECT-PROPERTIES
+  {
+    Date=14/06/26;
+    Version List=NAVW1,CU26Q1;
+  }
+}

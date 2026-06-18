@@ -1,0 +1,8 @@
+OBJECT Codeunit 90 PurchPost
+{
+  OBJECT-PROPERTIES
+  {
+    Date=01/01/23;
+    Version List=NAVW1,CU22Q1;
+  }
+}
