@@ -56,6 +56,9 @@ param(
     [Parameter(Mandatory = $true)] [string] $DatabaseName,
     [Parameter(Mandatory = $true)] [string] $OutFolder,
     [Parameter(Mandatory = $true)] [string] $Prefix,
+    # NavServer params are accepted (so callers can pass them uniformly) but are
+    # NOT used by Export-NAVApplicationObject, which has no such parameters. They
+    # are reserved for the Import/Compile steps, which do accept them.
     [string] $NavServerName = '',
     [string] $NavServerInstance = '',
     [int]    $NavServerManagementPort = 0,
@@ -65,6 +68,10 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+# The "registered with several NAV Server instances" prompt is interactive by
+# default. Suppress all confirmation so the export runs unattended; -Force on the
+# cmdlet plus ConfirmPreference=None answers it automatically.
+$ConfirmPreference = 'None'
 
 try {
     # 1. Import the model-tools module.
@@ -88,27 +95,21 @@ try {
     }
 
     # 2. Export all objects (combined) below the license ceiling.
-    # Export-NAVApplicationObject needs the NAV service tier (server instance),
-    # not just the SQL server/database -- without it the cmdlet raises
-    # "The Server Instance specified in the Options window is not available".
-    # Each database has its own service tier with its own management port.
-    Write-Host ("Exporting {0} from {1} via instance {2}:{3} (filter: {4}) ..." -f `
-        $DatabaseName, $DatabaseServer, $NavServerInstance, $NavServerManagementPort, $Filter)
+    # NOTE: Export-NAVApplicationObject does NOT accept NavServerName /
+    # NavServerInstance / NavServerManagementPort -- those exist only on Import /
+    # Compile / Delete. Export identifies the DB by SQL server + database. The
+    # "registered with several NAV Server instances" prompt is suppressed by
+    # -Force; -ExportTxtSkipUnlicensed avoids licence stops on vendor objects.
+    Write-Host ("Exporting {0} from {1} (filter: {2}) ..." -f `
+        $DatabaseName, $DatabaseServer, $Filter)
 
-    $exportArgs = @{
-        DatabaseServer = $DatabaseServer
-        DatabaseName   = $DatabaseName
-        Path           = $WorkFile
-        Filter         = $Filter
-        Force          = $true
-    }
-    if ($NavServerName)           { $exportArgs['NavServerName'] = $NavServerName }
-    if ($NavServerInstance)       { $exportArgs['NavServerInstance'] = $NavServerInstance }
-    if ($NavServerManagementPort -gt 0) {
-        $exportArgs['NavServerManagementPort'] = $NavServerManagementPort
-    }
-
-    Export-NAVApplicationObject @exportArgs | Out-Null
+    Export-NAVApplicationObject `
+        -DatabaseServer $DatabaseServer `
+        -DatabaseName   $DatabaseName `
+        -Path           $WorkFile `
+        -Filter         $Filter `
+        -ExportTxtSkipUnlicensed `
+        -Force | Out-Null
 
     if (!(Test-Path $WorkFile)) {
         throw "Export produced no file: $WorkFile"
