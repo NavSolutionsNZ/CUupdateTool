@@ -140,11 +140,18 @@ def test_import_and_report():
     check("P21 NOT in import folder",
           os.path.isfile(os.path.join(imp, 'CU-P21.txt')), False)
 
-    report = pl.treatment_report(rows, imported, manual)
+    report = pl.treatment_report(rows, imported, manual, merged=True)
     check("report shows manual-required section",
           'MANUAL MERGE REQUIRED' in report, True)
     check("report lists P21 as manual", 'P21' in report, True)
     check("report shows new treatment", 'new' in report, True)
+    check("post-merge report uses auto-merged label",
+          'auto-merged' in report, True)
+    # Classify-stage report (no merge yet) must say to-merge, not auto-merged.
+    classify_report = pl.treatment_report(rows)
+    check("classify report uses to-merge", 'to-merge' in classify_report, True)
+    check("classify report does NOT say auto-merged",
+          'auto-merged' in classify_report, False)
 
     shutil.rmtree(job, ignore_errors=True)
     shutil.rmtree(imp, ignore_errors=True)

@@ -54,18 +54,20 @@ class TriageGUI:
         self._build_baseline_tab(self.baseline_tab)
         self._build_pipeline_tab(self.pipeline_tab)
 
-        # Shared status + output.
+        # Shared status + output. Pack the save button at the BOTTOM first so it
+        # always reserves its space; the output pane then fills what remains and
+        # never pushes the button off a short window.
         self.status = tk.StringVar(value="Ready.")
         tk.Label(root, textvariable=self.status, anchor="w",
                  fg="#555").pack(fill="x", padx=8)
-        self.out = scrolledtext.ScrolledText(root, wrap="none",
-                                             font=("Courier New", 10))
-        self.out.pack(fill="both", expand=True, padx=8, pady=6)
         self.save_btn_holder = tk.Frame(root)
-        self.save_btn_holder.pack(fill="x", padx=8, pady=(0, 6))
+        self.save_btn_holder.pack(side="bottom", fill="x", padx=8, pady=(0, 6))
         self.save_btn = tk.Button(self.save_btn_holder, text="Save output...",
                                   command=self.on_save, state="disabled")
         self.save_btn.pack(side="left")
+        self.out = scrolledtext.ScrolledText(root, wrap="none",
+                                             font=("Courier New", 10))
+        self.out.pack(fill="both", expand=True, padx=8, pady=6)
 
         self.root.after(100, self._drain_queue)
 
@@ -241,7 +243,7 @@ class TriageGUI:
         self.cust_db_var = tk.StringVar(value="Webbline_Dev_DB")
         self.cust_inst_var = tk.StringVar(value="Webbline_Dev")
         self.cust_port_var = tk.StringVar(value="8245")
-        self.old_db_var = tk.StringVar(value="iDealer26Q1_DB")
+        self.old_db_var = tk.StringVar(value="iDealer2026Q1_DB")
         self.old_inst_var = tk.StringVar(value="iDealer26Q1")
         self.old_port_var = tk.StringVar(value="8445")
         self.cuupdate_var = tk.StringVar()
@@ -378,7 +380,20 @@ class TriageGUI:
                                self.pl_state['oldbase_dir'])
             self.pl_state['rows'] = rows
             report = pl.treatment_report(rows)
-            self.q.put(("done", report,
+            # Auto-save the treatment report into the job root, named with the
+            # CU token so it is a durable deliverable, not reliant on the button.
+            saved_note = ""
+            root = self.job_root_var.get().strip()
+            cu = self.cu_var.get().strip() or "CU"
+            if root and os.path.isdir(root):
+                fn = os.path.join(root, f"{cu}_treatment.txt")
+                try:
+                    with open(fn, "w", encoding=te.ce.ENCODING) as f:
+                        f.write(report + "\n")
+                    saved_note = f"\n\n[saved] {fn}"
+                except OSError as e:
+                    saved_note = f"\n\n[save failed] {e}"
+            self.q.put(("done", report + saved_note,
                         f"Classified {len(rows)} object(s)"))
         except Exception:
             self.q.put(("error", traceback.format_exc(), ""))
@@ -425,7 +440,7 @@ class TriageGUI:
                 self.pl_state['rows'], self.pl_state['hq_dir'], root,
                 import_dir)
             report = pl.treatment_report(self.pl_state['rows'], imported,
-                                         manual)
+                                         manual, merged=True)
             text = (f"Import set -> {import_dir}\n"
                     f"{len(imported)} ready, {len(manual)} need manual merge.\n\n"
                     + report)

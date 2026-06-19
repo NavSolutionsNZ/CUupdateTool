@@ -316,10 +316,13 @@ def build_import_set(rows, hq_dir, job_root, import_dir):
     return imported, manual
 
 
-def treatment_report(rows, imported=None, manual=None):
+def treatment_report(rows, imported=None, manual=None, merged=False):
     """Per-object report: key | treatment | reason, grouped by treatment, with a
-    tally. If imported/manual are given, merge objects are split into
-    auto-merged vs manual-required.
+    tally.
+
+    At classify stage (merged=False) a merge candidate is labelled 'to-merge' --
+    nothing has been merged yet. After step 4 (merged=True, with imported/manual
+    supplied) merge objects split into 'auto-merged' vs 'manual-required'.
     """
     manual_set = set(manual or [])
     lines = ['# CU upgrade treatment report',
@@ -327,10 +330,12 @@ def treatment_report(rows, imported=None, manual=None):
 
     def final_treatment(r):
         if r['treatment'] == 'merge':
+            if not merged:
+                return 'to-merge'
             return 'manual-required' if r['key'] in manual_set else 'auto-merged'
         return r['treatment']
 
-    order = {'new': 0, 'take-straight': 1, 'auto-merged': 2,
+    order = {'new': 0, 'take-straight': 1, 'to-merge': 2, 'auto-merged': 2,
              'manual-required': 3, 'merge': 4}
     decorated = sorted(rows, key=lambda r: (order.get(final_treatment(r), 9),
                                             r['key']))
