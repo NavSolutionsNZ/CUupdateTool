@@ -64,6 +64,7 @@ param(
     [int]    $NavServerManagementPort = 0,
     [string] $Filter = 'Id=1..99008535',
     [switch] $Append,
+    [string] $PhaseLabel = '',
     [string] $ModulePath = 'C:\Program Files (x86)\Microsoft Dynamics 365 Business Central\140\RoleTailored Client\Microsoft.Dynamics.Nav.Model.Tools.psd1',
     [string] $WorkFile = ''
 )
@@ -97,6 +98,10 @@ try {
     }
 
     # 2. Export all objects (combined) below the license ceiling.
+    if ($PhaseLabel) {
+        Write-Host ''
+        Write-Host ('>>> ' + $PhaseLabel) -ForegroundColor Cyan
+    }
     # NOTE: Export-NAVApplicationObject does NOT accept NavServerName /
     # NavServerInstance / NavServerManagementPort -- those exist only on Import /
     # Compile / Delete. Export identifies the DB by SQL server + database. The

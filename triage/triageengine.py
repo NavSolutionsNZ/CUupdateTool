@@ -271,7 +271,7 @@ def default_script_path():
 def export_baseline(server, database, out_folder, prefix,
                     script_path=None, filter_str=None, module_path=None,
                     nav_server=None, nav_instance=None, nav_mgmt_port=None,
-                    append=False):
+                    append=False, phase_label=None):
     """Invoke Export-Baseline.ps1 to export+split+rename one database.
 
     Returns (ok: bool, output: str). Windows-only (requires powershell.exe and
@@ -305,6 +305,8 @@ def export_baseline(server, database, out_folder, prefix,
         cmd += ['-Filter', filter_str]
     if append:
         cmd += ['-Append']
+    if phase_label:
+        cmd += ['-PhaseLabel', phase_label]
     if module_path:
         cmd += ['-ModulePath', module_path]
 
@@ -328,12 +330,16 @@ def export_filtered(server, database, out_folder, prefix, filters,
     if not filters:
         return False, 'No filters supplied (no objects to export).'
     outs = []
+    total = len(filters)
     for i, flt in enumerate(filters):
+        # Phase banner so a user watching the PowerShell popup sees movement
+        # between sub-steps: ">>> [2/4] Exporting <db> (Type=Codeunit;...)".
+        label = f'[{i + 1}/{total}] Exporting {database}  ({flt})'
         ok, out = export_baseline(
             server, database, out_folder, prefix,
             script_path=script_path, filter_str=flt, module_path=module_path,
             nav_server=nav_server, nav_instance=nav_instance,
-            nav_mgmt_port=nav_mgmt_port, append=(i > 0))
+            nav_mgmt_port=nav_mgmt_port, append=(i > 0), phase_label=label)
         outs.append(f'[filter {flt}]\n{out}')
         if not ok:
             return False, '\n\n'.join(outs)

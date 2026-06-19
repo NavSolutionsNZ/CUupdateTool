@@ -65,6 +65,10 @@ class TriageGUI:
         self.save_btn = tk.Button(self.save_btn_holder, text="Save output...",
                                   command=self.on_save, state="disabled")
         self.save_btn.pack(side="left")
+        # Busy bar (indeterminate), mirroring the CUupdate tool's spinner.
+        # Covers every step, including the windowless ones (classify, import).
+        self.progress = ttk.Progressbar(self.save_btn_holder,
+                                        mode="indeterminate", length=160)
         self.out = scrolledtext.ScrolledText(root, wrap="none",
                                              font=("Courier New", 10))
         self.out.pack(fill="both", expand=True, padx=8, pady=6)
@@ -123,6 +127,8 @@ class TriageGUI:
 
     def _run_bg(self, fn, *args):
         self.status.set("Working...")
+        self.progress.pack(side="right", padx=8)
+        self.progress.start(12)
         threading.Thread(target=fn, args=args, daemon=True).start()
 
     # ================= Baseline triage tab =================
@@ -454,6 +460,9 @@ class TriageGUI:
         try:
             while True:
                 kind, payload, summ = self.q.get_nowait()
+                # Any result means work finished -- stop the busy bar.
+                self.progress.stop()
+                self.progress.pack_forget()
                 if kind == "done":
                     self._emit(payload, summ)
                 elif kind == "error":
