@@ -56,6 +56,9 @@ param(
     [Parameter(Mandatory = $true)] [string] $DatabaseName,
     [Parameter(Mandatory = $true)] [string] $OutFolder,
     [Parameter(Mandatory = $true)] [string] $Prefix,
+    [string] $NavServerName = '',
+    [string] $NavServerInstance = '',
+    [int]    $NavServerManagementPort = 0,
     [string] $Filter = 'Id=1..99008535',
     [string] $ModulePath = 'C:\Program Files (x86)\Microsoft Dynamics 365 Business Central\140\RoleTailored Client\Microsoft.Dynamics.Nav.Model.Tools.psd1',
     [string] $WorkFile = ''
@@ -85,13 +88,27 @@ try {
     }
 
     # 2. Export all objects (combined) below the license ceiling.
-    Write-Host ("Exporting {0} from {1} (filter: {2}) ..." -f $DatabaseName, $DatabaseServer, $Filter)
-    Export-NAVApplicationObject `
-        -DatabaseServer $DatabaseServer `
-        -DatabaseName   $DatabaseName `
-        -Path           $WorkFile `
-        -Filter         $Filter `
-        -Force | Out-Null
+    # Export-NAVApplicationObject needs the NAV service tier (server instance),
+    # not just the SQL server/database -- without it the cmdlet raises
+    # "The Server Instance specified in the Options window is not available".
+    # Each database has its own service tier with its own management port.
+    Write-Host ("Exporting {0} from {1} via instance {2}:{3} (filter: {4}) ..." -f `
+        $DatabaseName, $DatabaseServer, $NavServerInstance, $NavServerManagementPort, $Filter)
+
+    $exportArgs = @{
+        DatabaseServer = $DatabaseServer
+        DatabaseName   = $DatabaseName
+        Path           = $WorkFile
+        Filter         = $Filter
+        Force          = $true
+    }
+    if ($NavServerName)           { $exportArgs['NavServerName'] = $NavServerName }
+    if ($NavServerInstance)       { $exportArgs['NavServerInstance'] = $NavServerInstance }
+    if ($NavServerManagementPort -gt 0) {
+        $exportArgs['NavServerManagementPort'] = $NavServerManagementPort
+    }
+
+    Export-NAVApplicationObject @exportArgs | Out-Null
 
     if (!(Test-Path $WorkFile)) {
         throw "Export produced no file: $WorkFile"

@@ -269,12 +269,17 @@ def default_script_path():
 
 
 def export_baseline(server, database, out_folder, prefix,
-                    script_path=None, filter_str=None, module_path=None):
+                    script_path=None, filter_str=None, module_path=None,
+                    nav_server=None, nav_instance=None, nav_mgmt_port=None):
     """Invoke Export-Baseline.ps1 to export+split+rename one database.
 
     Returns (ok: bool, output: str). Windows-only (requires powershell.exe and
     the NAV model-tools module on the calling machine). No credentials are
     passed; the script runs under the caller's Windows identity.
+
+    The NAV service tier (nav_server / nav_instance / nav_mgmt_port) is required
+    by Export-NAVApplicationObject -- each database has its own instance and
+    management port.
     """
     import subprocess
     script = script_path or default_script_path()
@@ -289,6 +294,12 @@ def export_baseline(server, database, out_folder, prefix,
         '-OutFolder', out_folder,
         '-Prefix', prefix,
     ]
+    if nav_server:
+        cmd += ['-NavServerName', nav_server]
+    if nav_instance:
+        cmd += ['-NavServerInstance', nav_instance]
+    if nav_mgmt_port:
+        cmd += ['-NavServerManagementPort', str(nav_mgmt_port)]
     if filter_str:
         cmd += ['-Filter', filter_str]
     if module_path:
@@ -304,21 +315,27 @@ def export_baseline(server, database, out_folder, prefix,
 
 
 def export_both_baselines(server, existing_db, new_db, root,
-                          script_path=None, filter_str=None, module_path=None):
+                          script_path=None, filter_str=None, module_path=None,
+                          nav_server=None,
+                          existing_instance=None, existing_port=None,
+                          new_instance=None, new_port=None):
     """Export both baselines into root/existing (prefix OB) and root/new
-    (prefix CU). Returns (ok, log, existing_dir, new_dir).
+    (prefix CU). Each database has its own NAV instance + management port.
+    Returns (ok, log, existing_dir, new_dir).
     """
     existing_dir = os.path.join(root, 'existing')
     new_dir = os.path.join(root, 'new')
     log = []
 
     ok_e, out_e = export_baseline(server, existing_db, existing_dir, 'OB',
-                                  script_path, filter_str, module_path)
+                                  script_path, filter_str, module_path,
+                                  nav_server, existing_instance, existing_port)
     log.append(f'[Existing/OB] {existing_db}\n{out_e}')
     if not ok_e:
         return False, '\n\n'.join(log), existing_dir, new_dir
 
     ok_n, out_n = export_baseline(server, new_db, new_dir, 'CU',
-                                  script_path, filter_str, module_path)
+                                  script_path, filter_str, module_path,
+                                  nav_server, new_instance, new_port)
     log.append(f'[New/CU] {new_db}\n{out_n}')
     return ok_n, '\n\n'.join(log), existing_dir, new_dir

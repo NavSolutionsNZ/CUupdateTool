@@ -89,6 +89,17 @@ class TriageGUI:
         tk.Entry(parent, textvariable=var, width=width).grid(
             row=r, column=1, sticky="w", padx=6)
 
+    def _dbtrio(self, parent, r, label, db_var, inst_var, port_var):
+        """One row: database name + NAV instance + management port."""
+        tk.Label(parent, text=label).grid(row=r, column=0, sticky="w", pady=2)
+        cell = tk.Frame(parent)
+        cell.grid(row=r, column=1, sticky="w", padx=6)
+        tk.Entry(cell, textvariable=db_var, width=22).pack(side="left")
+        tk.Label(cell, text="  instance:").pack(side="left")
+        tk.Entry(cell, textvariable=inst_var, width=18).pack(side="left")
+        tk.Label(cell, text="  mgmt port:").pack(side="left")
+        tk.Entry(cell, textvariable=port_var, width=7).pack(side="left")
+
     def _pick_dir(self, var):
         d = filedialog.askdirectory()
         if d:
@@ -131,17 +142,26 @@ class TriageGUI:
                                       "(Windows auth)")
         exp.pack(fill="x", **pad)
         self.server_var = tk.StringVar()
+        self.nav_server_var = tk.StringVar()
         self.existing_db_var = tk.StringVar()
+        self.existing_inst_var = tk.StringVar()
+        self.existing_port_var = tk.StringVar()
         self.new_db_var = tk.StringVar()
+        self.new_inst_var = tk.StringVar()
+        self.new_port_var = tk.StringVar()
         self.export_root_var = tk.StringVar()
         self._entry_row(exp, 0, "SQL server:", self.server_var)
-        self._entry_row(exp, 1, "Existing DB (-> OB-):", self.existing_db_var)
-        self._entry_row(exp, 2, "New DB (-> CU-):", self.new_db_var)
-        self._folder_row(exp, 3, "Export into root:", self.export_root_var)
+        self._entry_row(exp, 1, "NAV server (shared):", self.nav_server_var,
+                        width=45)
+        self._dbtrio(exp, 2, "Existing DB (-> OB-):", self.existing_db_var,
+                     self.existing_inst_var, self.existing_port_var)
+        self._dbtrio(exp, 3, "New DB (-> CU-):", self.new_db_var,
+                     self.new_inst_var, self.new_port_var)
+        self._folder_row(exp, 4, "Export into root:", self.export_root_var)
         exp.columnconfigure(1, weight=1)
         tk.Button(exp, text="Export from DB, then triage",
                   command=self.on_export_and_triage).grid(
-            row=4, column=1, sticky="w", padx=6, pady=4)
+            row=5, column=1, sticky="w", padx=6, pady=4)
 
         btns = tk.Frame(tab)
         btns.pack(fill="x", **pad)
@@ -185,8 +205,16 @@ class TriageGUI:
 
     def _work_export_baseline(self, server, edb, ndb, root):
         try:
+            def _port(v):
+                v = v.strip()
+                return int(v) if v.isdigit() else None
             ok, log, existing_dir, new_dir = te.export_both_baselines(
-                server, edb, ndb, root)
+                server, edb, ndb, root,
+                nav_server=self.nav_server_var.get().strip() or None,
+                existing_instance=self.existing_inst_var.get().strip() or None,
+                existing_port=_port(self.existing_port_var.get()),
+                new_instance=self.new_inst_var.get().strip() or None,
+                new_port=_port(self.new_port_var.get()))
             if not ok:
                 self.q.put(("error", "Export failed:\n\n" + log, ""))
                 return
@@ -208,15 +236,24 @@ class TriageGUI:
         self.hq_file_var = tk.StringVar()
         self.job_root_var = tk.StringVar()
         self.server2_var = tk.StringVar()
+        self.nav_server2_var = tk.StringVar()
         self.cust_db_var = tk.StringVar()
+        self.cust_inst_var = tk.StringVar()
+        self.cust_port_var = tk.StringVar()
         self.old_db_var = tk.StringVar()
+        self.old_inst_var = tk.StringVar()
+        self.old_port_var = tk.StringVar()
         self.cuupdate_var = tk.StringVar()
         self._file_row(paths, 0, "HQ changed-objects file:", self.hq_file_var)
         self._folder_row(paths, 1, "Job root (work folder):", self.job_root_var)
         self._entry_row(paths, 2, "SQL server:", self.server2_var)
-        self._entry_row(paths, 3, "Customer DB (-> EX-):", self.cust_db_var)
-        self._entry_row(paths, 4, "Old baseline DB (-> OB-):", self.old_db_var)
-        self._file_row(paths, 5, "CUupdate exe (or run_batch.py):",
+        self._entry_row(paths, 3, "NAV server (shared):", self.nav_server2_var,
+                        width=45)
+        self._dbtrio(paths, 4, "Customer DB (-> EX-):", self.cust_db_var,
+                     self.cust_inst_var, self.cust_port_var)
+        self._dbtrio(paths, 5, "Old baseline DB (-> OB-):", self.old_db_var,
+                     self.old_inst_var, self.old_port_var)
+        self._file_row(paths, 6, "CUupdate exe (or run_batch.py):",
                        self.cuupdate_var)
         paths.columnconfigure(1, weight=1)
 
@@ -295,13 +332,23 @@ class TriageGUI:
 
     def _work_pl_export(self, root, server, cdb, odb):
         try:
+            def _port(v):
+                v = v.strip()
+                return int(v) if v.isdigit() else None
+            nav = self.nav_server2_var.get().strip() or None
             flt = pl.keys_to_filter(self.pl_state['keys'])
             cust_dir = os.path.join(root, 'customer')
             old_dir = os.path.join(root, 'oldbase')
-            ok_c, out_c = te.export_baseline(server, cdb, cust_dir, 'EX',
-                                             filter_str=flt)
-            ok_o, out_o = te.export_baseline(server, odb, old_dir, 'OB',
-                                             filter_str=flt)
+            ok_c, out_c = te.export_baseline(
+                server, cdb, cust_dir, 'EX', filter_str=flt,
+                nav_server=nav,
+                nav_instance=self.cust_inst_var.get().strip() or None,
+                nav_mgmt_port=_port(self.cust_port_var.get()))
+            ok_o, out_o = te.export_baseline(
+                server, odb, old_dir, 'OB', filter_str=flt,
+                nav_server=nav,
+                nav_instance=self.old_inst_var.get().strip() or None,
+                nav_mgmt_port=_port(self.old_port_var.get()))
             self.pl_state['customer_dir'] = cust_dir
             self.pl_state['oldbase_dir'] = old_dir
             text = (f"Filter: {flt}\n\n[Customer/EX] {cdb}\n{out_c}\n\n"

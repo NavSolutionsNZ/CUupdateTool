@@ -89,6 +89,8 @@ and an export root, then click **Export from DB, then triage**. The tool runs
 
 into `root\existing` and `root\new`, then runs the triage on those folders.
 
+Each database has its own NAV service tier (server instance) with its own management port, so the export needs the NAV server (shared host), the per-database instance name, and its management port -- supplied as GUI fields. Without the instance, Export-NAVApplicationObject raises "The Server Instance specified in the Options window is not available".
+
 **Windows authentication only** — the script connects under the identity running
 the tool; no credentials are entered or stored. This step requires Windows, the
 NAV model-tools module (BC140 RoleTailored Client), and SQL access to the
