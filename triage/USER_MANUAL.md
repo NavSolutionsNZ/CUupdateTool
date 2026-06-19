@@ -128,18 +128,21 @@ each object new / take-straight / auto-merged / manual-required.
 
 ---
 
-## 3. Running the merge: CUupdate exe vs run_batch.py
+## 3. Running the merge: the batch exe vs run_batch.py
 
-Step 4 drives CUupdate. There are two ways to point at it:
+Step 4 drives CUupdate. Point the **CUupdate exe (or run_batch.py)** field at one
+of:
 
-- **run_batch.py** — the batch command-line entry point. Point the field at it
-  to run the merge headlessly. This requires Python on the machine running the
-  tool, and the `cuupdate` package present (the tool runs it from its own
-  directory so its imports resolve).
-- **A frozen CUupdate exe** — note that the standard `CUupdate.exe` is the GUI
-  build; it ignores batch arguments and opens the merge window instead of
-  running headlessly. A dedicated headless batch exe is the clean option for
-  machines without Python (planned).
+- **CUbatch_<version>.exe** — the headless batch merge executable. This needs no
+  Python and no GUI, so it is the right choice on a server. Build it once from
+  `cu_batch.spec` (see the CUupdate BUILD docs); it bundles the whole merge
+  engine. The triage tool runs it directly with the merge parameters.
+- **run_batch.py** — the same batch entry point as a script. Use this only on a
+  machine that has Python and the `cuupdate` package present (the tool runs it
+  from its own directory so its imports resolve).
+
+Do **not** point the field at the standard `CUupdate.exe` — that is the GUI
+build; it ignores batch arguments and just opens the merge window.
 
 The merge parameters (CU token, initials, date, date format) are passed through
 to CUupdate. Customer tag prefixes are **not** set here — CUupdate derives them
