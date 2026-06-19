@@ -4,6 +4,14 @@ Companion to `ARCHITECTURE.md`. This captures *how* the design was reached, the 
 each decision, the test-object inventory, and the open work — so anyone picking this up
 (company-wide) has the reasoning, not just the rules.
 
+> **Suite context (added as the tooling grew).** This repo now holds three tools, not one.
+> **CUupdate** (this document's subject) is the merge engine. **CUcompare** (`compare/`) validates
+> merge output against hand-merged gold files. **CU Triage & Pipeline** (`triage/`) is the
+> HQ-file-driven upgrade driver that classifies a customer's objects (new / take-straight /
+> to-merge), runs CUupdate over the to-merge set, and assembles an import-ready folder. See
+> `docs/TOOLS_OVERVIEW.md` for how they fit together, and `triage/USER_MANUAL.md` /
+> `compare/BUILD.md` for the newer tools. The sections below are CUupdate-specific.
+
 ---
 
 ## 1. Problem
