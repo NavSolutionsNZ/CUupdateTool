@@ -63,6 +63,7 @@ param(
     [string] $NavServerInstance = '',
     [int]    $NavServerManagementPort = 0,
     [string] $Filter = 'Id=1..99008535',
+    [switch] $Append,
     [string] $ModulePath = 'C:\Program Files (x86)\Microsoft Dynamics 365 Business Central\140\RoleTailored Client\Microsoft.Dynamics.Nav.Model.Tools.psd1',
     [string] $WorkFile = ''
 )
@@ -85,11 +86,12 @@ try {
         $WorkFile = Join-Path $env:TEMP ("baseline_{0}_{1}.txt" -f $Prefix, [System.Guid]::NewGuid().ToString('N'))
     }
 
-    # Ensure destination exists and is empty of stale per-object files for this
-    # prefix (a re-run must not leave deleted objects behind).
+    # Ensure destination exists. Clear stale per-object files for this prefix on
+    # the FIRST call (a re-run must not leave deleted objects behind); subsequent
+    # per-type calls use -Append so they accumulate into the same folder.
     if (!(Test-Path $OutFolder)) {
         New-Item -ItemType Directory -Path $OutFolder -Force | Out-Null
-    } else {
+    } elseif (-not $Append) {
         Get-ChildItem -Path $OutFolder -Filter ("{0}-*.txt" -f $Prefix) -File -ErrorAction SilentlyContinue |
             Remove-Item -Force -ErrorAction SilentlyContinue
     }

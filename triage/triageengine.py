@@ -270,7 +270,8 @@ def default_script_path():
 
 def export_baseline(server, database, out_folder, prefix,
                     script_path=None, filter_str=None, module_path=None,
-                    nav_server=None, nav_instance=None, nav_mgmt_port=None):
+                    nav_server=None, nav_instance=None, nav_mgmt_port=None,
+                    append=False):
     """Invoke Export-Baseline.ps1 to export+split+rename one database.
 
     Returns (ok: bool, output: str). Windows-only (requires powershell.exe and
@@ -302,6 +303,8 @@ def export_baseline(server, database, out_folder, prefix,
         cmd += ['-NavServerManagementPort', str(nav_mgmt_port)]
     if filter_str:
         cmd += ['-Filter', filter_str]
+    if append:
+        cmd += ['-Append']
     if module_path:
         cmd += ['-ModulePath', module_path]
 
@@ -312,6 +315,29 @@ def export_baseline(server, database, out_folder, prefix,
                        'with the NAV model-tools module installed.')
     out = (proc.stdout or '') + (proc.stderr or '')
     return (proc.returncode == 0), out.strip()
+
+
+def export_filtered(server, database, out_folder, prefix, filters,
+                    nav_server=None, nav_instance=None, nav_mgmt_port=None,
+                    script_path=None, module_path=None):
+    """Export a database once per filter in `filters` into out_folder, so a
+    type-aware export (one Type=...;Id=... clause per object type) accumulates
+    into a single folder. The first call cleans the prefix's stale files; the
+    rest append. Returns (ok, combined_output).
+    """
+    if not filters:
+        return False, 'No filters supplied (no objects to export).'
+    outs = []
+    for i, flt in enumerate(filters):
+        ok, out = export_baseline(
+            server, database, out_folder, prefix,
+            script_path=script_path, filter_str=flt, module_path=module_path,
+            nav_server=nav_server, nav_instance=nav_instance,
+            nav_mgmt_port=nav_mgmt_port, append=(i > 0))
+        outs.append(f'[filter {flt}]\n{out}')
+        if not ok:
+            return False, '\n\n'.join(outs)
+    return True, '\n\n'.join(outs)
 
 
 def export_both_baselines(server, existing_db, new_db, root,

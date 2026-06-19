@@ -115,21 +115,55 @@ def _split_only_script():
     return cands[0]
 
 
-def keys_to_filter(keys):
-    """Build a NAV object-id filter from a set of keys, grouped by type.
+# Type letter -> NAV filter type name (exact spelling from the dev environment:
+# XMLport, MenuSuite). The filter MUST pin Type as well as Id, because object
+# ids recur across types (Table 36 and Codeunit 36 are different objects); an
+# Id-only filter would over-pull every type sharing that id.
+FILTER_TYPE_NAME = {
+    'T': 'Table', 'C': 'Codeunit', 'P': 'Page', 'R': 'Report',
+    'X': 'XMLport', 'Q': 'Query', 'M': 'MenuSuite',
+}
 
-    NAV filters are per-table; Export-NAVApplicationObject takes a single
-    Filter applied across types via 'Type=...;Id=...'. Simplest robust form:
-    filter by Id only (ids are unique enough within an export for our purpose),
-    e.g. 'Id=18|36|80'. Returns the filter string.
+
+def keys_to_type_filters(keys):
+    """Build a list of per-type NAV filters from object keys.
+
+    Returns e.g. ['Type=Table;Id=18|36', 'Type=Codeunit;Id=80'] -- one filter
+    per object type present, each pinning Type so ids never over-pull across
+    types. Keys whose type letter is unknown are grouped under their raw letter
+    with no Type clause (id-only) as a last resort, and flagged by the caller.
     """
-    ids = []
+    by_type = {}
     for k in keys:
-        _letter, num = te.split_key(k)
+        letter, num = te.split_key(k)
         if num and num.isdigit():
-            ids.append(num)
-    ids = sorted(set(ids), key=int)
-    return 'Id=' + '|'.join(ids) if ids else 'Id=0'
+            by_type.setdefault(letter, []).append(num)
+
+    filters = []
+    # Stable, human order: tables first, then the rest.
+    order = ['T', 'C', 'P', 'R', 'X', 'Q', 'M']
+    seen = set()
+    for letter in order + sorted(b for b in by_type if b not in order):
+        if letter not in by_type or letter in seen:
+            continue
+        seen.add(letter)
+        ids = '|'.join(sorted(set(by_type[letter]), key=int))
+        tname = FILTER_TYPE_NAME.get(letter)
+        if tname:
+            filters.append(f'Type={tname};Id={ids}')
+        else:
+            # Unknown type letter -- id-only, better than dropping it.
+            filters.append(f'Id={ids}')
+    return filters
+
+
+# Back-compat shim: old name returned a single id-only string. Anything still
+# calling it gets the type-aware list joined for display, but callers should use
+# keys_to_type_filters and export per filter.
+def keys_to_filter(keys):
+    """Deprecated: returns the per-type filters joined for display only.
+    Use keys_to_type_filters and run one export per filter."""
+    return ' | '.join(keys_to_type_filters(keys))
 
 
 def classify(hq_dir, customer_dir, oldbase_dir):

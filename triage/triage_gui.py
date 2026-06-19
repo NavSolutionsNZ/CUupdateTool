@@ -337,22 +337,24 @@ class TriageGUI:
                 v = v.strip()
                 return int(v) if v.isdigit() else None
             nav = self.nav_server2_var.get().strip() or None
-            flt = pl.keys_to_filter(self.pl_state['keys'])
+            filters = pl.keys_to_type_filters(self.pl_state['keys'])
             cust_dir = os.path.join(root, 'customer')
             old_dir = os.path.join(root, 'oldbase')
-            ok_c, out_c = te.export_baseline(
-                server, cdb, cust_dir, 'EX', filter_str=flt,
+            ok_c, out_c = te.export_filtered(
+                server, cdb, cust_dir, 'EX', filters,
                 nav_server=nav,
                 nav_instance=self.cust_inst_var.get().strip() or None,
                 nav_mgmt_port=_port(self.cust_port_var.get()))
-            ok_o, out_o = te.export_baseline(
-                server, odb, old_dir, 'OB', filter_str=flt,
+            ok_o, out_o = te.export_filtered(
+                server, odb, old_dir, 'OB', filters,
                 nav_server=nav,
                 nav_instance=self.old_inst_var.get().strip() or None,
                 nav_mgmt_port=_port(self.old_port_var.get()))
             self.pl_state['customer_dir'] = cust_dir
             self.pl_state['oldbase_dir'] = old_dir
-            text = (f"Filter: {flt}\n\n[Customer/EX] {cdb}\n{out_c}\n\n"
+            text = (f"Filters ({len(filters)} type groups):\n  "
+                    + "\n  ".join(filters)
+                    + f"\n\n[Customer/EX] {cdb}\n{out_c}\n\n"
                     f"[Old baseline/OB] {odb}\n{out_o}")
             if not (ok_c and ok_o):
                 self.q.put(("error", "Export failed:\n\n" + text, ""))

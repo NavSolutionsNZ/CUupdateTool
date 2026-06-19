@@ -78,9 +78,18 @@ def test_vl_gate():
 
 
 def test_filter():
-    print("filter:")
-    f = pl.keys_to_filter(['T18', 'C80', 'T36'])
-    check("id filter built and sorted", f, 'Id=18|36|80')
+    print("type-aware filter:")
+    filters = pl.keys_to_type_filters(['T18', 'C80', 'T36', 'P21', 'X50'])
+    # One filter per type, each pinning Type, ids sorted numerically.
+    check("table filter", 'Type=Table;Id=18|36' in filters, True)
+    check("codeunit filter", 'Type=Codeunit;Id=80' in filters, True)
+    check("page filter", 'Type=Page;Id=21' in filters, True)
+    check("xmlport filter (exact spelling)",
+          'Type=XMLport;Id=50' in filters, True)
+    check("one filter per type", len(filters), 4)
+    # No id-only filter that would over-pull across types.
+    check("no bare Id= filter",
+          any(f.startswith('Id=') for f in filters), False)
 
 
 def test_stage_merge():
