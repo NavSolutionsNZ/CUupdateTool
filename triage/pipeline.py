@@ -320,6 +320,47 @@ def build_import_set(rows, hq_dir, job_root, import_dir):
     return imported, manual
 
 
+def _join_import_script():
+    """Locate Join-And-Import.ps1 bundled with the tool (frozen-aware)."""
+    cands = [
+        os.path.join(_HERE, 'scripts', 'Join-And-Import.ps1'),
+        os.path.join(getattr(sys, '_MEIPASS', _HERE), 'scripts',
+                     'Join-And-Import.ps1'),
+    ]
+    for c in cands:
+        if os.path.isfile(c):
+            return c
+    return cands[0]
+
+
+def join_and_import(import_dir, server, database, module_path=None,
+                    joined_file=None, script_path=None):
+    """Join every *.txt in import_dir into one file and import it into the
+    customer SQL database (overwrite, no schema sync, import only).
+
+    Imports whatever is present -- no manual-required filtering, so a set that
+    is still missing hand-merged objects imports the ready ones regardless.
+    SQL-direct target (DatabaseServer + DatabaseName), matching the proven
+    manual import; compile is left to the developer.
+
+    Returns (ok, output).
+    """
+    script = script_path or _join_import_script()
+    cmd = ['powershell.exe', '-NoProfile', '-ExecutionPolicy', 'Bypass',
+           '-File', script, '-ImportFolder', import_dir,
+           '-DatabaseServer', server, '-DatabaseName', database]
+    if module_path:
+        cmd += ['-ModulePath', module_path]
+    if joined_file:
+        cmd += ['-JoinedFile', joined_file]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True)
+    except FileNotFoundError:
+        return False, ('powershell.exe not found -- join + import runs on '
+                       'Windows with the NAV model-tools module.')
+    return proc.returncode == 0, (proc.stdout or '') + (proc.stderr or '')
+
+
 def treatment_report(rows, imported=None, manual=None, merged=False):
     """Per-object report: key | treatment | reason, grouped by treatment, with a
     tally.

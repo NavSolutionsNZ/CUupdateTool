@@ -291,6 +291,8 @@ class TriageGUI:
             ('classify', "3. Classify + report", self.on_pl_classify),
             ('merge', "4. Stage + run CUupdate", self.on_pl_merge),
             ('import', "5. Build import set", self.on_pl_import),
+            ('joinimport', "6. Join + import to customer DB",
+             self.on_pl_joinimport),
         ]):
             b = tk.Button(steps, text=label, width=30, command=cmd)
             b.grid(row=i // 2, column=i % 2, sticky="w", padx=4, pady=3)
@@ -452,6 +454,43 @@ class TriageGUI:
                     + report)
             self.q.put(("done", text,
                         f"Import: {len(imported)} ready, {len(manual)} manual"))
+        except Exception:
+            self.q.put(("error", traceback.format_exc(), ""))
+
+    def on_pl_joinimport(self):
+        root = self.job_root_var.get().strip()
+        server = self.server2_var.get().strip()
+        cdb = self.cust_db_var.get().strip()
+        if not self._need(job_root=root, server=server, customer_db=cdb):
+            return
+        import_dir = os.path.join(root, 'Import')
+        if not os.path.isdir(import_dir):
+            messagebox.showerror("CU Pipeline",
+                                 "No Import folder -- run step 5 first.")
+            return
+        if not any(f.lower().endswith('.txt') for f in os.listdir(import_dir)):
+            messagebox.showerror("CU Pipeline",
+                                 "Import folder has no .txt objects to import.")
+            return
+        if not messagebox.askyesno(
+                "Join + import",
+                f"Join all objects in:\n  {import_dir}\n\n"
+                f"and import them into customer DB '{cdb}' on '{server}' "
+                f"(overwrite, no schema sync, no compile)?\n\n"
+                "Whatever is in the folder is imported regardless of any "
+                "still-missing manual objects."):
+            return
+        self._run_bg(self._work_pl_joinimport, import_dir, server, cdb)
+
+    def _work_pl_joinimport(self, import_dir, server, cdb):
+        try:
+            ok, out = pl.join_and_import(import_dir, server, cdb)
+            text = (f"Join + import -> {cdb} on {server}\n"
+                    f"From: {import_dir}\n\n{out}")
+            self.q.put(("done" if ok else "error",
+                        text if ok else "Join + import failed:\n\n" + text,
+                        "Imported to customer DB" if ok
+                        else "Join + import failed"))
         except Exception:
             self.q.put(("error", traceback.format_exc(), ""))
 

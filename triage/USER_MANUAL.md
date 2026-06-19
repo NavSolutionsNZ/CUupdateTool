@@ -59,7 +59,7 @@ merge before the import set is complete).
 
 ## 2. The CU Pipeline, step by step
 
-The pipeline runs as five explicit steps so each one's result is visible before
+The pipeline runs as six explicit steps so each one's result is visible before
 the next. Fill in the inputs at the top, then click the step buttons in order.
 
 ### 2.1 Inputs
@@ -125,6 +125,24 @@ vendor objects, plus the auto-merged outputs. Objects CUupdate gated to manual
 review are flagged **manual-required** and deliberately left out — the import
 set is honestly incomplete until those are hand-merged. The final report marks
 each object new / take-straight / auto-merged / manual-required.
+
+### 2.7 Step 6 — Join + import to customer DB
+
+Joins every object file in the `Import/` folder into one combined file
+(`Import/joined/Combined.txt`) and imports it into the **customer** database,
+overwriting existing objects. The target is the SQL server and Customer DB from
+the inputs at the top — the same connection used for the export, identified by
+SQL server and database name (not a NAV service-tier instance).
+
+The import uses **overwrite, no schema synchronisation, and does not compile** —
+compiling is left to you in the dev environment, where you control the order
+(tables before dependent pages) and can review errors.
+
+Whatever is in the `Import/` folder is imported, regardless of any objects still
+flagged manual-required from step 5 — so you can import the ready set and add the
+hand-merged objects in a later pass. The step asks for confirmation first,
+showing the folder and target database. It runs under Windows authentication; no
+credentials are entered or stored.
 
 ---
 

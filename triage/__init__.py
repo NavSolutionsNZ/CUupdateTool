@@ -9,4 +9,4 @@ easy export from NAV, and stages the New Baseline copies of the changed objects.
 Imports compareengine for the body-level comparison (no engine fork). Isolated
 from cuupdate/.
 """
-__version__ = "0.12"
+__version__ = "0.13"
