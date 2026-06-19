@@ -262,7 +262,7 @@ class TriageGUI:
                      self.cust_inst_var, self.cust_port_var)
         self._dbtrio(paths, 5, "Old baseline DB (-> OB-):", self.old_db_var,
                      self.old_inst_var, self.old_port_var)
-        self._file_row(paths, 6, "CUupdate exe (or run_batch.py):",
+        self._file_row(paths, 6, "CUbatch.exe (or run_batch.py):",
                        self.cuupdate_var)
         paths.columnconfigure(1, weight=1)
 

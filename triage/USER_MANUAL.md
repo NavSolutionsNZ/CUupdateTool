@@ -74,7 +74,7 @@ the next. Fill in the inputs at the top, then click the step buttons in order.
   management port. Exported with the `EX-` prefix.
 - **Old baseline DB** — the database for the CU the customer is currently on,
   with its instance and port. Exported with the `OB-` prefix.
-- **CUupdate exe (or run_batch.py)** — see section 3.
+- **CUbatch.exe (or run_batch.py)** — see section 3.
 
 Note that the NAV instance name and the SQL database name are often different
 (for example instance `iDealer26Q1` but database `iDealer2026Q1_DB`), and each
@@ -130,7 +130,7 @@ each object new / take-straight / auto-merged / manual-required.
 
 ## 3. Running the merge: the batch exe vs run_batch.py
 
-Step 4 drives CUupdate. Point the **CUupdate exe (or run_batch.py)** field at one
+Step 4 drives CUupdate. Point the **CUbatch.exe (or run_batch.py)** field at one
 of:
 
 - **CUbatch_<version>.exe** — the headless batch merge executable. This needs no

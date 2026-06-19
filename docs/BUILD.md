@@ -47,7 +47,7 @@ This produces `dist\CUbatch_<version>.exe` -- a console exe that runs the batch
 merge (`run_batch.py`'s CLI) with no Python and no GUI window. It shares the
 version from `cuupdate/__init__.py`, and its dist/ clean is scoped to the
 `CUbatch` prefix so it coexists with `CUupdate_*`. Point the triage tool's
-"CUupdate exe (or run_batch.py)" field at this exe on a Python-less machine.
+"CUbatch.exe (or run_batch.py)" field at this exe on a Python-less machine.
 
 (The `.exe` can only be built on Windows; PyInstaller does not cross-compile.
 Build on Windows, deploy the resulting `.exe` to the server.)
