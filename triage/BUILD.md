@@ -99,11 +99,38 @@ While testing, the PS1 lives in `triage/scripts/` and ships bundled inside the
 exe. Once confirmed, you can keep a copy in a local folder on the SQL box (which
 may have no internet access) and point the tool at it.
 
+## CU Pipeline tab (HQ-file-driven, step by step)
+
+When HQ ships a single combined `.txt` of every object changed in the new CU,
+the **CU Pipeline** tab drives the rest. It runs as five explicit steps so each
+subprocess hop surfaces its own result before the next.
+
+Inputs: the HQ file, a job root (work folder), SQL server + Customer DB + Old
+baseline DB, the CUupdate exe (or `run_batch.py`), and the merge parameters (CU
+token, initials, date, date format).
+
+1. **Split HQ file** - splits HQ's combined file into `hq/CU-<key>.txt` via
+   `Split-Objects.ps1`; lists the object keys found.
+2. **Export customer + old baseline** - exports just those keys from the
+   Customer DB (`EX-`) and Old baseline DB (`OB-`) into `customer/` and
+   `oldbase/`, filtered by object id.
+3. **Classify + report** - three-way per object: `new` (customer lacks it),
+   `take-straight` (customer Version List and body both match the old baseline),
+   `merge` (Version List OR body differs).
+4. **Stage + run CUupdate** - stages merge objects into `A/<Type>/` `B/<Type>/`
+   and runs CUupdate's batch driver; CUupdate applies its own merge / DEV-gate
+   rules.
+5. **Build import set** - assembles `Import/` from what is ready (new +
+   take-straight vendor objects, plus `Merged-` outputs). DEV-gated objects are
+   flagged manual-required and left out - the import set is honestly incomplete
+   until those are hand-merged. The final report marks each object new /
+   take-straight / auto-merged / manual-required with the reason.
+
+DB export and split run under Windows auth via PowerShell (no credentials
+stored); CUupdate runs as the exe/CLI you point at.
+
 ## Roadmap (not yet built)
 
-- **Stage 2**: add the customer DB export as a third input; split the changed
-  set into take-straight (customer-unmodified vs Existing baseline) and ToMerge
-  (customer-modified), staging A (customer) and B (new vendor) for CUupdate.
-- **Stage 3**: drive the NAV PowerShell export to populate the baseline folders,
-  and optionally shell out to CUupdate for the merge cases — keeping the whole
-  process in one place. The export step is already a clean seam for this.
+- Collapse the five pipeline steps into one "Run all" button after first real
+  runs confirm each hop.
+- Optionally drive the join + import of the final `Import/` set.
