@@ -268,9 +268,13 @@ def run_cuupdate(cuupdate_exe, job_root, cu, initials, date,
     a path to python + run_batch.py. Returns (ok, output).
     """
     if cuupdate_exe.lower().endswith('.py'):
-        cmd = [sys.executable, cuupdate_exe]
+        # run_batch.py uses flat imports (import execute, from diffengine ...),
+        # so it must run with its OWN directory as cwd for those to resolve.
+        cmd = [sys.executable, os.path.basename(cuupdate_exe)]
+        run_cwd = os.path.dirname(os.path.abspath(cuupdate_exe)) or None
     else:
         cmd = [cuupdate_exe]
+        run_cwd = None
     cmd += ['--root', job_root, '--cu', cu, '--initials', initials,
             '--date-format', date_format, '--cust', cust,
             '--vend', vend, '--langs', langs]
@@ -279,7 +283,7 @@ def run_cuupdate(cuupdate_exe, job_root, cu, initials, date,
     if cust_digits:
         cmd += ['--cust-digits', cust_digits]
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True)
+        proc = subprocess.run(cmd, capture_output=True, text=True, cwd=run_cwd)
     except FileNotFoundError:
         return False, f'CUupdate not found: {cuupdate_exe}'
     return proc.returncode == 0, (proc.stdout or '') + (proc.stderr or '')
