@@ -56,6 +56,25 @@ def test_classify():
           by['T36']['treatment'], 'take-straight')
     check("C80 merge (!= old baseline)", by['C80']['treatment'], 'merge')
     check("P21 merge (no old-baseline ref)", by['P21']['treatment'], 'merge')
+    # VL gate: identical body but customer Version List differs -> merge.
+    check("T50 merge on Version List alone (body identical)",
+          by['T50']['treatment'], 'merge')
+    check("T50 reason cites Version List",
+          'Version List' in by['T50']['reason'], True)
+
+
+def test_vl_gate():
+    print("version-list gate:")
+    # The T50 bodies are identical; only the VL token set differs.
+    ex = os.path.join(CUST, 'EX-T50.txt')
+    ob = os.path.join(OLD, 'OB-T50.txt')
+    body = pl.ce.compare_pair(ex, ob)
+    check("T50 bodies match (body gate would take-straight)",
+          body['verdict'], 'matched')
+    check("T50 version tokens differ",
+          pl._version_tokens(ex) != pl._version_tokens(ob), True)
+    check("WBL is the customer-only token",
+          'WBL' in (pl._version_tokens(ex) - pl._version_tokens(ob)), True)
 
 
 def test_filter():
@@ -70,7 +89,7 @@ def test_stage_merge():
     shutil.rmtree(job, ignore_errors=True)
     rows = pl.classify(HQ, CUST, OLD)
     n = pl.stage_merge_job(rows, HQ, CUST, job)
-    check("two merge objects staged (C80, P21)", n, 2)
+    check("three merge objects staged (C80, P21, T50)", n, 3)
     check("A/Codeunit/EX-C80.txt staged",
           os.path.isfile(os.path.join(job, 'A', 'Codeunit', 'EX-C80.txt')),
           True)
@@ -103,8 +122,8 @@ def test_import_and_report():
     check("import has new T14", 'T14' in imported, True)
     check("import has take-straight T36", 'T36' in imported, True)
     check("import has auto-merged C80", 'C80' in imported, True)
-    check("P21 flagged manual (DEV-gated, no merge output)",
-          manual, ['P21'])
+    check("P21+T50 flagged manual (DEV-gated, no merge output)",
+          manual, ['P21', 'T50'])
     check("import file CU-T14.txt present",
           os.path.isfile(os.path.join(imp, 'CU-T14.txt')), True)
     check("import file Merged-C80.txt present",
@@ -123,7 +142,7 @@ def test_import_and_report():
 
 
 def main():
-    for t in (test_classify, test_filter, test_stage_merge,
+    for t in (test_classify, test_vl_gate, test_filter, test_stage_merge,
               test_import_and_report):
         t()
     print()

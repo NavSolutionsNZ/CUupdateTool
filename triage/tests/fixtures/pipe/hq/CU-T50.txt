@@ -1,0 +1,17 @@
+OBJECT Table 50 Obj50
+{
+  OBJECT-PROPERTIES
+  {
+    Date=01/01/24;
+    Version List=NAVW114.00,CU26Q2;
+  }
+  CODE
+  {
+    PROCEDURE Foo@1();
+    BEGIN
+      X := 1;
+    END;
+    BEGIN
+    END.
+  }
+}

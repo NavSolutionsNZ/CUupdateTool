@@ -12,8 +12,12 @@ drives the rest:
      DB (OB-), filtered to HQ's key list.
   3. Classify each object three ways:
        - take-straight (new): customer does not have the object.
-       - take-straight (unmodified): customer == Old Baseline (body, collapsed).
-       - merge: customer != Old Baseline -> stage A (EX-) + B (CU-) for CUupdate.
+       - take-straight (unmodified): customer Version List AND body both match
+         the old baseline.
+       - merge: customer Version List OR body differs from the old baseline
+         (over-inclusive on purpose; CUupdate's no-CU-change short-circuit
+         take-A's anything that needs no merge, so over-including is free while
+         under-including risks losing customer work).
   4. Run CUupdate (run_batch) over the staged A/ B/ -> Merged/, auto vs DEV.
   5. Build the Import folder: take-straight CU objects + Merged- outputs.
      DEV-gated objects are flagged as still-needs-manual; they are NOT added to
@@ -39,6 +43,30 @@ for _p in (_HERE, os.path.join(_HERE, '..', 'compare'), os.path.join(_HERE, '..'
 
 import compareengine as ce          # noqa: E402
 import triageengine as te           # noqa: E402
+
+import re as _re
+
+# Version List header line, e.g. `    Version List=NAVW114.00,AP001651,WBL;`
+_VERSION_LINE = _re.compile(r'Version\s*List\s*=([^;]*)', _re.I)
+
+
+def _version_tokens(path):
+    """The set of Version List tokens for an object, or empty set if none.
+
+    Used for the triage gate: if the customer (EX) and old-baseline (OB)
+    Version Lists differ, the customer registered a change in the header --
+    a CUupdate candidate regardless of body. Read with latin-1 to match the
+    rest of the tooling.
+    """
+    try:
+        with open(path, 'r', encoding=ce.ENCODING) as f:
+            for line in f:
+                m = _VERSION_LINE.search(line)
+                if m:
+                    return {t.strip() for t in m.group(1).split(',') if t.strip()}
+    except OSError:
+        pass
+    return set()
 
 # Type letter -> run_batch subfolder name (mirrors Rich's manual convention;
 # run_batch only needs A/ and B/ to share the same relative layout).
@@ -143,17 +171,32 @@ def classify(hq_dir, customer_dir, oldbase_dir):
                          'cu_file': cu_file, 'ex_file': ex_file,
                          'ob_file': None})
             continue
-        # Customer-modified test: body-only, whitespace-collapsed (gold policy).
-        res = ce.compare_pair(os.path.join(customer_dir, ex_file),
-                              os.path.join(oldbase_dir, ob_file))
-        if res['verdict'] == 'matched':
+        # Triage gate (either/or, deliberately over-inclusive): send to CUupdate
+        # if the customer registered a change in the Version List OR the body
+        # differs from the old baseline. CUupdate's own no-CU-change
+        # short-circuit harmlessly take-A's anything that needs no merge, so
+        # over-including costs nothing while under-including risks losing
+        # customer work.
+        vl_differs = (_version_tokens(os.path.join(customer_dir, ex_file))
+                      != _version_tokens(os.path.join(oldbase_dir, ob_file)))
+        body = ce.compare_pair(os.path.join(customer_dir, ex_file),
+                               os.path.join(oldbase_dir, ob_file))
+        body_differs = (body['verdict'] != 'matched')
+
+        if not vl_differs and not body_differs:
             rows.append({'key': k, 'treatment': 'take-straight',
-                         'reason': 'customer object unchanged from old baseline',
+                         'reason': 'customer object unchanged from old baseline '
+                                   '(Version List and body both match)',
                          'cu_file': cu_file, 'ex_file': ex_file,
                          'ob_file': ob_file})
         else:
-            rows.append({'key': k, 'treatment': 'merge',
-                         'reason': 'customer modified vs old baseline',
+            if vl_differs and body_differs:
+                why = 'customer modified vs old baseline (Version List + body)'
+            elif vl_differs:
+                why = 'customer Version List differs from old baseline'
+            else:
+                why = 'customer body differs from old baseline'
+            rows.append({'key': k, 'treatment': 'merge', 'reason': why,
                          'cu_file': cu_file, 'ex_file': ex_file,
                          'ob_file': ob_file})
     return rows
