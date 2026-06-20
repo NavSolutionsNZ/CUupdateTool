@@ -3,13 +3,13 @@
 triage_gui.py -- double-click launcher for the CU upgrade tooling.
 
 Two tabs:
-  - Baseline triage : compare Existing vs New vendor baselines (Stage 1), or
-    export both from the database first. Produces the type-grouped pipe-
-    separated carry list.
   - CU Pipeline     : HQ-file-driven Stage 2+3, run step by step so each
     subprocess hop (split, export, merge) surfaces its own result before the
     next. Split HQ file -> export customer+old-baseline -> classify ->
     stage+run CUupdate -> build import set.
+  - Baseline triage : compare Existing vs New vendor baselines (Stage 1), or
+    export both from the database first. Produces the type-grouped pipe-
+    separated carry list.
 
 Thin tkinter wrapper; all logic lives in triageengine / pipeline. Freeze with
 triage.spec (see triage/BUILD.md).
@@ -48,8 +48,8 @@ class TriageGUI:
         nb.pack(fill="x", padx=8, pady=(8, 0))
         self.baseline_tab = tk.Frame(nb)
         self.pipeline_tab = tk.Frame(nb)
-        nb.add(self.baseline_tab, text="Baseline triage")
         nb.add(self.pipeline_tab, text="CU Pipeline")
+        nb.add(self.baseline_tab, text="Baseline triage")
 
         self._build_baseline_tab(self.baseline_tab)
         self._build_pipeline_tab(self.pipeline_tab)
