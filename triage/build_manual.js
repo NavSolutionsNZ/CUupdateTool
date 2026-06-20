@@ -129,9 +129,23 @@ function codeBlock(lines) {
 const IMG_DIMS = {}; // filled lazily
 function imgDims(file) {
   if (IMG_DIMS[file]) return IMG_DIMS[file];
-  // read PNG width/height from the IHDR chunk
+  // read PNG width/height from the IHDR chunk. Validate the signature first:
+  // a mislabelled JPEG (or any non-PNG) would otherwise yield garbage
+  // dimensions and produce a corrupt .docx that Word refuses to open.
   const b = fs.readFileSync(path.join(IMG, file));
+  const PNG_SIG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  if (b.length < 24 || !b.subarray(0, 8).equals(PNG_SIG)) {
+    throw new Error('not a valid PNG (check it is not a renamed JPEG): ' + file);
+  }
+  // IHDR is the first chunk: [4-byte len][4-byte 'IHDR'][width][height]...
+  // i.e. width at byte 16, height at byte 20.
+  if (b.toString('ascii', 12, 16) !== 'IHDR') {
+    throw new Error('PNG missing IHDR as first chunk: ' + file);
+  }
   const w = b.readUInt32BE(16), h = b.readUInt32BE(20);
+  if (!w || !h || w > 100000 || h > 100000) {
+    throw new Error('implausible PNG dimensions ' + w + 'x' + h + ': ' + file);
+  }
   return (IMG_DIMS[file] = [w, h]);
 }
 function imagePara(file, caption) {
@@ -314,6 +328,10 @@ json.dump(out,open(r'${mapJson}','w'))
     + '<w:p><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>'
     + '</w:sdtContent>';
   x = x.slice(0, scS) + newSC + x.slice(scE + '</w:sdtContent>'.length);
+  // Ensure every drawing's docPr id is unique. The docx lib emits id="1" for
+  // all images, which Word rejects as a duplicate-id document. Renumber here.
+  let _did = 0;
+  x = x.replace(/(<wp:docPr\s+id=")\d+(")/g, (_m, a, b) => a + (++_did) + b);
   fs.writeFileSync(docXmlPath, x);
   // 5. repack over the original
   execFileSync('python3', [path.join(OFFICE, 'pack.py'), un, OUT, '--original', OUT], { stdio: 'inherit' });
