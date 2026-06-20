@@ -80,10 +80,16 @@ Note that the NAV instance name and the SQL database name are often different
 (for example instance `iDealer26Q1` but database `iDealer2026Q1_DB`), and each
 instance has its own management port.
 
+![The CU Pipeline tab with the inputs and merge parameters filled in.](img/01_inputs.png)
+
 ### 2.2 Step 1 — Split HQ file
 
 Splits HQ's combined file into one file per object (`hq/CU-<key>.txt`, e.g.
 `CU-T18.txt`) and lists the object keys found. No database connection needed.
+
+![The step 1 output: the split destination and the list of object keys found.](img/02_step1_output.png)
+
+![The hq/ folder after step 1: one CU-<key>.txt file per object.](img/03_step1_hq_folder.png)
 
 ### 2.3 Step 2 — Export customer + old baseline
 
@@ -92,6 +98,14 @@ baseline DB (`OB-`). The export is filtered **by type and id together**
 (`Type=Table;Id=18|36`, `Type=Codeunit;Id=80`, ...) so an object id never
 over-pulls across types. Runs under Windows authentication — no credentials are
 entered or stored.
+
+![The step 2 output: per-type export filters and the export of each object from the customer and old-baseline databases.](img/07_step2_output.png)
+
+![Step 2 produces the customer/ and oldbase/ folders alongside hq/.](img/06_three_folders.png)
+
+![The customer/ folder: each object exported with the EX- prefix.](img/04_customer_folder.png)
+
+![The oldbase/ folder: the same objects from the old-baseline DB with the OB- prefix.](img/05_oldbase_folder.png)
 
 ### 2.4 Step 3 — Classify + report
 
@@ -110,6 +124,10 @@ The comparison is **body-only**: the `OBJECT-PROPERTIES` header
 (`Date`/`Time`/`Modified`/`Version List` value) and the documentation trigger
 are excluded from the body check, because the vendor re-stamps those every CU.
 
+![The step 3 output: each object classified take-straight or to-merge, with the reason, and the run summary.](img/08_step3_output.png)
+
+![The treatment report (<CU>_treatment.txt) written to the job root.](img/09_treatment_written.png)
+
 ### 2.5 Step 4 — Stage + run CUupdate
 
 Stages the to-merge objects into the layout CUupdate expects —
@@ -118,6 +136,18 @@ runs CUupdate's batch driver over them. CUupdate applies its own merge rules and
 decides auto-merge vs manual review per object, using the merge parameters (CU
 token, initials, date, date format) from the panel.
 
+![Step 4 creates the staging and output folders under the job root: A/ and B/ (the merge inputs), AautoMerged/ and BautoMerged/, and Merged/ (the results).](img/10_step4_folders.png)
+
+![The step 4 output: auto-merged objects, any with no CU change, and the objects gated to manual review with the reason and line for each block.](img/11_step4_output.png)
+
+Objects gated to manual review are left in `A/` and `B/` for you to hand-merge.
+Open the customer (`A/`, base) and vendor (`B/`, theirs) versions in a merge
+tool and resolve the flagged blocks by hand.
+
+![Hand-merging a gated object in TortoiseMerge: A/ is the base (customer) file, B/ is their (vendor) file.](img/13_tortoisemerge.png)
+
+![Save each completed hand-merge into the Merged/<Type>/ folder as Merged-<key>.txt so step 5 picks it up.](img/14_save_merged.png)
+
 ### 2.6 Step 5 — Build import set
 
 Assembles the `Import/` folder from what is ready: the new and take-straight
@@ -125,6 +155,8 @@ vendor objects, plus the auto-merged outputs. Objects CUupdate gated to manual
 review are flagged **manual-required** and deliberately left out — the import
 set is honestly incomplete until those are hand-merged. The final report marks
 each object new / take-straight / auto-merged / manual-required.
+
+![The Import folder after step 5: take-straight vendor objects (CU-) alongside the auto-merged outputs (Merged-).](img/15_import_folder.png)
 
 ### 2.7 Step 6 — Join + import to customer DB
 
@@ -143,6 +175,8 @@ flagged manual-required from step 5 — so you can import the ready set and add 
 hand-merged objects in a later pass. The step asks for confirmation first,
 showing the folder and target database. It runs under Windows authentication; no
 credentials are entered or stored.
+
+![Step 6 asks for confirmation, showing the import folder and target database, before joining and importing.](img/16_step6_warning.png)
 
 ---
 
