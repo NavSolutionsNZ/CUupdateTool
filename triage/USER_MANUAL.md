@@ -235,6 +235,10 @@ the CU Pipeline tab is the workflow.
   that do not open a PowerShell window, so you can tell the tool is progressing.
 - Long exports show a per-phase banner (`[2/4] Exporting ...`) in the output so
   you can see which type group is in progress and how many remain.
+- Each pipeline step button turns **green** when it finishes successfully and
+  **red** if it runs but fails, so you can see progress through the run at a
+  glance. Re-running a step clears the colour of every later step (its previous
+  result is now stale), and changing the job root resets them all for a new job.
 - **Save output** writes the current output pane to a file. The save dialog
   defaults the name to the step that produced the output (e.g.
   `1_Split_HQ_file.txt`, `3_Classify_report.txt`) and opens in the job-root

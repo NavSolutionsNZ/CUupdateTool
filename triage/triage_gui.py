@@ -43,6 +43,9 @@ class TriageGUI:
         # the Save-output file. Set on each successful result.
         self.last_step = "cu_report"
         self._pending_step = "cu_report"
+        # Key of the pipeline button whose run is in flight, used to recolour it
+        # on the result (None for non-pipeline actions). Promoted in the drain.
+        self._pending_key = None
         # Pipeline state carried between steps.
         self.pl_state = {}
         root.title(f"CU Tooling {_VERSION}")
@@ -182,6 +185,7 @@ class TriageGUI:
 
     def on_run_baseline(self):
         self._pending_step = "Baseline_triage"
+        self._pending_key = None
         existing = self.existing_var.get().strip()
         new = self.new_var.get().strip()
         if not os.path.isdir(existing) or not os.path.isdir(new):
@@ -206,6 +210,7 @@ class TriageGUI:
 
     def on_export_and_triage(self):
         self._pending_step = "Baseline_export_triage"
+        self._pending_key = None
         server = self.server_var.get().strip()
         edb = self.existing_db_var.get().strip()
         ndb = self.new_db_var.get().strip()
@@ -291,6 +296,8 @@ class TriageGUI:
         steps = tk.LabelFrame(tab, text="Run step by step")
         steps.pack(fill="x", **pad)
         self.step_btns = {}
+        self._step_order = ['split', 'export', 'classify', 'merge',
+                            'import', 'joinimport']
         for i, (key, label, cmd) in enumerate([
             ('split', "1. Split HQ file", self.on_pl_split),
             ('export', "2. Export customer + old baseline", self.on_pl_export),
@@ -303,6 +310,41 @@ class TriageGUI:
             b = tk.Button(steps, text=label, width=30, command=cmd)
             b.grid(row=i // 2, column=i % 2, sticky="w", padx=4, pady=3)
             self.step_btns[key] = b
+        # Remember the platform default button colours so we can reset to them.
+        any_btn = self.step_btns['split']
+        self._btn_default_bg = any_btn.cget('bg')
+        self._btn_default_abg = any_btn.cget('activebackground')
+        # Changing the job root means a new job: clear all step colours.
+        self.job_root_var.trace_add('write', lambda *_: self._reset_steps())
+
+    # ---- pipeline step button colouring ----
+    _STEP_OK_BG = "#cce8cc"    # soft green: step ran successfully
+    _STEP_ERR_BG = "#f0d0d0"   # soft red: step ran but failed
+
+    def _set_step_colour(self, key, bg, abg):
+        b = self.step_btns.get(key)
+        if b is not None:
+            b.config(bg=bg, activebackground=abg)
+
+    def _mark_step(self, key, ok):
+        """Colour a step button green (ok) or red (failed), and reset the
+        colour of every downstream step since its prior output is now stale."""
+        if key not in self.step_btns:
+            return
+        if ok:
+            self._set_step_colour(key, self._STEP_OK_BG, self._STEP_OK_BG)
+        else:
+            self._set_step_colour(key, self._STEP_ERR_BG, self._STEP_ERR_BG)
+        idx = self._step_order.index(key)
+        for downstream in self._step_order[idx + 1:]:
+            self._set_step_colour(downstream, self._btn_default_bg,
+                                  self._btn_default_abg)
+
+    def _reset_steps(self):
+        """Return every step button to the platform default colour."""
+        for key in self.step_btns:
+            self._set_step_colour(key, self._btn_default_bg,
+                                  self._btn_default_abg)
 
     def _need(self, **fields):
         missing = [name for name, val in fields.items() if not val]
@@ -314,6 +356,7 @@ class TriageGUI:
 
     def on_pl_split(self):
         self._pending_step = "1_Split_HQ_file"
+        self._pending_key = "split"
         hq = self.hq_file_var.get().strip()
         root = self.job_root_var.get().strip()
         if not self._need(hq_file=hq, job_root=root):
@@ -337,6 +380,7 @@ class TriageGUI:
 
     def on_pl_export(self):
         self._pending_step = "2_Export_customer_old_baseline"
+        self._pending_key = "export"
         root = self.job_root_var.get().strip()
         server = self.server2_var.get().strip()
         cdb = self.cust_db_var.get().strip()
@@ -383,6 +427,7 @@ class TriageGUI:
 
     def on_pl_classify(self):
         self._pending_step = "3_Classify_report"
+        self._pending_key = "classify"
         if not (self.pl_state.get('hq_dir') and
                 self.pl_state.get('customer_dir')):
             messagebox.showerror("CU Pipeline",
@@ -417,6 +462,7 @@ class TriageGUI:
 
     def on_pl_merge(self):
         self._pending_step = "4_Stage_run_CUbatch"
+        self._pending_key = "merge"
         if not self.pl_state.get('rows'):
             messagebox.showerror("CU Pipeline", "Run step 3 (classify) first.")
             return
@@ -446,6 +492,7 @@ class TriageGUI:
 
     def on_pl_import(self):
         self._pending_step = "5_Build_import_set"
+        self._pending_key = "import"
         if not self.pl_state.get('rows'):
             messagebox.showerror("CU Pipeline", "Run steps 1-4 first.")
             return
@@ -470,6 +517,7 @@ class TriageGUI:
 
     def on_pl_joinimport(self):
         self._pending_step = "6_Join_import"
+        self._pending_key = "joinimport"
         root = self.job_root_var.get().strip()
         server = self.server2_var.get().strip()
         cdb = self.cust_db_var.get().strip()
@@ -516,8 +564,12 @@ class TriageGUI:
                 self.progress.pack_forget()
                 if kind == "done":
                     self.last_step = self._pending_step
+                    if self._pending_key:
+                        self._mark_step(self._pending_key, ok=True)
                     self._emit(payload, summ)
                 elif kind == "error":
+                    if self._pending_key:
+                        self._mark_step(self._pending_key, ok=False)
                     self._emit(payload, "Error -- see output.")
         except queue.Empty:
             pass
