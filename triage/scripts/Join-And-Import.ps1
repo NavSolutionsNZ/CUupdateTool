@@ -98,6 +98,9 @@ try {
     }
 
     # 3. Import the combined file (overwrite, no schema sync, import only).
+    # NB: Import-NAVApplicationObject in BC140 does NOT accept -Force (only
+    # Join-NAVApplicationObjectFile does). Confirmation is suppressed via
+    # -Confirm:$false and $ConfirmPreference='None'.
     Write-Host ("Importing {0} into {1} on {2} (Overwrite, no schema sync) ..." -f `
         $JoinedFile, $DatabaseName, $DatabaseServer)
     Import-NAVApplicationObject `
@@ -106,8 +109,7 @@ try {
         -DatabaseName $DatabaseName `
         -ImportAction Overwrite `
         -SynchronizeSchemaChanges No `
-        -Confirm:$false `
-        -Force
+        -Confirm:$false
 
     Write-Host ("Done: imported {0} object file(s) into {1}. Compile in the dev environment." -f `
         $srcFiles.Count, $DatabaseName) -ForegroundColor Green

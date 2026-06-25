@@ -39,6 +39,10 @@ class TriageGUI:
         self.root = root
         self.q = queue.Queue()
         self.last_report = ""
+        # Slug of the step whose output is currently in the pane, used to name
+        # the Save-output file. Set on each successful result.
+        self.last_step = "cu_report"
+        self._pending_step = "cu_report"
         # Pipeline state carried between steps.
         self.pl_state = {}
         root.title(f"CU Tooling {_VERSION}")
@@ -177,6 +181,7 @@ class TriageGUI:
                   command=self.on_run_baseline).pack(side="left", padx=4)
 
     def on_run_baseline(self):
+        self._pending_step = "Baseline_triage"
         existing = self.existing_var.get().strip()
         new = self.new_var.get().strip()
         if not os.path.isdir(existing) or not os.path.isdir(new):
@@ -200,6 +205,7 @@ class TriageGUI:
             self.q.put(("error", traceback.format_exc(), ""))
 
     def on_export_and_triage(self):
+        self._pending_step = "Baseline_export_triage"
         server = self.server_var.get().strip()
         edb = self.existing_db_var.get().strip()
         ndb = self.new_db_var.get().strip()
@@ -289,7 +295,7 @@ class TriageGUI:
             ('split', "1. Split HQ file", self.on_pl_split),
             ('export', "2. Export customer + old baseline", self.on_pl_export),
             ('classify', "3. Classify + report", self.on_pl_classify),
-            ('merge', "4. Stage + run CUupdate", self.on_pl_merge),
+            ('merge', "4. Stage + run CUbatch", self.on_pl_merge),
             ('import', "5. Build import set", self.on_pl_import),
             ('joinimport', "6. Join + import to customer DB",
              self.on_pl_joinimport),
@@ -307,6 +313,7 @@ class TriageGUI:
         return True
 
     def on_pl_split(self):
+        self._pending_step = "1_Split_HQ_file"
         hq = self.hq_file_var.get().strip()
         root = self.job_root_var.get().strip()
         if not self._need(hq_file=hq, job_root=root):
@@ -329,6 +336,7 @@ class TriageGUI:
             self.q.put(("error", traceback.format_exc(), ""))
 
     def on_pl_export(self):
+        self._pending_step = "2_Export_customer_old_baseline"
         root = self.job_root_var.get().strip()
         server = self.server2_var.get().strip()
         cdb = self.cust_db_var.get().strip()
@@ -374,6 +382,7 @@ class TriageGUI:
             self.q.put(("error", traceback.format_exc(), ""))
 
     def on_pl_classify(self):
+        self._pending_step = "3_Classify_report"
         if not (self.pl_state.get('hq_dir') and
                 self.pl_state.get('customer_dir')):
             messagebox.showerror("CU Pipeline",
@@ -407,6 +416,7 @@ class TriageGUI:
             self.q.put(("error", traceback.format_exc(), ""))
 
     def on_pl_merge(self):
+        self._pending_step = "4_Stage_run_CUbatch"
         if not self.pl_state.get('rows'):
             messagebox.showerror("CU Pipeline", "Run step 3 (classify) first.")
             return
@@ -435,6 +445,7 @@ class TriageGUI:
             self.q.put(("error", traceback.format_exc(), ""))
 
     def on_pl_import(self):
+        self._pending_step = "5_Build_import_set"
         if not self.pl_state.get('rows'):
             messagebox.showerror("CU Pipeline", "Run steps 1-4 first.")
             return
@@ -458,6 +469,7 @@ class TriageGUI:
             self.q.put(("error", traceback.format_exc(), ""))
 
     def on_pl_joinimport(self):
+        self._pending_step = "6_Join_import"
         root = self.job_root_var.get().strip()
         server = self.server2_var.get().strip()
         cdb = self.cust_db_var.get().strip()
@@ -503,6 +515,7 @@ class TriageGUI:
                 self.progress.stop()
                 self.progress.pack_forget()
                 if kind == "done":
+                    self.last_step = self._pending_step
                     self._emit(payload, summ)
                 elif kind == "error":
                     self._emit(payload, "Error -- see output.")
@@ -513,9 +526,15 @@ class TriageGUI:
     def on_save(self):
         if not self.last_report:
             return
+        # Name the file after the step that produced the current output, and
+        # default to the job-root folder when one is set (Pipeline tab).
+        initial_dir = self.job_root_var.get().strip()
+        kw = {}
+        if initial_dir and os.path.isdir(initial_dir):
+            kw["initialdir"] = initial_dir
         path = filedialog.asksaveasfilename(
-            defaultextension=".txt", initialfile="cu_report.txt",
-            filetypes=[("Text", "*.txt"), ("All files", "*.*")])
+            defaultextension=".txt", initialfile=f"{self.last_step}.txt",
+            filetypes=[("Text", "*.txt"), ("All files", "*.*")], **kw)
         if not path:
             return
         try:

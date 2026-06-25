@@ -235,8 +235,10 @@ the CU Pipeline tab is the workflow.
   that do not open a PowerShell window, so you can tell the tool is progressing.
 - Long exports show a per-phase banner (`[2/4] Exporting ...`) in the output so
   you can see which type group is in progress and how many remain.
-- **Save output** writes the current output pane to a file. Step 3 also
-  auto-saves its treatment report.
+- **Save output** writes the current output pane to a file. The save dialog
+  defaults the name to the step that produced the output (e.g.
+  `1_Split_HQ_file.txt`, `3_Classify_report.txt`) and opens in the job-root
+  folder. Step 3 also auto-saves its treatment report.
 
 ---
 
